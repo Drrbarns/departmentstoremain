@@ -32,6 +32,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
   usePageTitle(product?.name || 'Product');
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [displayImages, setDisplayImages] = useState<string[]>([]);
   const [selectedVariant, setSelectedVariant] = useState<any>(null);
   const [selectedColor, setSelectedColor] = useState('');
   const [selectedSize, setSelectedSize] = useState('');
@@ -41,6 +42,23 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
 
   const { addToCart } = useCart();
+
+  // Swap gallery images when a color/variant is selected
+  useEffect(() => {
+    if (!product) return;
+    if (selectedColor) {
+      const colorVariants = product.variants.filter((v: any) => v.color === selectedColor);
+      const variantImageUrls = colorVariants.flatMap((v: any) => product.variantImagesMap?.[v.id] || []);
+      if (variantImageUrls.length > 0) {
+        setDisplayImages(variantImageUrls);
+        setSelectedImage(0);
+        return;
+      }
+    }
+    // Fall back to product-level images
+    setDisplayImages(product.images.length > 0 ? product.images : ['https://via.placeholder.com/800x800?text=No+Image']);
+    setSelectedImage(0);
+  }, [selectedColor, product]);
 
   useEffect(() => {
     async function fetchProduct() {
@@ -56,7 +74,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                 *,
                 categories(name),
                 product_variants(*),
-                product_images(url, position, alt_text)
+                product_images(url, position, alt_text, variant_id)
               `);
 
             const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
@@ -96,9 +114,19 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
           }
         });
 
+        // Separate product-level images from variant-specific images
+        const allImages = (productData.product_images || []).sort((a: any, b: any) => a.position - b.position);
+        const productLevelImages = allImages.filter((img: any) => !img.variant_id).map((img: any) => img.url);
+        const variantImagesMap: Record<string, string[]> = {};
+        allImages.filter((img: any) => img.variant_id).forEach((img: any) => {
+          if (!variantImagesMap[img.variant_id]) variantImagesMap[img.variant_id] = [];
+          variantImagesMap[img.variant_id].push(img.url);
+        });
+
         const transformedProduct = {
           ...productData,
-          images: productData.product_images?.sort((a: any, b: any) => a.position - b.position).map((img: any) => img.url) || [],
+          images: productLevelImages.length > 0 ? productLevelImages : [],
+          variantImagesMap,
           category: productData.categories?.name || 'Shop',
           rating: productData.rating_avg || 0,
           reviewCount: 0,
@@ -120,6 +148,8 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
         }
 
         setProduct(transformedProduct);
+        setDisplayImages(transformedProduct.images);
+        setSelectedImage(0);
 
         // Set initial quantity to MOQ
         if (transformedProduct.moq > 1) {
@@ -211,7 +241,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
       id: product.id,
       name: product.name,
       price: activePrice,
-      image: product.images[0],
+      image: displayImages[0] || product.images[0],
       quantity: quantity,
       variant: variantLabel,
       slug: product.slug,
@@ -296,10 +326,10 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
               <div>
                 <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 mb-4 shadow-lg border border-gray-100">
                   <Image
-                    src={product.images[selectedImage]}
+                    src={displayImages[selectedImage] || displayImages[0] || 'https://via.placeholder.com/800x800?text=No+Image'}
                     alt={product.name}
                     fill
-                    className="object-cover object-center"
+                    className="object-cover object-center transition-opacity duration-300"
                     sizes="(max-width: 1024px) 100vw, 50vw"
                     priority
                     quality={80}
@@ -311,9 +341,9 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                   )}
                 </div>
 
-                {product.images.length > 1 && (
+                {displayImages.length > 1 && (
                   <div className="grid grid-cols-4 gap-4">
-                    {product.images.map((image: string, index: number) => (
+                    {displayImages.map((image: string, index: number) => (
                       <button
                         key={index}
                         onClick={() => setSelectedImage(index)}
@@ -618,7 +648,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                   {product.sku && (
                     <div className="flex items-center text-gray-700">
                       <i className="ri-barcode-line text-xl text-blue-700 mr-3"></i>
-                      <span>SKU: {product.sku}</span>
+                      <span>Product Code: <span className="font-mono font-semibold">{product.sku}</span></span>
                     </div>
                   )}
                 </div>

@@ -239,15 +239,25 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
     }
   };
 
-  const statusOptions = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
-  const statusLabel = (s: string) => s === 'shipped' ? 'Packaged' : s.charAt(0).toUpperCase() + s.slice(1);
+  const statusOptions = ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'refund_requested', 'refunded'];
+  const statusLabel = (s: string) => {
+    const labels: Record<string, string> = {
+      shipped: 'Packaged',
+      refund_requested: 'Refund Requested',
+      refunded: 'Refunded',
+      awaiting_payment: 'Awaiting Payment'
+    };
+    return labels[s] || s.charAt(0).toUpperCase() + s.slice(1);
+  };
   const statusColors: any = {
     'pending': 'bg-amber-100 text-amber-700 border-amber-200',
     'processing': 'bg-blue-100 text-blue-700 border-blue-200',
     'shipped': 'bg-purple-100 text-purple-700 border-purple-200',
-    'delivered': 'bg-blue-100 text-blue-700 border-blue-200',
+    'delivered': 'bg-green-100 text-green-700 border-green-200',
     'cancelled': 'bg-red-100 text-red-700 border-red-200',
-    'awaiting_payment': 'bg-gray-100 text-gray-700 border-gray-200'
+    'awaiting_payment': 'bg-gray-100 text-gray-700 border-gray-200',
+    'refund_requested': 'bg-orange-100 text-orange-700 border-orange-200',
+    'refunded': 'bg-purple-100 text-purple-700 border-purple-200'
   };
 
   if (loading) return <div className="p-8 text-center">Loading...</div>;
@@ -380,6 +390,41 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                 reasons={fraudAnalysis.reasons}
                 orderId={orderId}
               />
+            )}
+
+            {currentStatus === 'refund_requested' && (
+              <div className="bg-orange-50 border-2 border-orange-300 rounded-xl p-5 flex gap-4">
+                <i className="ri-refund-2-line text-2xl text-orange-600 flex-shrink-0 mt-0.5"></i>
+                <div className="flex-1">
+                  <p className="font-bold text-orange-900 mb-1">Refund Requested by Customer</p>
+                  <p className="text-sm text-orange-800 mb-3">
+                    The customer has requested a refund for this order. Please process the refund manually via your payment provider, then mark the order as <strong>Refunded</strong> using the status dropdown.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      onClick={() => handleUpdateStatus('refunded')}
+                      disabled={statusUpdating}
+                      className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-semibold text-sm transition-colors disabled:opacity-50"
+                    >
+                      {statusUpdating ? 'Updating...' : 'Mark as Refunded'}
+                    </button>
+                    <button
+                      onClick={() => handleUpdateStatus('cancelled')}
+                      disabled={statusUpdating}
+                      className="px-4 py-2 border-2 border-orange-300 text-orange-700 rounded-lg font-semibold text-sm hover:bg-orange-100 transition-colors disabled:opacity-50"
+                    >
+                      Cancel Order Only
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {currentStatus === 'refunded' && (
+              <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 flex gap-3">
+                <i className="ri-checkbox-circle-line text-xl text-purple-600 flex-shrink-0 mt-0.5"></i>
+                <p className="text-sm text-purple-900"><strong>Refund completed.</strong> This order has been marked as refunded.</p>
+              </div>
             )}
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

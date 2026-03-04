@@ -188,8 +188,27 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
         setCustomSize('');
     };
 
-    // Images
-    const [images, setImages] = useState<any[]>(initialData?.product_images || []);
+    // Product-level images (not linked to any variant)
+    const [images, setImages] = useState<any[]>(
+        (initialData?.product_images || []).filter((img: any) => !img.variant_id)
+    );
+    // Variant-level images keyed by color name
+    const [variantImages, setVariantImages] = useState<Record<string, { url: string }[]>>(() => {
+        const map: Record<string, { url: string }[]> = {};
+        const allImages = initialData?.product_images || [];
+        const allVariants = initialData?.product_variants || [];
+        allImages.forEach((img: any) => {
+            if (img.variant_id) {
+                const variant = allVariants.find((v: any) => v.id === img.variant_id);
+                const color = variant?.option2 || '';
+                if (color) {
+                    if (!map[color]) map[color] = [];
+                    map[color].push({ url: img.url });
+                }
+            }
+        });
+        return map;
+    });
     const [uploading, setUploading] = useState(false);
 
     // SEO
@@ -267,6 +286,36 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
         setImages(images.filter((_, idx) => idx !== indexToRemove));
     };
 
+    const handleVariantImageUpload = async (colorName: string, e: React.ChangeEvent<HTMLInputElement>) => {
+        try {
+            if (!e.target.files || e.target.files.length === 0) return;
+            setUploading(true);
+            const file = e.target.files[0];
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Math.random()}.${fileExt}`;
+
+            const { error: uploadError } = await supabase.storage.from('products').upload(fileName, file);
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage.from('products').getPublicUrl(fileName);
+            setVariantImages(prev => ({
+                ...prev,
+                [colorName]: [...(prev[colorName] || []), { url: publicUrl }]
+            }));
+        } catch (error: any) {
+            alert('Error uploading image: ' + error.message);
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleRemoveVariantImage = (colorName: string, indexToRemove: number) => {
+        setVariantImages(prev => ({
+            ...prev,
+            [colorName]: (prev[colorName] || []).filter((_, idx) => idx !== indexToRemove)
+        }));
+    };
+
     // Variant helpers removed — variants are now auto-generated from selectedColors × selectedSizes
 
     const handleSubmit = async () => {
@@ -324,34 +373,16 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
 
             if (error) throw error;
 
-            // Update Images
+            // Update Images & Variants
             if (productId) {
-                // Strategy: We will just delete all old images/variants and recreate them for simplicity in this MVP.
-                // In a clearer implementation, we would diff them.
-
-                // 1. Images
+                // Delete old images and variants first
                 if (isEditMode) {
                     await supabase.from('product_images').delete().eq('product_id', productId);
-                }
-                if (images.length > 0) {
-                    const imageInserts = images.map((img, idx) => ({
-                        product_id: productId,
-                        url: img.url,
-                        position: idx,
-                        alt_text: productName
-                    }));
-                    await supabase.from('product_images').insert(imageInserts);
-                }
-
-                // 2. Variants
-                if (isEditMode) {
-                    // Be careful not to delete ALL variants if we want to preserve IDs etc, 
-                    // but for now, full replacement is safer to ensure sync.
-                    // Note: This might break order-item references if they rely on variant_id hard constraints without cascading.
-                    // Our Schema migration has ON DELETE SET NULL for order_items -> variant_id, so this is safe for now (but distinct from "archiving").
                     await supabase.from('product_variants').delete().eq('product_id', productId);
                 }
 
+                // 1. Insert variants first so we can get their IDs for variant images
+                const colorVariantIdMap: Record<string, string> = {};
                 if (variants.length > 0) {
                     const variantInserts = variants.map(v => {
                         const colorHex = selectedColors.find(c => c.name === v.color)?.hex || null;
@@ -366,8 +397,53 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                             metadata: colorHex ? { color_hex: colorHex } : {}
                         };
                     });
-                    const { error: varError } = await supabase.from('product_variants').insert(variantInserts);
+                    const { data: insertedVariants, error: varError } = await supabase
+                        .from('product_variants')
+                        .insert(variantInserts)
+                        .select();
                     if (varError) throw varError;
+                    // Map color → first variant ID of that color
+                    (insertedVariants || []).forEach((v: any) => {
+                        const color = v.option2 || '';
+                        if (color && !colorVariantIdMap[color]) {
+                            colorVariantIdMap[color] = v.id;
+                        }
+                    });
+                }
+
+                // 2. Build and insert all images (product-level + variant-level)
+                const imageInserts: any[] = [];
+
+                // Product-level images (no variant linked)
+                images.forEach((img, idx) => {
+                    imageInserts.push({
+                        product_id: productId,
+                        url: img.url,
+                        position: idx,
+                        alt_text: productName,
+                        variant_id: null
+                    });
+                });
+
+                // Variant-level images (linked to a specific variant)
+                Object.entries(variantImages).forEach(([colorName, imgs]) => {
+                    const variantId = colorVariantIdMap[colorName];
+                    if (variantId && imgs.length > 0) {
+                        imgs.forEach((img, idx) => {
+                            imageInserts.push({
+                                product_id: productId,
+                                url: img.url,
+                                position: idx,
+                                alt_text: `${productName} - ${colorName}`,
+                                variant_id: variantId
+                            });
+                        });
+                    }
+                });
+
+                if (imageInserts.length > 0) {
+                    const { error: imgError } = await supabase.from('product_images').insert(imageInserts);
+                    if (imgError) throw imgError;
                 }
             }
 
@@ -957,10 +1033,11 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                     )}
 
                     {activeTab === 'images' && (
-                        <div className="space-y-6">
+                        <div className="space-y-8">
+                            {/* Product-Level Images */}
                             <div>
                                 <h3 className="text-lg font-bold text-gray-900 mb-1">Product Images</h3>
-                                <p className="text-gray-600">Add up to 10 images. First image will be the primary image.</p>
+                                <p className="text-gray-600">General product images shown by default (when no variant is selected).</p>
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1004,6 +1081,78 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                     />
                                 </label>
                             </div>
+
+                            {/* Variant Images */}
+                            {selectedColors.length > 0 && (
+                                <div className="border-t border-gray-200 pt-6">
+                                    <div className="mb-4">
+                                        <h3 className="text-lg font-bold text-gray-900 mb-1">Variant Images</h3>
+                                        <p className="text-gray-600 text-sm">Upload images per design/color. On the product page, selecting a variant will swap the gallery to show these images.</p>
+                                    </div>
+
+                                    <div className="space-y-5">
+                                        {selectedColors.map(color => (
+                                            <div key={color.name} className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    <span
+                                                        className="w-5 h-5 rounded-full border border-gray-300 flex-shrink-0"
+                                                        style={{ backgroundColor: color.hex }}
+                                                    ></span>
+                                                    <h4 className="font-semibold text-gray-900">{color.name}</h4>
+                                                    <span className="text-xs text-gray-500 ml-1">
+                                                        {(variantImages[color.name] || []).length} image{(variantImages[color.name] || []).length !== 1 ? 's' : ''}
+                                                    </span>
+                                                    {(variantImages[color.name] || []).length === 0 && (
+                                                        <span className="ml-auto text-xs text-amber-600 flex items-center gap-1">
+                                                            <i className="ri-information-line"></i>
+                                                            Falls back to product images
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+                                                    {(variantImages[color.name] || []).map((img, idx) => (
+                                                        <div key={idx} className="relative group">
+                                                            <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                                                                <img src={img.url} alt={`${color.name} ${idx + 1}`} className="w-full h-full object-cover" />
+                                                            </div>
+                                                            {idx === 0 && (
+                                                                <span className="absolute top-1 left-1 bg-blue-700 text-white px-1.5 py-0.5 rounded text-xs font-semibold">
+                                                                    Main
+                                                                </span>
+                                                            )}
+                                                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
+                                                                <button
+                                                                    onClick={() => handleRemoveVariantImage(color.name, idx)}
+                                                                    className="w-8 h-8 flex items-center justify-center bg-white text-red-600 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
+                                                                >
+                                                                    <i className="ri-delete-bin-line text-sm"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+
+                                                    <label className={`aspect-square border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-700 hover:bg-blue-50 transition-colors flex flex-col items-center justify-center gap-1 text-gray-500 hover:text-blue-700 cursor-pointer ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                                        {uploading ? (
+                                                            <i className="ri-loader-4-line animate-spin text-xl"></i>
+                                                        ) : (
+                                                            <i className="ri-add-line text-xl"></i>
+                                                        )}
+                                                        <span className="text-xs font-medium">Add</span>
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            className="hidden"
+                                                            onChange={(e) => handleVariantImageUpload(color.name, e)}
+                                                            disabled={uploading}
+                                                        />
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
                                 <p className="text-sm text-gray-700">

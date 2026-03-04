@@ -331,7 +331,15 @@ export default function CheckoutPage() {
           </Link>
         </div>
 
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">Checkout</h1>
+
+        <div className="mb-8 bg-blue-50 border border-blue-200 rounded-xl p-4 flex gap-3">
+          <i className="ri-truck-line text-xl text-blue-700 flex-shrink-0 mt-0.5"></i>
+          <div className="text-sm text-blue-900">
+            <p className="font-semibold mb-1">Delivery Information</p>
+            <p>Orders are delivered within <strong>24 – 72 hours</strong> after payment is confirmed. For faster or urgent deliveries, please reach out to our customer support team. Have your <strong>order number</strong> ready as you may be asked to provide it.</p>
+          </div>
+        </div>
 
         {currentStep === 1 && (
           <div className="mb-8 bg-white rounded-xl shadow-sm p-6">

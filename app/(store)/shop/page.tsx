@@ -79,9 +79,9 @@ function ShopContent() {
               `, { count: 'exact' })
               .order('position', { foreignTable: 'product_images', ascending: true });
 
-            // Search
+            // Search by name or product code (SKU)
             if (search) {
-              query = query.ilike('name', `%${search}%`);
+              query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%`);
             }
 
             // Category Filter with Subcategories
