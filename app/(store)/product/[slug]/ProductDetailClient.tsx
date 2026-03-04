@@ -217,6 +217,10 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
   const needsVariantSelection = hasVariants && !selectedVariant;
   const needsColorSelection = hasColors && !selectedColor;
 
+  // Custom option names from product metadata
+  const option1Name = product?.metadata?.option1_name || 'Color';
+  const option2Name = product?.metadata?.option2_name || 'Size';
+
   // Determine the active price: variant price if selected, otherwise base price
   const activePrice = selectedVariant?.price ?? product?.price ?? 0;
   const activeStock = selectedVariant ? (selectedVariant.stock ?? selectedVariant.quantity ?? product?.stockCount ?? 0) : (product?.stockCount ?? 0);
@@ -405,14 +409,15 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
                 <p className="text-gray-700 leading-relaxed mb-8 text-lg">{product.description}</p>
 
-                {/* Color Selector */}
+                {/* Option 1 Selector (Color / Design / Material / etc.) */}
                 {hasVariants && product.colors.length > 0 && (
                   <div className="mb-6">
                     <label className="block font-semibold text-gray-900 mb-3">
-                      Color: {selectedColor ? (
+                      {option1Name}:{' '}
+                      {selectedColor ? (
                         <span className="text-blue-700 font-normal">{selectedColor}</span>
                       ) : (
-                        <span className="text-red-500 font-normal text-sm">Please select a color</span>
+                        <span className="text-red-500 font-normal text-sm">Please select</span>
                       )}
                     </label>
                     <div className="flex flex-wrap gap-3">
@@ -421,22 +426,48 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                         const colorVariants = product.variants.filter((v: any) => v.color === color);
                         const colorStock = colorVariants.reduce((sum: number, v: any) => sum + (v.stock ?? v.quantity ?? 0), 0);
                         const isOutOfStock = colorStock === 0 && product.stockCount === 0;
+
+                        // Get the first image for this option1 value (for thumbnail display)
+                        const variantId = colorVariants[0]?.id;
+                        const variantThumb = variantId ? product.variantImagesMap?.[variantId]?.[0] : null;
+                        const hasColorHex = !!(product.colorHexMap?.[color] || colorNameToHex(color) !== '#d1d5db');
+
+                        const handleSelect = () => {
+                          setSelectedColor(color);
+                          const matching = product.variants.filter((v: any) => v.color === color);
+                          if (matching.length === 1) {
+                            setSelectedVariant(matching[0]);
+                            setSelectedSize(matching[0].name);
+                          } else {
+                            setSelectedVariant(null);
+                            setSelectedSize('');
+                          }
+                        };
+
+                        // If there's a variant image thumbnail, show it as image swatch
+                        if (variantThumb) {
+                          return (
+                            <button
+                              key={color}
+                              onClick={handleSelect}
+                              disabled={isOutOfStock}
+                              title={color}
+                              className={`relative flex flex-col items-center gap-1.5 cursor-pointer group transition-all ${isOutOfStock ? 'opacity-40 cursor-not-allowed' : ''}`}
+                            >
+                              <div className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${isSelected ? 'border-blue-700 ring-2 ring-blue-400 ring-offset-1' : 'border-gray-200 hover:border-gray-400'}`}>
+                                <img src={variantThumb} alt={color} className="w-full h-full object-cover" />
+                              </div>
+                              <span className={`text-xs font-medium leading-tight text-center max-w-[64px] truncate ${isSelected ? 'text-blue-700' : 'text-gray-600'}`}>{color}</span>
+                              {isSelected && <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-700 rounded-full flex items-center justify-center"><i className="ri-check-line text-white text-[9px]"></i></span>}
+                            </button>
+                          );
+                        }
+
+                        // Fall back to color swatch pill
                         return (
                           <button
                             key={color}
-                            onClick={() => {
-                              setSelectedColor(color);
-                              // If only one variant for this color, auto-select it
-                              const matching = product.variants.filter((v: any) => v.color === color);
-                              if (matching.length === 1) {
-                                setSelectedVariant(matching[0]);
-                                setSelectedSize(matching[0].name);
-                              } else {
-                                // Reset variant selection so user picks a size too
-                                setSelectedVariant(null);
-                                setSelectedSize('');
-                              }
-                            }}
+                            onClick={handleSelect}
                             disabled={isOutOfStock}
                             className={`px-5 py-2.5 rounded-full border-2 font-medium transition-all whitespace-nowrap cursor-pointer flex items-center gap-2 ${isSelected
                               ? 'border-blue-700 bg-blue-50 text-blue-700 shadow-sm'
@@ -445,7 +476,9 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                                 : 'border-gray-300 text-gray-700 hover:border-gray-400'
                               }`}
                           >
-                            <span className="w-5 h-5 rounded-full border border-gray-300 flex-shrink-0 shadow-sm" style={{ backgroundColor: product.colorHexMap?.[color] || colorNameToHex(color) }}></span>
+                            {hasColorHex && (
+                              <span className="w-5 h-5 rounded-full border border-gray-300 flex-shrink-0 shadow-sm" style={{ backgroundColor: product.colorHexMap?.[color] || colorNameToHex(color) }}></span>
+                            )}
                             <span>{color}</span>
                           </button>
                         );
@@ -473,10 +506,11 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                     return (
                       <div className="mb-8">
                         <label className="block font-semibold text-gray-900 mb-3">
-                          Variant: {selectedVariant ? (
+                          {option1Name || option2Name || 'Variant'}:{' '}
+                          {selectedVariant ? (
                             <span className="text-blue-700 font-normal">{selectedVariant.name} — GH₵{selectedVariant.price?.toFixed(2)}</span>
                           ) : (
-                            <span className="text-red-500 font-normal text-sm">Please select a variant</span>
+                            <span className="text-red-500 font-normal text-sm">Please select</span>
                           )}
                         </label>
                         <div className="flex flex-wrap gap-3">
@@ -515,7 +549,8 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                     return (
                       <div className="mb-8">
                         <label className="block font-semibold text-gray-900 mb-3">
-                          Size / Type: {selectedVariant ? (
+                          {option2Name}:{' '}
+                          {selectedVariant ? (
                             <span className="text-blue-700 font-normal">{selectedVariant.name} — GH₵{selectedVariant.price?.toFixed(2)}</span>
                           ) : (
                             <span className="text-red-500 font-normal text-sm">Please select</span>

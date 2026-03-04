@@ -88,6 +88,9 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
         return Array.from(sizes);
     });
 
+    const [option1Name, setOption1Name] = useState(initialData?.metadata?.option1_name || 'Color / Design');
+    const [option2Name, setOption2Name] = useState(initialData?.metadata?.option2_name || 'Size / Type');
+
     const [customColorName, setCustomColorName] = useState('');
     const [customColorHex, setCustomColorHex] = useState('#888888');
     const [customSize, setCustomSize] = useState('');
@@ -345,7 +348,9 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                 tags: (keywords as string).split(',').map((k: string) => k.trim()).filter(Boolean),
                 metadata: {
                     low_stock_threshold: parseInt(lowStockThreshold) || 5,
-                    preorder_shipping: preorderShipping.trim() || null
+                    preorder_shipping: preorderShipping.trim() || null,
+                    option1_name: option1Name.trim() || 'Color / Design',
+                    option2_name: option2Name.trim() || 'Size / Type',
                 }
             };
 
@@ -772,18 +777,29 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                 <p className="text-gray-600 mt-1">Select colors and sizes below — variants are generated automatically</p>
                             </div>
 
-                            {/* STEP 1: Colors */}
+                            {/* STEP 1: Option 1 (Color/Design/etc.) */}
                             <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                                <h4 className="text-sm font-bold text-gray-900 mb-1 flex items-center">
-                                    <i className="ri-palette-line mr-2 text-lg text-blue-700"></i>
-                                    Step 1: Select Colors
-                                    {selectedColors.length > 0 && (
-                                        <span className="ml-2 bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded-full">
-                                            {selectedColors.length} selected
-                                        </span>
-                                    )}
-                                </h4>
-                                <p className="text-xs text-gray-500 mb-4">Click colors to add/remove. Skip if product has no color options.</p>
+                                <div className="flex items-center gap-3 mb-3">
+                                    <i className="ri-palette-line text-lg text-blue-700 flex-shrink-0"></i>
+                                    <div className="flex-1 flex items-center gap-2">
+                                        <span className="text-sm font-bold text-gray-900 whitespace-nowrap">Step 1 —</span>
+                                        <input
+                                            type="text"
+                                            value={option1Name}
+                                            onChange={(e) => setOption1Name(e.target.value)}
+                                            className="flex-1 px-3 py-1.5 border-2 border-blue-300 rounded-lg text-sm font-semibold text-blue-800 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 max-w-[220px]"
+                                            placeholder="e.g. Color, Design, Material..."
+                                        />
+                                        {selectedColors.length > 0 && (
+                                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap">
+                                                {selectedColors.length} selected
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                <p className="text-xs text-gray-500 mb-4">
+                                    Name this option anything — Color, Design, Pattern, Material, etc. Values can optionally have a color swatch. <strong>Images for each value are set in the Images tab.</strong>
+                                </p>
 
                                 <div className="flex flex-wrap gap-2 mb-4">
                                     {colorPresets.map(color => {
@@ -809,31 +825,35 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                     })}
                                 </div>
 
-                                {/* Custom color */}
+                                {/* Custom value */}
                                 <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
                                     <input
                                         type="color"
                                         value={customColorHex}
                                         onChange={(e) => setCustomColorHex(e.target.value)}
-                                        className="w-10 h-10 rounded-lg border border-gray-300 cursor-pointer p-0.5"
-                                        title="Pick a custom color"
+                                        className="w-10 h-10 rounded-lg border border-gray-300 cursor-pointer p-0.5 flex-shrink-0"
+                                        title="Optional color swatch (leave if not applicable)"
                                     />
                                     <input
                                         type="text"
                                         value={customColorName}
                                         onChange={(e) => setCustomColorName(e.target.value)}
-                                        placeholder="Custom color name"
+                                        placeholder={`Add a custom ${option1Name} value (e.g. Floral, 64GB, etc.)`}
                                         className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
                                         onKeyDown={(e) => e.key === 'Enter' && addCustomColor()}
                                     />
                                     <button
                                         onClick={addCustomColor}
                                         disabled={!customColorName.trim()}
-                                        className="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-900 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                        className="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-900 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                                     >
-                                        Add Color
+                                        Add
                                     </button>
                                 </div>
+                                <p className="text-xs text-gray-400 mt-2">
+                                    <i className="ri-information-line mr-1"></i>
+                                    The color picker is optional — use it only if this value has a representative color swatch.
+                                </p>
 
                                 {/* Selected colors summary */}
                                 {selectedColors.length > 0 && (
@@ -851,18 +871,27 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                 )}
                             </div>
 
-                            {/* STEP 2: Sizes */}
+                            {/* STEP 2: Option 2 (Size/Type/etc.) */}
                             <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                                <h4 className="text-sm font-bold text-gray-900 mb-1 flex items-center">
-                                    <i className="ri-ruler-line mr-2 text-lg text-blue-600"></i>
-                                    Step 2: Select Sizes
-                                    {selectedSizes.length > 0 && (
-                                        <span className="ml-2 bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded-full">
-                                            {selectedSizes.length} selected
-                                        </span>
-                                    )}
-                                </h4>
-                                <p className="text-xs text-gray-500 mb-4">Click sizes to add/remove. Use custom for volumes (100ml), weights, etc.</p>
+                                <div className="flex items-center gap-3 mb-3">
+                                    <i className="ri-ruler-line text-lg text-blue-600 flex-shrink-0"></i>
+                                    <div className="flex-1 flex items-center gap-2">
+                                        <span className="text-sm font-bold text-gray-900 whitespace-nowrap">Step 2 —</span>
+                                        <input
+                                            type="text"
+                                            value={option2Name}
+                                            onChange={(e) => setOption2Name(e.target.value)}
+                                            className="flex-1 px-3 py-1.5 border-2 border-blue-300 rounded-lg text-sm font-semibold text-blue-800 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 max-w-[220px]"
+                                            placeholder="e.g. Size, Storage, Weight..."
+                                        />
+                                        {selectedSizes.length > 0 && (
+                                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap">
+                                                {selectedSizes.length} selected
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                <p className="text-xs text-gray-500 mb-4">Name this option anything — Size, Storage, Weight, Volume, etc. Skip if not needed.</p>
 
                                 <div className="flex flex-wrap gap-2 mb-4">
                                     {sizePresets.map(size => {
@@ -883,22 +912,22 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                     })}
                                 </div>
 
-                                {/* Custom size */}
+                                {/* Custom option2 value */}
                                 <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
                                     <input
                                         type="text"
                                         value={customSize}
                                         onChange={(e) => setCustomSize(e.target.value)}
-                                        placeholder="Custom size (e.g. 100ml, One Size, 42)"
+                                        placeholder={`Custom ${option2Name} value (e.g. 100ml, One Size, 128GB)`}
                                         className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
                                         onKeyDown={(e) => e.key === 'Enter' && addCustomSize()}
                                     />
                                     <button
                                         onClick={addCustomSize}
                                         disabled={!customSize.trim()}
-                                        className="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-900 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                        className="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-900 disabled:opacity-40 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                                     >
-                                        Add Size
+                                        Add
                                     </button>
                                 </div>
 
@@ -926,6 +955,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                                 <i className="ri-grid-line mr-2 text-lg text-purple-600"></i>
                                                 Step 3: Set Price & Stock ({variantCombinations.length} variant{variantCombinations.length > 1 ? 's' : ''})
                                             </h4>
+                                            <p className="text-xs text-gray-500 mt-0.5">{option1Name}{selectedSizes.length > 0 ? ` × ${option2Name}` : ''} combinations</p>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <button
@@ -954,10 +984,10 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                             <thead className="bg-gray-50 border-b border-gray-200">
                                                 <tr>
                                                     {selectedColors.length > 0 && (
-                                                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Color</th>
+                                                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">{option1Name}</th>
                                                     )}
                                                     {selectedSizes.length > 0 && (
-                                                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Size</th>
+                                                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">{option2Name}</th>
                                                     )}
                                                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Price (GH₵)</th>
                                                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Stock</th>
@@ -1086,8 +1116,10 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                             {selectedColors.length > 0 && (
                                 <div className="border-t border-gray-200 pt-6">
                                     <div className="mb-4">
-                                        <h3 className="text-lg font-bold text-gray-900 mb-1">Variant Images</h3>
-                                        <p className="text-gray-600 text-sm">Upload images per design/color. On the product page, selecting a variant will swap the gallery to show these images.</p>
+                                        <h3 className="text-lg font-bold text-gray-900 mb-1">{option1Name} Images</h3>
+                                        <p className="text-gray-600 text-sm">
+                                            Upload images per {option1Name.toLowerCase()} value. On the product page, selecting that variant will instantly swap the gallery to show these images.
+                                        </p>
                                     </div>
 
                                     <div className="space-y-5">
