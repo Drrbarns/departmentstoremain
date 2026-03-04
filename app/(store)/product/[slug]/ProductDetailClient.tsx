@@ -43,12 +43,11 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
   const { addToCart } = useCart();
 
-  // Swap gallery images when a color/variant is selected
+  // Swap gallery images when a variant is selected
   useEffect(() => {
     if (!product) return;
-    if (selectedColor) {
-      const colorVariants = product.variants.filter((v: any) => v.color === selectedColor);
-      const variantImageUrls = colorVariants.flatMap((v: any) => product.variantImagesMap?.[v.id] || []);
+    if (selectedVariant) {
+      const variantImageUrls = product.variantImagesMap?.[selectedVariant.id] || [];
       if (variantImageUrls.length > 0) {
         setDisplayImages(variantImageUrls);
         setSelectedImage(0);
@@ -58,7 +57,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
     // Fall back to product-level images
     setDisplayImages(product.images.length > 0 ? product.images : ['https://via.placeholder.com/800x800?text=No+Image']);
     setSelectedImage(0);
-  }, [selectedColor, product]);
+  }, [selectedVariant, product]);
 
   useEffect(() => {
     async function fetchProduct() {
@@ -97,20 +96,17 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
         }
 
         // Transform product data
-        // Map variant colors from option2, and extract color_hex from metadata
         const rawVariants = (productData.product_variants || []).map((v: any) => ({
           ...v,
           color: v.option2 || '',
           colorHex: v.metadata?.color_hex || ''
         }));
 
-        // Build a color-to-hex map from variants (prefer stored hex, fallback to colorNameToHex)
+        // Build a color-to-hex map
         const colorHexMap: Record<string, string> = {};
         rawVariants.forEach((v: any) => {
-          if (v.color) {
-            if (!colorHexMap[v.color]) {
-              colorHexMap[v.color] = v.colorHex || colorNameToHex(v.color);
-            }
+          if (v.color && !colorHexMap[v.color]) {
+            colorHexMap[v.color] = v.colorHex || colorNameToHex(v.color);
           }
         });
 
@@ -123,6 +119,10 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
           variantImagesMap[img.variant_id].push(img.url);
         });
 
+        // Each variant is its own selectable option — label is name OR colorName, whichever is set
+        // "colors" here means the unique option1 values that drive image swapping
+        const variantLabels = rawVariants.map((v: any) => v.name || v.color || '').filter(Boolean);
+
         const transformedProduct = {
           ...productData,
           images: productLevelImages.length > 0 ? productLevelImages : [],
@@ -132,9 +132,11 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
           reviewCount: 0,
           stockCount: productData.quantity,
           moq: productData.moq || 1,
+          // colors = unique option2 values (for color swatch display)
           colors: [...new Set(rawVariants.map((v: any) => v.color).filter(Boolean))],
           colorHexMap,
           variants: rawVariants,
+          variantLabels,
           sizes: rawVariants.map((v: any) => v.name) || [],
           features: ['Premium Quality', 'Authentic Design'],
           featured: ['Premium Quality', 'Authentic Design'],
@@ -213,13 +215,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
   }, [slug]);
 
   const hasVariants = product?.variants?.length > 0;
-  const hasColors = product?.colors?.length > 0;
   const needsVariantSelection = hasVariants && !selectedVariant;
-  const needsColorSelection = hasColors && !selectedColor;
-
-  // Custom option names from product metadata
-  const option1Name = product?.metadata?.option1_name || 'Color';
-  const option2Name = product?.metadata?.option2_name || 'Size';
 
   // Determine the active price: variant price if selected, otherwise base price
   const activePrice = selectedVariant?.price ?? product?.price ?? 0;
@@ -409,187 +405,76 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
                 <p className="text-gray-700 leading-relaxed mb-8 text-lg">{product.description}</p>
 
-                {/* Option 1 Selector (Color / Design / Material / etc.) */}
-                {hasVariants && product.colors.length > 0 && (
+                {/* Variant Selector — one button per variant row */}
+                {hasVariants && (
                   <div className="mb-6">
                     <label className="block font-semibold text-gray-900 mb-3">
-                      {option1Name}:{' '}
-                      {selectedColor ? (
-                        <span className="text-blue-700 font-normal">{selectedColor}</span>
+                      {selectedVariant ? (
+                        <span>
+                          Variant: <span className="text-blue-700 font-normal">{selectedVariant.name || selectedVariant.color} — GH₵{(selectedVariant.price || product.price).toFixed(2)}</span>
+                        </span>
                       ) : (
-                        <span className="text-red-500 font-normal text-sm">Please select</span>
+                        <span>Variant: <span className="text-red-500 font-normal text-sm">Please select</span></span>
                       )}
                     </label>
                     <div className="flex flex-wrap gap-3">
-                      {product.colors.map((color: string) => {
-                        const isSelected = selectedColor === color;
-                        const colorVariants = product.variants.filter((v: any) => v.color === color);
-                        const colorStock = colorVariants.reduce((sum: number, v: any) => sum + (v.stock ?? v.quantity ?? 0), 0);
-                        const isOutOfStock = colorStock === 0 && product.stockCount === 0;
-
-                        // Get the first image for this option1 value (for thumbnail display)
-                        const variantId = colorVariants[0]?.id;
-                        const variantThumb = variantId ? product.variantImagesMap?.[variantId]?.[0] : null;
-                        const hasColorHex = !!(product.colorHexMap?.[color] || colorNameToHex(color) !== '#d1d5db');
+                      {product.variants.map((variant: any) => {
+                        const isSelected = selectedVariant?.id === variant.id;
+                        const variantStock = variant.stock ?? variant.quantity ?? 0;
+                        const isOutOfStock = variantStock === 0 && product.stockCount === 0;
+                        const variantThumb = product.variantImagesMap?.[variant.id]?.[0];
+                        const label = variant.name || variant.color || 'Option';
+                        const colorHex = variant.colorHex || (variant.color ? colorNameToHex(variant.color) : null);
 
                         const handleSelect = () => {
-                          setSelectedColor(color);
-                          const matching = product.variants.filter((v: any) => v.color === color);
-                          if (matching.length === 1) {
-                            setSelectedVariant(matching[0]);
-                            setSelectedSize(matching[0].name);
-                          } else {
-                            setSelectedVariant(null);
-                            setSelectedSize('');
-                          }
+                          setSelectedVariant(variant);
+                          setSelectedColor(variant.color || label);
+                          setSelectedSize(variant.name || '');
                         };
 
-                        // If there's a variant image thumbnail, show it as image swatch
+                        // Image thumbnail style
                         if (variantThumb) {
                           return (
                             <button
-                              key={color}
+                              key={variant.id}
                               onClick={handleSelect}
                               disabled={isOutOfStock}
-                              title={color}
-                              className={`relative flex flex-col items-center gap-1.5 cursor-pointer group transition-all ${isOutOfStock ? 'opacity-40 cursor-not-allowed' : ''}`}
+                              title={label}
+                              className={`relative flex flex-col items-center gap-1.5 cursor-pointer transition-all ${isOutOfStock ? 'opacity-40 cursor-not-allowed' : ''}`}
                             >
                               <div className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${isSelected ? 'border-blue-700 ring-2 ring-blue-400 ring-offset-1' : 'border-gray-200 hover:border-gray-400'}`}>
-                                <img src={variantThumb} alt={color} className="w-full h-full object-cover" />
+                                <img src={variantThumb} alt={label} className="w-full h-full object-cover" />
                               </div>
-                              <span className={`text-xs font-medium leading-tight text-center max-w-[64px] truncate ${isSelected ? 'text-blue-700' : 'text-gray-600'}`}>{color}</span>
+                              <span className={`text-xs font-medium max-w-[64px] truncate text-center ${isSelected ? 'text-blue-700' : 'text-gray-600'}`}>{label}</span>
                               {isSelected && <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-700 rounded-full flex items-center justify-center"><i className="ri-check-line text-white text-[9px]"></i></span>}
                             </button>
                           );
                         }
 
-                        // Fall back to color swatch pill
+                        // Color swatch + text pill
                         return (
                           <button
-                            key={color}
+                            key={variant.id}
                             onClick={handleSelect}
                             disabled={isOutOfStock}
-                            className={`px-5 py-2.5 rounded-full border-2 font-medium transition-all whitespace-nowrap cursor-pointer flex items-center gap-2 ${isSelected
+                            className={`px-4 py-2.5 rounded-full border-2 font-medium transition-all whitespace-nowrap cursor-pointer flex items-center gap-2 ${isSelected
                               ? 'border-blue-700 bg-blue-50 text-blue-700 shadow-sm'
                               : isOutOfStock
                                 ? 'border-gray-200 text-gray-300 cursor-not-allowed bg-gray-50'
                                 : 'border-gray-300 text-gray-700 hover:border-gray-400'
                               }`}
                           >
-                            {hasColorHex && (
-                              <span className="w-5 h-5 rounded-full border border-gray-300 flex-shrink-0 shadow-sm" style={{ backgroundColor: product.colorHexMap?.[color] || colorNameToHex(color) }}></span>
+                            {colorHex && colorHex !== '#d1d5db' && (
+                              <span className="w-4 h-4 rounded-full border border-gray-300 flex-shrink-0" style={{ backgroundColor: colorHex }}></span>
                             )}
-                            <span>{color}</span>
+                            <span>{label}</span>
+                            <span className={`text-xs ${isSelected ? 'text-blue-500' : 'text-gray-400'}`}>GH₵{(variant.price || product.price).toFixed(2)}</span>
                           </button>
                         );
                       })}
                     </div>
                   </div>
                 )}
-
-                {/* Size / Name Variant Selector */}
-                {hasVariants && (() => {
-                  // Filter variants: if colors exist and one is selected, show only matching; otherwise show all
-                  const hasColors = product.colors.length > 0;
-                  const visibleVariants = hasColors && selectedColor
-                    ? product.variants.filter((v: any) => v.color === selectedColor)
-                    : hasColors
-                      ? [] // Don't show name variants until a color is picked
-                      : product.variants;
-
-                  // Check if we need to show the name selector (skip if all visible variants have the same name or only 1)
-                  const uniqueNames = [...new Set(visibleVariants.map((v: any) => v.name).filter(Boolean))];
-                  const showNameSelector = visibleVariants.length > 1 || (!hasColors && visibleVariants.length > 0);
-
-                  if (!showNameSelector && !hasColors) {
-                    // Single variant with no colors — show standard picker
-                    return (
-                      <div className="mb-8">
-                        <label className="block font-semibold text-gray-900 mb-3">
-                          {option1Name || option2Name || 'Variant'}:{' '}
-                          {selectedVariant ? (
-                            <span className="text-blue-700 font-normal">{selectedVariant.name} — GH₵{selectedVariant.price?.toFixed(2)}</span>
-                          ) : (
-                            <span className="text-red-500 font-normal text-sm">Please select</span>
-                          )}
-                        </label>
-                        <div className="flex flex-wrap gap-3">
-                          {product.variants.map((variant: any) => {
-                            const isSelected = selectedVariant?.id === variant.id || selectedVariant?.name === variant.name;
-                            const variantStock = variant.stock ?? variant.quantity ?? 0;
-                            const isOutOfStock = variantStock === 0 && product.stockCount === 0;
-                            return (
-                              <button
-                                key={variant.id || variant.name}
-                                onClick={() => {
-                                  setSelectedVariant(variant);
-                                  setSelectedSize(variant.name);
-                                }}
-                                disabled={isOutOfStock}
-                                className={`px-6 py-3 rounded-lg border-2 font-medium transition-all whitespace-nowrap cursor-pointer flex flex-col items-center ${isSelected
-                                  ? 'border-blue-700 bg-blue-50 text-blue-700 shadow-sm'
-                                  : isOutOfStock
-                                    ? 'border-gray-200 text-gray-300 cursor-not-allowed bg-gray-50'
-                                    : 'border-gray-300 text-gray-700 hover:border-gray-400'
-                                  }`}
-                              >
-                                <span>{variant.name}</span>
-                                <span className={`text-xs mt-0.5 ${isSelected ? 'text-blue-600' : 'text-gray-500'}`}>
-                                  GH₵{(variant.price || product.price).toFixed(2)}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  if (visibleVariants.length > 1) {
-                    return (
-                      <div className="mb-8">
-                        <label className="block font-semibold text-gray-900 mb-3">
-                          {option2Name}:{' '}
-                          {selectedVariant ? (
-                            <span className="text-blue-700 font-normal">{selectedVariant.name} — GH₵{selectedVariant.price?.toFixed(2)}</span>
-                          ) : (
-                            <span className="text-red-500 font-normal text-sm">Please select</span>
-                          )}
-                        </label>
-                        <div className="flex flex-wrap gap-3">
-                          {visibleVariants.map((variant: any) => {
-                            const isSelected = selectedVariant?.id === variant.id;
-                            const variantStock = variant.stock ?? variant.quantity ?? 0;
-                            const isOutOfStock = variantStock === 0 && product.stockCount === 0;
-                            return (
-                              <button
-                                key={variant.id || variant.name}
-                                onClick={() => {
-                                  setSelectedVariant(variant);
-                                  setSelectedSize(variant.name);
-                                }}
-                                disabled={isOutOfStock}
-                                className={`px-6 py-3 rounded-lg border-2 font-medium transition-all whitespace-nowrap cursor-pointer flex flex-col items-center ${isSelected
-                                  ? 'border-blue-700 bg-blue-50 text-blue-700 shadow-sm'
-                                  : isOutOfStock
-                                    ? 'border-gray-200 text-gray-300 cursor-not-allowed bg-gray-50'
-                                    : 'border-gray-300 text-gray-700 hover:border-gray-400'
-                                  }`}
-                              >
-                                <span>{variant.name}</span>
-                                <span className={`text-xs mt-0.5 ${isSelected ? 'text-blue-600' : 'text-gray-500'}`}>
-                                  GH₵{(variant.price || product.price).toFixed(2)}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  return null;
-                })()}
 
                 <div className="mb-8">
                   <label className="block font-semibold text-gray-900 mb-3">Quantity</label>
@@ -650,14 +535,14 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
                 <div className="flex flex-col sm:flex-row gap-4 mb-8">
                   <button
-                    disabled={activeStock === 0 || needsVariantSelection || needsColorSelection}
-                    className={`flex-1 bg-gray-900 hover:bg-blue-700 text-white py-4 rounded-lg font-semibold transition-colors flex items-center justify-center space-x-2 text-lg whitespace-nowrap cursor-pointer ${(activeStock === 0 || needsVariantSelection || needsColorSelection) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    disabled={activeStock === 0 || needsVariantSelection}
+                    className={`flex-1 bg-gray-900 hover:bg-blue-700 text-white py-4 rounded-lg font-semibold transition-colors flex items-center justify-center space-x-2 text-lg whitespace-nowrap cursor-pointer ${(activeStock === 0 || needsVariantSelection) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     onClick={handleAddToCart}
                   >
                     <i className="ri-shopping-cart-line text-xl"></i>
-                    <span>{activeStock === 0 ? 'Out of Stock' : needsColorSelection ? 'Select a Color' : needsVariantSelection ? 'Select a Variant' : 'Add to Cart'}</span>
+                    <span>{activeStock === 0 ? 'Out of Stock' : needsVariantSelection ? 'Select a Variant' : 'Add to Cart'}</span>
                   </button>
-                  {activeStock > 0 && !needsVariantSelection && !needsColorSelection && (
+                  {activeStock > 0 && !needsVariantSelection && (
                     <button
                       onClick={handleBuyNow}
                       className="sm:w-auto bg-blue-700 hover:bg-blue-800 text-white px-8 py-4 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer"
