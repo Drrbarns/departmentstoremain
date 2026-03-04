@@ -58,7 +58,7 @@ export default function MaintenancePage() {
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <a
-              href="mailto:support@multimeysupplies.com"
+              href="mailto:support@discount-discovery-zone.vercel.app"
               className="inline-flex items-center gap-2 bg-white text-gray-900 px-6 py-3 rounded-full font-medium hover:bg-gray-50 transition-colors border border-gray-200 whitespace-nowrap"
             >
               <i className="ri-mail-line"></i>

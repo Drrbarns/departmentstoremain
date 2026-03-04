@@ -88,7 +88,7 @@ export default function ContactPage() {
   };
 
   // Get contact details from CMS settings
-  const contactEmail = getSetting('contact_email') || 'support@multimeysupplies.com';
+  const contactEmail = getSetting('contact_email') || 'support@discount-discovery-zone.vercel.app';
   const contactPhone = getSetting('contact_phone') || '+233209597443';
   const contactAddress = getSetting('contact_address') || 'Accra, Ghana';
 

@@ -18,7 +18,7 @@ export default function TermsPage() {
           <section className="mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-6">1. Agreement to Terms</h2>
             <p className="text-gray-600 leading-relaxed mb-4">
-              By accessing and using this website (multimeysupplies.com), you accept and agree to be bound by these Terms and Conditions. If you do not agree with any part of these terms, you must not use our website or services.
+              By accessing and using this website (discount-discovery-zone.vercel.app), you accept and agree to be bound by these Terms and Conditions. If you do not agree with any part of these terms, you must not use our website or services.
             </p>
             <p className="text-gray-600 leading-relaxed">
               These terms apply to all visitors, users, and customers who access or use our service. We reserve the right to update or modify these terms at any time without prior notice. Your continued use of the website following any changes indicates your acceptance of the new terms.
@@ -183,7 +183,7 @@ export default function TermsPage() {
           <section className="mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-6">7. Intellectual Property</h2>
             <p className="text-gray-600 leading-relaxed mb-4">
-              All content on this website, including text, graphics, logos, images, videos, and software, is the property of MultiMey Supplies or its content suppliers and is protected by copyright, trademark, and other intellectual property laws.
+              All content on this website, including text, graphics, logos, images, videos, and software, is the property of Discount Discovery Zone or its content suppliers and is protected by copyright, trademark, and other intellectual property laws.
             </p>
             <p className="text-gray-600 leading-relaxed mb-4">
               You may not reproduce, distribute, modify, create derivative works of, publicly display, or otherwise use any content from this website without our express written permission.
@@ -227,7 +227,7 @@ export default function TermsPage() {
           <section className="mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-6">9. Limitation of Liability</h2>
             <p className="text-gray-600 leading-relaxed mb-4">
-              To the fullest extent permitted by law, MultiMey Supplies shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from:
+              To the fullest extent permitted by law, Discount Discovery Zone shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from:
             </p>
             <ul className="space-y-2 text-gray-600 mb-6">
               <li className="flex items-start gap-2">
@@ -259,7 +259,7 @@ export default function TermsPage() {
           <section className="mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-6">10. Indemnification</h2>
             <p className="text-gray-600 leading-relaxed">
-              You agree to indemnify and hold harmless MultiMey Supplies, its affiliates, officers, directors, employees, and agents from any claims, damages, losses, liabilities, and expenses (including legal fees) arising from your use of the website, violation of these terms, or infringement of any third-party rights.
+              You agree to indemnify and hold harmless Discount Discovery Zone, its affiliates, officers, directors, employees, and agents from any claims, damages, losses, liabilities, and expenses (including legal fees) arising from your use of the website, violation of these terms, or infringement of any third-party rights.
             </p>
           </section>
 
@@ -292,7 +292,7 @@ export default function TermsPage() {
                   <i className="ri-mail-line text-blue-700 text-xl mt-1"></i>
                   <div>
                     <p className="font-medium text-gray-900">Email</p>
-                    <a href="mailto:support@multimeysupplies.com" className="text-blue-700 hover:underline">support@multimeysupplies.com</a>
+                    <a href="mailto:support@discount-discovery-zone.vercel.app" className="text-blue-700 hover:underline">support@discount-discovery-zone.vercel.app</a>
                   </div>
                 </div>
 
@@ -308,7 +308,7 @@ export default function TermsPage() {
                   <i className="ri-map-pin-line text-blue-700 text-xl mt-1"></i>
                   <div>
                     <p className="font-medium text-gray-900">Address</p>
-                    <p className="text-gray-600">MultiMey Supplies<br />Accra, Ghana</p>
+                    <p className="text-gray-600">Discount Discovery Zone<br />Accra, Ghana</p>
                   </div>
                 </div>
               </div>

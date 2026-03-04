@@ -7,6 +7,7 @@ interface SiteSettings {
     site_name: string;
     site_tagline: string;
     site_logo: string;
+    site_logo_white: string;
     contact_email: string;
     contact_phone: string;
     contact_address: string;
@@ -63,13 +64,15 @@ interface CMSContextType {
     getSetting: (key: string) => string;
     getActiveBanners: (position?: string) => Banner[];
     refreshCMS: () => Promise<void>;
+    updateSetting: (key: string, value: string) => Promise<void>;
 }
 
 const defaultSettings: SiteSettings = {
-    site_name: 'MultiMey Supplies',
+    site_name: 'Discount Discovery Zone',
     site_tagline: 'Dresses, Electronics, Bags, Shoes & More',
     site_logo: '/logo.png',
-    contact_email: 'support@multimeysupplies.com',
+    site_logo_white: '/logo-white.png',
+    contact_email: 'support@discount-discovery-zone.vercel.app',
     contact_phone: '+233209597443',
     contact_address: 'Accra, Ghana',
     social_facebook: '',
@@ -93,14 +96,15 @@ const CMSContext = createContext<CMSContextType>({
     getSetting: () => '',
     getActiveBanners: () => [],
     refreshCMS: async () => { },
+    updateSetting: async () => { },
 });
 
 export function CMSProvider({ children }: { children: ReactNode }) {
     const [settings, setSettings] = useState<SiteSettings>({
-        site_name: 'MultiMey Supplies',
+        site_name: 'Discount Discovery Zone',
         site_tagline: 'Dresses, Electronics, Bags, Shoes & More',
         site_logo: '/logo.png',
-        contact_email: 'info@multimeysupplies.com',
+        contact_email: 'info@discount-discovery-zone.vercel.app',
         contact_phone: '+233209597443',
         contact_address: 'Accra, Ghana',
         social_facebook: '',
@@ -118,11 +122,34 @@ export function CMSProvider({ children }: { children: ReactNode }) {
     const [banners, setBanners] = useState<Banner[]>([]);
     const [loading, setLoading] = useState(false);
 
-    // CMS Fetching Logic Removed - Content is now managed in code.
-    const fetchCMSData = async () => { };
+    const fetchCMSData = async () => {
+        try {
+            const { data } = await supabase.from('site_settings').select('key, value');
+            if (data && data.length > 0) {
+                const dbSettings: Partial<SiteSettings> = {};
+                data.forEach((row: any) => {
+                    try {
+                        dbSettings[row.key as keyof SiteSettings] = JSON.parse(row.value);
+                    } catch {
+                        dbSettings[row.key as keyof SiteSettings] = row.value;
+                    }
+                });
+                setSettings(prev => ({ ...prev, ...dbSettings }));
+            }
+        } catch (err) {
+            console.warn('Could not load site settings from DB:', err);
+        }
+    };
 
-    // Initial load handled by state defaults
+    const updateSetting = async (key: string, value: string) => {
+        const jsonValue = JSON.stringify(value);
+        await supabase.from('site_settings')
+            .upsert({ key, value: jsonValue }, { onConflict: 'key' });
+        setSettings(prev => ({ ...prev, [key]: value }));
+    };
+
     useEffect(() => {
+        fetchCMSData();
     }, []);
 
     const getContent = (section: string, blockKey: string): CMSContent | undefined => {
@@ -154,6 +181,7 @@ export function CMSProvider({ children }: { children: ReactNode }) {
                 getSetting,
                 getActiveBanners,
                 refreshCMS: fetchCMSData,
+                updateSetting,
             }}
         >
             {children}

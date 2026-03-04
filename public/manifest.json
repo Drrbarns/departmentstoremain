@@ -1,7 +1,7 @@
 {
-  "name": "MultiMey Supplies",
-  "short_name": "MultiMey",
-  "description": "Shop dresses, electronics, bags, shoes and more at MultiMey Supplies. Quality products delivered across Ghana.",
+  "name": "Discount Discovery Zone",
+  "short_name": "DDZ",
+  "description": "Shop dresses, electronics, bags, shoes and more at Discount Discovery Zone. Quality products delivered across Ghana.",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",

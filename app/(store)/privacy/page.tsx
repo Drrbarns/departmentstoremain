@@ -281,7 +281,7 @@ export default function PrivacyPage() {
             </div>
 
             <p className="text-gray-600 leading-relaxed">
-              To exercise any of these rights, please contact us at <a href="mailto:support@multimeysupplies.com" className="text-blue-700 font-medium hover:underline">support@multimeysupplies.com</a> or through your account settings. We will respond within 30 days.
+              To exercise any of these rights, please contact us at <a href="mailto:support@discount-discovery-zone.vercel.app" className="text-blue-700 font-medium hover:underline">support@discount-discovery-zone.vercel.app</a> or through your account settings. We will respond within 30 days.
             </p>
           </section>
 
@@ -384,7 +384,7 @@ export default function PrivacyPage() {
                   <i className="ri-mail-line text-blue-700 text-xl mt-1"></i>
                   <div>
                     <p className="font-medium text-gray-900">Email</p>
-                    <a href="mailto:support@multimeysupplies.com" className="text-blue-700 hover:underline">support@multimeysupplies.com</a>
+                    <a href="mailto:support@discount-discovery-zone.vercel.app" className="text-blue-700 hover:underline">support@discount-discovery-zone.vercel.app</a>
                   </div>
                 </div>
 
@@ -400,7 +400,7 @@ export default function PrivacyPage() {
                   <i className="ri-map-pin-line text-blue-700 text-xl mt-1"></i>
                   <div>
                     <p className="font-medium text-gray-900">Address</p>
-                    <p className="text-gray-600">MultiMey Supplies<br />Accra, Ghana</p>
+                    <p className="text-gray-600">Discount Discovery Zone<br />Accra, Ghana</p>
                   </div>
                 </div>
               </div>

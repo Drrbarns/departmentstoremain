@@ -30,11 +30,11 @@ export default function PWASplash() {
       <div className="pwa-splash-logo mb-6">
         <img
           src="/logo.png"
-          alt="MultiMey Supplies"
+          alt="Discount Discovery Zone"
           className="w-24 h-24 object-contain brightness-0 invert"
         />
       </div>
-      <h1 className="text-white text-xl font-bold font-serif mb-2">MultiMey Supplies</h1>
+      <h1 className="text-white text-xl font-bold font-serif mb-2">Discount Discovery Zone</h1>
       <p className="text-blue-200 text-sm font-medium mb-8">Dresses, Electronics, Bags & More</p>
       <div className="pwa-splash-dots flex gap-1.5">
         <span className="w-2 h-2 bg-white rounded-full" />

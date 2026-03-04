@@ -11,7 +11,7 @@ export default function AboutPage() {
   const { getSetting } = useCMS();
   const [activeTab, setActiveTab] = useState('story');
 
-  const siteName = getSetting('site_name') || 'MultiMey Supplies';
+  const siteName = getSetting('site_name') || 'Discount Discovery Zone';
 
   const values = [
     {
@@ -71,13 +71,13 @@ export default function AboutPage() {
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-6">How It All Started</h2>
               <div className="space-y-6 text-lg text-gray-600 leading-relaxed">
                 <p>
-                  <strong>MultiMey Supplies</strong> started with a simple idea: bring quality products to Ghanaians at fair prices. We saw how people were paying too much for items that could be sourced smarter — so we built a bridge between trusted Chinese manufacturers, local suppliers, and everyday shoppers.
+                  <strong>Discount Discovery Zone</strong> started with a simple idea: bring quality products to Ghanaians at fair prices. We saw how people were paying too much for items that could be sourced smarter — so we built a bridge between trusted Chinese manufacturers, local suppliers, and everyday shoppers.
                 </p>
                 <p>
                   What began as a small operation in Accra has grown into a full online store offering everything from trendy dresses and stylish bags to the latest electronics and durable shoes. We handpick every product, test it for quality, and price it fairly.
                 </p>
                 <p>
-                  Whether you are shopping for yourself, stocking your boutique, or looking for the perfect gift, <strong>MultiMey Supplies</strong> has you covered. We combine local sourcing with direct imports to give you the widest selection at the best value.
+                  Whether you are shopping for yourself, stocking your boutique, or looking for the perfect gift, <strong>Discount Discovery Zone</strong> has you covered. We combine local sourcing with direct imports to give you the widest selection at the best value.
                 </p>
               </div>
             </div>
@@ -85,11 +85,11 @@ export default function AboutPage() {
               <div className="aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl bg-gray-100 relative flex items-center justify-center">
                 <img
                   src="/logo.png"
-                  alt="MultiMey Supplies"
+                  alt="Discount Discovery Zone"
                   className="w-2/3 h-auto object-contain opacity-80"
                 />
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-8">
-                  <p className="text-white font-bold text-xl">MultiMey Supplies</p>
+                  <p className="text-white font-bold text-xl">Discount Discovery Zone</p>
                   <p className="text-blue-200">Founder & CEO</p>
                 </div>
               </div>

@@ -25,7 +25,7 @@ export default function FAQsPage() {
     {
       category: 'orders',
       question: 'Can I modify or cancel my order?',
-      answer: 'You can modify or cancel your order within 1 hour of placing it. Contact our customer service immediately via WhatsApp at +233 20 959 7443 or email support@multimeysupplies.com. Once an order is processed, modifications may not be possible.'
+      answer: 'You can modify or cancel your order within 1 hour of placing it. Contact our customer service immediately via WhatsApp at +233 20 959 7443 or email support@discount-discovery-zone.vercel.app. Once an order is processed, modifications may not be possible.'
     },
     {
       category: 'orders',

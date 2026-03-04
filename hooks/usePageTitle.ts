@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 
-const SITE_NAME = 'MultiMey Supplies';
+const SITE_NAME = 'Discount Discovery Zone';
 
 export function usePageTitle(title: string) {
   useEffect(() => {

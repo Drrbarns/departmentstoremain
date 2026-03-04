@@ -11,30 +11,30 @@ export const viewport: Viewport = {
   themeColor: '#2563eb',
 };
 
-const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.multimeysupplies.com';
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://discount-discovery-zone.vercel.app';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "MultiMey Supplies | Quality Products & Supplies",
-    template: "%s | MultiMey Supplies"
+    default: "Discount Discovery Zone | Department Store Ghana",
+    template: "%s | Discount Discovery Zone"
   },
-  description: "Shop dresses, electronics, bags, shoes & more at MultiMey Supplies. Locally sourced and imported quality products delivered across Ghana from Accra.",
+  description: "Shop dresses, electronics, bags, shoes & more at Discount Discovery Zone Department Store. Quality products delivered across Ghana from Accra.",
   keywords: [
-    "MultiMey Supplies",
+    "Discount Discovery Zone",
+    "Department Store Ghana",
     "Online Store Ghana",
     "Buy Dresses Online Ghana",
     "Electronics Ghana",
     "Bags and Shoes Accra",
-    "China Import Ghana",
     "Affordable Fashion Ghana",
     "Accra Online Shopping",
     "Ghana E-commerce",
     "Quality Products Accra"
   ],
-  authors: [{ name: "MultiMey Supplies" }],
-  creator: "MultiMey Supplies",
-  publisher: "MultiMey Supplies",
+  authors: [{ name: "Discount Discovery Zone" }],
+  creator: "Discount Discovery Zone",
+  publisher: "Discount Discovery Zone",
   robots: {
     index: true,
     follow: true,
@@ -68,7 +68,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'MultiMey Supplies',
+    title: 'Discount Discovery Zone',
   },
   formatDetection: {
     telephone: true,
@@ -81,21 +81,21 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_GH",
     url: siteUrl,
-    title: "MultiMey Supplies | Quality Products & Supplies",
-    description: "Shop dresses, electronics, bags, shoes and more. Locally sourced and China-imported quality products delivered across Ghana.",
-    siteName: "MultiMey Supplies",
+    title: "Discount Discovery Zone | Department Store Ghana",
+    description: "Shop dresses, electronics, bags, shoes and more at Discount Discovery Zone. Quality products delivered across Ghana.",
+    siteName: "Discount Discovery Zone",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "MultiMey Supplies",
+        alt: "Discount Discovery Zone",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "MultiMey Supplies | Quality Products & Supplies",
+    title: "Discount Discovery Zone | Department Store Ghana",
     description: "Dresses, electronics, bags, shoes and more. Quality products delivered across Ghana from Accra.",
     images: ["/og-image.png"],
     creator: "@mey_phua",
@@ -122,7 +122,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#2563eb" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="MultiMey Supplies" />
+        <meta name="apple-mobile-web-app-title" content="Discount Discovery Zone" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="msapplication-TileColor" content="#2563eb" />
         <meta name="msapplication-tap-highlight" content="no" />
@@ -151,10 +151,10 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "Organization",
-              "name": "MultiMey Supplies",
-              "url": "https://www.multimeysupplies.com",
-              "logo": "https://www.multimeysupplies.com/logo.png",
-              "description": "Shop dresses, electronics, bags, shoes and more at MultiMey Supplies. Locally sourced and China-imported quality products delivered across Ghana from Accra.",
+              "name": "Discount Discovery Zone",
+              "url": "https://discount-discovery-zone.vercel.app",
+              "logo": "https://discount-discovery-zone.vercel.app/logo.png",
+              "description": "Shop dresses, electronics, bags, shoes and more at Discount Discovery Zone. Quality products delivered across Ghana from Accra.",
               "address": {
                 "@type": "PostalAddress",
                 "addressCountry": "GH",

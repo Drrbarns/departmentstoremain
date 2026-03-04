@@ -5,7 +5,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.multimeysupplies.com';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.discount-discovery-zone.vercel.app';
 
   // Static pages
   const staticPages: MetadataRoute.Sitemap = [

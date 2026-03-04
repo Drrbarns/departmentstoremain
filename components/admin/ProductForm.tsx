@@ -31,7 +31,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
 
     // Auto-generate SKU function
     const generateSku = () => {
-        const prefix = 'MMS'; // MultiMey Supplies
+        const prefix = 'MMS'; // Discount Discovery Zone
         const timestamp = Date.now().toString(36).toUpperCase().slice(-4);
         const random = Math.random().toString(36).substring(2, 6).toUpperCase();
         return `${prefix}-${timestamp}-${random}`;

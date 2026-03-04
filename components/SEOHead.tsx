@@ -17,7 +17,7 @@ interface SEOProps {
 
 export function generateMetadata({
   title = 'Premium Online Shopping in Ghana',
-  description = 'Shop dresses, electronics, bags, shoes and more at MultiMey Supplies. Locally sourced and imported quality products delivered across Ghana.',
+  description = 'Shop dresses, electronics, bags, shoes and more at Discount Discovery Zone. Locally sourced and imported quality products delivered across Ghana.',
   keywords = [],
   ogImage = 'https://readdy.ai/api/search-image?query=modern%20premium%20ecommerce%20online%20shopping%20platform%20elegant%20design&width=1200&height=630&seq=ogimage&orientation=landscape',
   ogType = 'website',
