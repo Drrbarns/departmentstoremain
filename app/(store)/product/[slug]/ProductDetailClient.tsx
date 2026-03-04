@@ -667,6 +667,15 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                   )}
                 </div>
 
+                {/* Delivery notice */}
+                <div className="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4 flex gap-3">
+                  <i className="ri-truck-line text-xl text-blue-700 flex-shrink-0 mt-0.5"></i>
+                  <div className="text-sm text-blue-900">
+                    <p className="font-semibold mb-1">Expected Delivery</p>
+                    <p>Orders are delivered within <strong>24 – 72 hours</strong> after payment is confirmed. For faster or urgent deliveries, <strong>contact our customer care team</strong>.</p>
+                  </div>
+                </div>
+
                 <div className="border-t border-gray-200 pt-6 space-y-4">
                   <div className="flex items-center text-gray-700">
                     <i className="ri-store-2-line text-xl text-blue-700 mr-3"></i>
