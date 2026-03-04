@@ -135,7 +135,7 @@ export function CMSProvider({ children }: { children: ReactNode }) {
                         dbSettings[row.key as keyof SiteSettings] = row.value;
                     }
                 });
-                setSettings(prev => ({ ...prev, ...dbSettings }));
+                setSettings(prev => ({ ...prev, ...(dbSettings as SiteSettings) }));
             }
         } catch (err) {
             console.warn('Could not load site settings from DB:', err);
