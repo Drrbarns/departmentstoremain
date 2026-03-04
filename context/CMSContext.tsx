@@ -70,8 +70,8 @@ interface CMSContextType {
 const defaultSettings: SiteSettings = {
     site_name: 'Discount Discovery Zone',
     site_tagline: 'Dresses, Electronics, Bags, Shoes & More',
-    site_logo: '/logo.png',
-    site_logo_white: '/logo-white.png',
+    site_logo: '',
+    site_logo_white: '',
     contact_email: 'support@discount-discovery-zone.vercel.app',
     contact_phone: '+233209597443',
     contact_address: 'Accra, Ghana',
@@ -103,7 +103,7 @@ export function CMSProvider({ children }: { children: ReactNode }) {
     const [settings, setSettings] = useState<SiteSettings>({
         site_name: 'Discount Discovery Zone',
         site_tagline: 'Dresses, Electronics, Bags, Shoes & More',
-        site_logo: '/logo.png',
+        site_logo: '',
         contact_email: 'info@discount-discovery-zone.vercel.app',
         contact_phone: '+233209597443',
         contact_address: 'Accra, Ghana',
