@@ -104,6 +104,7 @@ export function CMSProvider({ children }: { children: ReactNode }) {
         site_name: 'Discount Discovery Zone',
         site_tagline: 'Dresses, Electronics, Bags, Shoes & More',
         site_logo: '',
+        site_logo_white: '',
         contact_email: 'info@discount-discovery-zone.vercel.app',
         contact_phone: '+233209597443',
         contact_address: 'Accra, Ghana',
