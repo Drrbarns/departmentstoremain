@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { CartProvider } from "@/context/CartContext";
 import { WishlistProvider } from "@/context/WishlistContext";
+import { CMSProvider } from "@/context/CMSContext";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -205,13 +206,15 @@ export default function RootLayout({
         >
           Skip to main content
         </a>
-        <CartProvider>
-          <WishlistProvider>
-            <div id="main-content">
-              {children}
-            </div>
-          </WishlistProvider>
-        </CartProvider>
+        <CMSProvider>
+          <CartProvider>
+            <WishlistProvider>
+              <div id="main-content">
+                {children}
+              </div>
+            </WishlistProvider>
+          </CartProvider>
+        </CMSProvider>
       </body>
     </html>
   );
