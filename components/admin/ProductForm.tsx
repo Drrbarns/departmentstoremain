@@ -701,7 +701,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                                                     )}
                                                                     <input
                                                                         type="file"
-                                                                        accept="image/*"
+                                                                        accept="image/jpeg,image/png,image/webp,image/gif"
                                                                         className="hidden"
                                                                         disabled={uploadingVariantId !== null}
                                                                         onChange={(e) => handleVariantImageUpload(row.tempId, e)}
@@ -807,7 +807,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                     {uploading ? <i className="ri-loader-4-line animate-spin text-3xl"></i> : <i className="ri-upload-2-line text-3xl"></i>}
                                     <span className="text-sm font-semibold text-center px-2">{uploading ? 'Uploading...' : 'Upload Images'}</span>
                                     <span className="text-xs text-gray-400">Tap to select multiple</span>
-                                    <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} disabled={uploading} />
+                                    <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="hidden" onChange={handleImageUpload} disabled={uploading} />
                                 </label>
                             </div>
 
