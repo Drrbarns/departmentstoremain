@@ -160,17 +160,22 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
         try {
             if (!e.target.files || e.target.files.length === 0) return;
             setUploading(true);
-            const file = e.target.files[0];
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${Math.random()}.${fileExt}`;
-            const { error: uploadError } = await supabase.storage.from('products').upload(fileName, file);
-            if (uploadError) throw uploadError;
-            const { data: { publicUrl } } = supabase.storage.from('products').getPublicUrl(fileName);
-            setImages([...images, { url: publicUrl, position: images.length }]);
+            const files = Array.from(e.target.files);
+            const uploaded: { url: string; position: number }[] = [];
+            for (const file of files) {
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${Math.random().toString(36).slice(2)}.${fileExt}`;
+                const { error: uploadError } = await supabase.storage.from('products').upload(fileName, file);
+                if (uploadError) throw uploadError;
+                const { data: { publicUrl } } = supabase.storage.from('products').getPublicUrl(fileName);
+                uploaded.push({ url: publicUrl, position: images.length + uploaded.length });
+            }
+            setImages(prev => [...prev, ...uploaded]);
         } catch (error: any) {
             alert('Error uploading image: ' + error.message);
         } finally {
             setUploading(false);
+            e.target.value = '';
         }
     };
 
@@ -800,8 +805,9 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
 
                                 <label className={`aspect-square border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-700 hover:bg-blue-50 transition-colors flex flex-col items-center justify-center space-y-2 text-gray-600 hover:text-blue-700 cursor-pointer ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                     {uploading ? <i className="ri-loader-4-line animate-spin text-3xl"></i> : <i className="ri-upload-2-line text-3xl"></i>}
-                                    <span className="text-sm font-semibold">{uploading ? 'Uploading...' : 'Upload Image'}</span>
-                                    <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploading} />
+                                    <span className="text-sm font-semibold text-center px-2">{uploading ? 'Uploading...' : 'Upload Images'}</span>
+                                    <span className="text-xs text-gray-400">Tap to select multiple</span>
+                                    <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} disabled={uploading} />
                                 </label>
                             </div>
 
