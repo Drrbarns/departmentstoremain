@@ -1,5 +1,5 @@
-// Discount Discovery Zone - Service Worker v2.0
-const CACHE_VERSION = 'sl-v2.0';
+// Discount Discovery Zone - Service Worker v2.2
+const CACHE_VERSION = 'sl-v2.2';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `images-${CACHE_VERSION}`;
