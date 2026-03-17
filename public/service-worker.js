@@ -1,4 +1,4 @@
-// MultiMey Supplies - Service Worker v2.0
+// Discount Discovery Zone - Service Worker v2.0
 const CACHE_VERSION = 'sl-v2.0';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `dynamic-${CACHE_VERSION}`;
@@ -14,7 +14,7 @@ const STATIC_ASSETS = [
   '/account',
   '/categories',
   '/offline',
-  '/logo.png',
+  '/icons/icon-192x192.png',
 ];
 
 // Cache size limits

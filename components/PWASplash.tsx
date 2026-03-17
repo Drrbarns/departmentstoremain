@@ -1,8 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useCMS } from '@/context/CMSContext';
 
 export default function PWASplash() {
+  const { getSetting } = useCMS();
+  const logoWhite = getSetting('site_logo_white');
+  const logoDark = getSetting('site_logo');
+  const logoUrl = logoWhite || logoDark || '/icons/icon-192x192.png';
+  const useInvert = !logoWhite && !!logoDark;
   const [showSplash, setShowSplash] = useState(false);
 
   useEffect(() => {
@@ -29,9 +35,9 @@ export default function PWASplash() {
     <div className="pwa-splash" aria-hidden="true">
       <div className="pwa-splash-logo mb-6">
         <img
-          src="/logo.png"
+          src={logoUrl}
           alt="Discount Discovery Zone"
-          className="w-24 h-24 object-contain brightness-0 invert"
+          className={`w-24 h-24 object-contain ${useInvert ? 'brightness-0 invert' : ''}`}
         />
       </div>
       <h1 className="text-white text-xl font-bold font-serif mb-2">Discount Discovery Zone</h1>

@@ -1,11 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useCMS } from '@/context/CMSContext';
 import { usePWAInstall } from './PWAInstaller';
 
 export default function PWAPrompt() {
   const [showPrompt, setShowPrompt] = useState(false);
+  const { getSetting } = useCMS();
   const { canInstall, isInstalled, install } = usePWAInstall();
+  const logoUrl = getSetting('site_logo') || '/icons/icon-192x192.png';
 
   useEffect(() => {
     if (isInstalled || !canInstall) return;
@@ -55,7 +58,7 @@ export default function PWAPrompt() {
             <div className="flex items-center gap-4 mb-6">
               <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg flex-shrink-0 bg-blue-50 flex items-center justify-center">
                 <img
-                  src="/logo.png"
+                  src={logoUrl}
                   alt="Discount Discovery Zone"
                   className="w-14 h-14 object-contain"
                 />
