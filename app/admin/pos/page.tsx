@@ -1,7 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabase';
+
+const BarcodeScanner = dynamic(() => import('@/components/admin/BarcodeScanner'), { ssr: false });
 
 interface Product {
     id: string;
@@ -11,6 +14,7 @@ interface Product {
     category: string;
     image: string;
     sku: string;
+    barcode: string | null;
 }
 
 interface CartItem extends Product {
@@ -32,6 +36,8 @@ export default function POSPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(true);
     const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
+    const [showScanner, setShowScanner] = useState(false);
+    const [scanFeedback, setScanFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
     // Checkout State
     const [showCheckoutModal, setShowCheckoutModal] = useState(false);
@@ -71,7 +77,7 @@ export default function POSPage() {
             const { data: prodData } = await supabase
                 .from('products')
                 .select(`
-          id, name, price, quantity, sku,
+          id, name, price, quantity, sku, barcode,
           categories(name),
           product_images(url)
         `)
@@ -85,7 +91,8 @@ export default function POSPage() {
                     quantity: p.quantity,
                     category: p.categories?.name || 'Uncategorized',
                     image: p.product_images?.[0]?.url || 'https://via.placeholder.com/150',
-                    sku: p.sku
+                    sku: p.sku,
+                    barcode: p.barcode || null
                 }));
                 setProducts(formatted);
 
@@ -141,11 +148,26 @@ export default function POSPage() {
 
     const emptyCart = () => setCart([]);
 
+    const handleBarcodeScan = useCallback((barcode: string) => {
+        const match = products.find(p =>
+            p.barcode === barcode || p.sku === barcode
+        );
+        if (match) {
+            addToCart(match);
+            setScanFeedback({ message: `Added: ${match.name}`, type: 'success' });
+        } else {
+            setScanFeedback({ message: `No product found for: ${barcode}`, type: 'error' });
+        }
+        setTimeout(() => setScanFeedback(null), 3000);
+    }, [products]); // eslint-disable-line react-hooks/exhaustive-deps
+
     // Computed
     const filteredProducts = useMemo(() => {
         return products.filter(p => {
-            const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                p.sku?.toLowerCase().includes(searchQuery.toLowerCase());
+            const q = searchQuery.toLowerCase();
+            const matchesSearch = p.name.toLowerCase().includes(q) ||
+                p.sku?.toLowerCase().includes(q) ||
+                p.barcode?.includes(searchQuery);
             const matchesCat = activeCategory === 'All' || p.category === activeCategory;
             return matchesSearch && matchesCat;
         });
@@ -433,16 +455,26 @@ export default function POSPage() {
             <div className={`flex-1 flex flex-col h-full min-w-0 ${isMobileCartOpen ? 'hidden lg:flex' : 'flex'}`}>
                 {/* Header / Search */}
                 <div className="bg-white p-4 border-b border-gray-200 flex items-center justify-between space-x-4 shrink-0">
-                    <div className="relative flex-1 max-w-lg">
-                        <i className="ri-search-line absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                        <input
-                            type="text"
-                            placeholder="Search products..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                            autoFocus
-                        />
+                    <div className="relative flex-1 max-w-lg flex gap-2">
+                        <div className="relative flex-1">
+                            <i className="ri-search-line absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input
+                                type="text"
+                                placeholder="Search by name, SKU, or barcode..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                autoFocus
+                            />
+                        </div>
+                        <button
+                            onClick={() => setShowScanner(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-semibold text-sm transition-colors whitespace-nowrap"
+                            title="Scan barcode"
+                        >
+                            <i className="ri-barcode-line text-lg"></i>
+                            <span className="hidden sm:inline">Scan</span>
+                        </button>
                     </div>
                     <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar">
                         {categories.map(cat => (
@@ -613,6 +645,26 @@ export default function POSPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Barcode Scanner Modal */}
+            {showScanner && (
+                <BarcodeScanner
+                    onScan={handleBarcodeScan}
+                    onClose={() => setShowScanner(false)}
+                />
+            )}
+
+            {/* Scan Feedback Toast */}
+            {scanFeedback && (
+                <div className={`fixed top-20 left-1/2 -translate-x-1/2 z-[60] px-5 py-3 rounded-xl shadow-lg font-semibold text-sm flex items-center gap-2 animate-[slideDown_0.3s_ease-out] ${
+                    scanFeedback.type === 'success'
+                        ? 'bg-green-600 text-white'
+                        : 'bg-red-600 text-white'
+                }`}>
+                    <i className={scanFeedback.type === 'success' ? 'ri-checkbox-circle-fill' : 'ri-error-warning-fill'}></i>
+                    {scanFeedback.message}
+                </div>
+            )}
 
             {/* Checkout Modal */}
             {showCheckoutModal && (

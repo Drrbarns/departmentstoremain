@@ -2,6 +2,7 @@
   "dependencies": {
     "@react-google-maps/api": "^2.19.3",
     "@supabase/supabase-js": "^2.91.1",
+    "html5-qrcode": "^2.3.8",
     "jsbarcode": "^3.12.3",
     "next": "15.1.11",
     "pg": "^8.18.0",
