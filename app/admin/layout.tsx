@@ -187,6 +187,11 @@ export default function AdminLayout({
       path: '/admin/inventory'
     },
     {
+      title: 'Barcodes',
+      icon: 'ri-barcode-line',
+      path: '/admin/barcodes'
+    },
+    {
       title: 'Analytics',
       icon: 'ri-bar-chart-line',
       path: '/admin/analytics'

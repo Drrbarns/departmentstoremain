@@ -32,6 +32,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
     const [price, setPrice] = useState(initialData?.price || '');
     const [comparePrice, setComparePrice] = useState(initialData?.compare_at_price || '');
     const [sku, setSku] = useState(initialData?.sku || '');
+    const [barcode, setBarcode] = useState(initialData?.barcode || '');
     const [stock, setStock] = useState(initialData?.quantity || '');
     const [moq, setMoq] = useState(initialData?.moq || '1');
     const [lowStockThreshold, setLowStockThreshold] = useState(initialData?.metadata?.low_stock_threshold || '5');
@@ -41,12 +42,21 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
     const [preorderShipping, setPreorderShipping] = useState(initialData?.metadata?.preorder_shipping || '');
     const [activeTab, setActiveTab] = useState('general');
 
-    // Auto-generate SKU function
     const generateSku = () => {
         const prefix = 'DDZ';
         const timestamp = Date.now().toString(36).toUpperCase().slice(-4);
         const random = Math.random().toString(36).substring(2, 6).toUpperCase();
         return `${prefix}-${timestamp}-${random}`;
+    };
+
+    const generateBarcode = () => {
+        const prefix = '200';
+        const body = prefix + Date.now().toString().slice(-9);
+        const digits = body.split('').map(Number);
+        let sum = 0;
+        digits.forEach((d, i) => { sum += d * (i % 2 === 0 ? 1 : 3); });
+        const check = (10 - (sum % 10)) % 10;
+        return body + check;
     };
 
     // --- Variant System (row-based) ---
@@ -154,6 +164,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
 
     useEffect(() => {
         if (!isEditMode && !sku) setSku(generateSku());
+        if (!isEditMode && !barcode) setBarcode(generateBarcode());
     }, [isEditMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -200,6 +211,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                 price: parseFloat(price) || 0,
                 compare_at_price: comparePrice ? parseFloat(comparePrice) : null,
                 sku: sku || generateSku(),
+                barcode: barcode || generateBarcode(),
                 quantity: hasVariants ? variantStockTotal : (parseInt(stock) || 0),
                 moq: parseInt(moq) || 1,
                 status: status.toLowerCase(),
@@ -505,6 +517,29 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                             </button>
                                         </div>
                                     </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-900 mb-2">Barcode (EAN-13)</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={barcode}
+                                                onChange={(e) => setBarcode(e.target.value)}
+                                                className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono bg-gray-50"
+                                                readOnly
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setBarcode(generateBarcode())}
+                                                className="px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors cursor-pointer"
+                                                title="Generate new barcode"
+                                            >
+                                                <i className="ri-refresh-line text-lg"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid md:grid-cols-2 gap-6 mt-6">
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-900 mb-2">Stock Quantity *</label>
                                         {variantRows.length > 0 ? (
