@@ -63,8 +63,7 @@ export default function Home() {
           .select('*, product_variants(*), product_images(*)')
           .eq('status', 'active')
           .eq('featured', true)
-          .order('created_at', { ascending: false })
-          .limit(8);
+          .order('created_at', { ascending: false });
 
         if (productsError) throw productsError;
         setFeaturedProducts(productsData || []);
@@ -293,7 +292,7 @@ export default function Home() {
 
           {loading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8 md:gap-8">
-              {[...Array(4)].map((_, i) => (
+              {[...Array(8)].map((_, i) => (
                 <ProductCardSkeleton key={i} />
               ))}
             </div>
