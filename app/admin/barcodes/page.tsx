@@ -33,34 +33,138 @@ function BarcodeImage({ value, width = 1.5, height = 50 }: { value: string; widt
         if (svgRef.current && value) {
             try {
                 JsBarcode(svgRef.current, value, {
-                    format: 'EAN13',
-                    width,
-                    height,
-                    displayValue: true,
-                    fontSize: 12,
-                    margin: 5,
-                    background: '#ffffff',
+                    format: 'EAN13', width, height,
+                    displayValue: true, fontSize: 12, margin: 5, background: '#ffffff',
                 });
             } catch {
                 try {
                     JsBarcode(svgRef.current, value, {
-                        format: 'CODE128',
-                        width,
-                        height,
-                        displayValue: true,
-                        fontSize: 12,
-                        margin: 5,
-                        background: '#ffffff',
+                        format: 'CODE128', width, height,
+                        displayValue: true, fontSize: 12, margin: 5, background: '#ffffff',
                     });
-                } catch {
-                    // fallback: leave empty
-                }
+                } catch { /* fallback */ }
             }
         }
     }, [value, width, height]);
 
     if (!value) return <span className="text-gray-400 text-sm italic">No barcode</span>;
     return <svg ref={svgRef} />;
+}
+
+function openPrintWindow(productsToPrint: { name: string; barcode: string; price: number; quantity: number; sku: string; image: string }[]) {
+    const totalLabels = productsToPrint.reduce((sum, p) => sum + p.quantity, 0);
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html><head>
+<title>Barcode Labels - Discount Discovery Zone</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: Arial, sans-serif; background: #fff; }
+@media print {
+    @page { margin: 5mm; size: A4; }
+    .no-print { display: none !important; }
+    .product-section { break-before: page; }
+    .product-section:first-of-type { break-before: auto; }
+}
+.toolbar {
+    padding: 12px; text-align: center;
+    background: #f5f5f5; border-bottom: 1px solid #ddd;
+    position: sticky; top: 0; z-index: 10;
+}
+.toolbar button {
+    padding: 10px 24px; background: #2563eb; color: white;
+    border: none; border-radius: 8px; font-size: 14px;
+    font-weight: 600; cursor: pointer; margin: 0 4px;
+}
+.toolbar button:hover { background: #1d4ed8; }
+.store-header {
+    padding: 16px; text-align: center;
+    border-bottom: 2px solid #333; margin-bottom: 8px;
+}
+.store-header h1 { font-size: 18px; margin-bottom: 2px; }
+.store-header p { font-size: 11px; color: #666; }
+.product-section {
+    border: 2px solid #e5e7eb; border-radius: 12px;
+    margin: 12px; overflow: hidden;
+}
+.product-header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 12px 16px; background: #f9fafb;
+    border-bottom: 2px solid #e5e7eb;
+}
+.product-img {
+    width: 64px; height: 64px; object-fit: cover;
+    border-radius: 8px; border: 1px solid #e5e7eb; flex-shrink: 0;
+}
+.product-img-placeholder {
+    width: 64px; height: 64px; border-radius: 8px;
+    background: #f3f4f6; display: flex; align-items: center;
+    justify-content: center; color: #9ca3af; font-size: 24px; flex-shrink: 0;
+}
+.product-info h2 { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+.product-info .meta { font-size: 11px; color: #6b7280; }
+.product-info .meta span { margin-right: 10px; }
+.product-info .price-tag { font-size: 16px; font-weight: 800; color: #1d4ed8; margin-top: 2px; }
+.qty-badge {
+    display: inline-block; background: #dbeafe; color: #1e40af;
+    font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 9999px;
+}
+.barcode-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 3px; padding: 6px;
+}
+.barcode-cell {
+    border: 1px solid #e5e7eb; border-radius: 4px;
+    padding: 4px 3px; text-align: center;
+}
+.barcode-cell .lbl-name {
+    font-size: 7px; font-weight: 700; line-height: 1.1;
+    margin-bottom: 1px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+}
+.barcode-cell svg { max-width: 100%; height: auto; }
+.barcode-cell .lbl-price { font-size: 9px; font-weight: 800; margin-top: 1px; }
+</style>
+</head><body>
+<div class="no-print toolbar">
+    <button onclick="window.print()">Print Barcodes</button>
+    <button onclick="window.close()">Close</button>
+</div>
+<div class="store-header">
+    <h1>Discount Discovery Zone</h1>
+    <p>${productsToPrint.length} product${productsToPrint.length !== 1 ? 's' : ''} &middot; ${totalLabels} total labels &middot; ${new Date().toLocaleDateString()}</p>
+</div>
+<div id="c"></div>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3/dist/JsBarcode.all.min.js"><\/script>
+<script>
+const P=${JSON.stringify(productsToPrint)};
+const c=document.getElementById('c');
+P.forEach(p=>{
+    const s=document.createElement('div');s.className='product-section';
+    const h=document.createElement('div');h.className='product-header';
+    h.innerHTML=(p.image?'<img class="product-img" src="'+p.image+'" />':'<div class="product-img-placeholder">&#128722;</div>')+
+        '<div class="product-info"><h2>'+p.name+'</h2>'+
+        '<div class="meta"><span>SKU: '+(p.sku||'\\u2014')+'</span><span>Barcode: '+p.barcode+'</span></div>'+
+        '<div class="price-tag">GH\\u20B5 '+Number(p.price).toFixed(2)+'</div>'+
+        '<div style="margin-top:3px"><span class="qty-badge">'+p.quantity+' labels</span></div></div>';
+    s.appendChild(h);
+    const g=document.createElement('div');g.className='barcode-grid';
+    for(let i=0;i<p.quantity;i++){
+        const d=document.createElement('div');d.className='barcode-cell';
+        const n=document.createElement('div');n.className='lbl-name';n.textContent=p.name;d.appendChild(n);
+        const v=document.createElementNS('http://www.w3.org/2000/svg','svg');d.appendChild(v);
+        try{JsBarcode(v,p.barcode,{format:'EAN13',width:1.2,height:30,displayValue:true,fontSize:9,margin:1,background:'#fff'});}
+        catch(e){try{JsBarcode(v,p.barcode,{format:'CODE128',width:1.2,height:30,displayValue:true,fontSize:9,margin:1,background:'#fff'});}catch(e2){}}
+        const pr=document.createElement('div');pr.className='lbl-price';pr.textContent='GH\\u20B5 '+Number(p.price).toFixed(2);d.appendChild(pr);
+        g.appendChild(d);
+    }
+    s.appendChild(g);c.appendChild(s);
+});
+<\/script>
+</body></html>`);
+    printWindow.document.close();
 }
 
 export default function BarcodesPage() {
@@ -70,7 +174,7 @@ export default function BarcodesPage() {
     const [selected, setSelected] = useState<Set<string>>(new Set());
     const [searchQuery, setSearchQuery] = useState('');
     const [filter, setFilter] = useState<'all' | 'with' | 'without'>('all');
-    const printRef = useRef<HTMLDivElement>(null);
+    const [labelCounts, setLabelCounts] = useState<Record<string, number>>({});
 
     const fetchProducts = useCallback(async () => {
         setLoading(true);
@@ -81,7 +185,7 @@ export default function BarcodesPage() {
             .order('name');
 
         if (!error && data) {
-            setProducts(data.map((p: any) => ({
+            const mapped = data.map((p: any) => ({
                 id: p.id,
                 name: p.name,
                 sku: p.sku,
@@ -90,7 +194,11 @@ export default function BarcodesPage() {
                 quantity: p.quantity,
                 category_name: p.categories?.name || '',
                 image_url: p.product_images?.sort((a: any, b: any) => a.position - b.position)?.[0]?.url || '',
-            })));
+            }));
+            setProducts(mapped);
+            const counts: Record<string, number> = {};
+            mapped.forEach(p => { counts[p.id] = Math.min(Math.max(p.quantity, 1), 50); });
+            setLabelCounts(counts);
         }
         setLoading(false);
     }, []);
@@ -100,19 +208,15 @@ export default function BarcodesPage() {
     const generateForAll = async () => {
         const missing = products.filter(p => !p.barcode);
         if (missing.length === 0) return;
-
         setGenerating(true);
         const used = new Set(products.filter(p => p.barcode).map(p => p.barcode!));
-
         for (const product of missing) {
             let code: string;
             do { code = generateBarcode(); } while (used.has(code));
             used.add(code);
-
             await supabase.from('products').update({ barcode: code }).eq('id', product.id);
             await new Promise(r => setTimeout(r, 50));
         }
-
         await fetchProducts();
         setGenerating(false);
     };
@@ -121,7 +225,6 @@ export default function BarcodesPage() {
         const used = new Set(products.filter(p => p.barcode).map(p => p.barcode!));
         let code: string;
         do { code = generateBarcode(); } while (used.has(code));
-
         await supabase.from('products').update({ barcode: code }).eq('id', productId);
         await fetchProducts();
     };
@@ -154,7 +257,24 @@ export default function BarcodesPage() {
         return matchesSearch && matchesFilter;
     });
 
-    const handlePrint = () => {
+    const updateLabelCount = (id: string, value: number) => {
+        setLabelCounts(prev => ({ ...prev, [id]: Math.max(1, value) }));
+    };
+
+    const printSingleProduct = (product: Product) => {
+        if (!product.barcode) return;
+        const qty = labelCounts[product.id] || Math.min(Math.max(product.quantity, 1), 50);
+        openPrintWindow([{
+            name: product.name,
+            barcode: product.barcode,
+            price: product.price,
+            quantity: qty,
+            sku: product.sku,
+            image: product.image_url || ''
+        }]);
+    };
+
+    const handlePrintSelected = () => {
         const toPrint = selected.size > 0
             ? products.filter(p => selected.has(p.id) && p.barcode)
             : filtered.filter(p => p.barcode);
@@ -164,166 +284,21 @@ export default function BarcodesPage() {
             return;
         }
 
-        const totalLabels = toPrint.reduce((sum, p) => sum + Math.max(p.quantity, 1), 0);
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) return;
-
-        printWindow.document.write(`
-            <!DOCTYPE html>
-            <html><head>
-            <title>Barcode Labels - Discount Discovery Zone</title>
-            <style>
-                * { margin: 0; padding: 0; box-sizing: border-box; }
-                body { font-family: Arial, sans-serif; background: #fff; }
-                @media print {
-                    @page { margin: 5mm; size: A4; }
-                    .no-print { display: none !important; }
-                    .product-section { page-break-inside: avoid; break-inside: avoid; }
-                    .product-section:not(:first-of-type) { page-break-before: always; }
-                }
-                .toolbar {
-                    padding: 12px; text-align: center;
-                    background: #f5f5f5; border-bottom: 1px solid #ddd;
-                    position: sticky; top: 0; z-index: 10;
-                }
-                .toolbar button {
-                    padding: 10px 24px; background: #2563eb; color: white;
-                    border: none; border-radius: 8px; font-size: 14px;
-                    font-weight: 600; cursor: pointer; margin: 0 4px;
-                }
-                .toolbar button:hover { background: #1d4ed8; }
-                .store-header {
-                    padding: 16px; text-align: center;
-                    border-bottom: 2px solid #333; margin-bottom: 16px;
-                }
-                .store-header h1 { font-size: 18px; margin-bottom: 2px; }
-                .store-header p { font-size: 11px; color: #666; }
-                .product-section {
-                    border: 2px solid #e5e7eb; border-radius: 12px;
-                    margin: 16px 12px; overflow: hidden;
-                }
-                .product-header {
-                    display: flex; align-items: center; gap: 16px;
-                    padding: 16px; background: #f9fafb;
-                    border-bottom: 2px solid #e5e7eb;
-                }
-                .product-img {
-                    width: 80px; height: 80px; object-fit: cover;
-                    border-radius: 8px; border: 1px solid #e5e7eb;
-                    flex-shrink: 0;
-                }
-                .product-img-placeholder {
-                    width: 80px; height: 80px; border-radius: 8px;
-                    background: #f3f4f6; display: flex; align-items: center;
-                    justify-content: center; color: #9ca3af; font-size: 28px;
-                    flex-shrink: 0;
-                }
-                .product-info h2 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
-                .product-info .meta { font-size: 12px; color: #6b7280; }
-                .product-info .meta span { margin-right: 12px; }
-                .product-info .price-tag {
-                    font-size: 18px; font-weight: 800; color: #1d4ed8; margin-top: 4px;
-                }
-                .barcode-grid {
-                    display: grid; grid-template-columns: repeat(4, 1fr);
-                    gap: 4px; padding: 8px;
-                }
-                .barcode-cell {
-                    border: 1px solid #e5e7eb; border-radius: 6px;
-                    padding: 6px 4px; text-align: center;
-                    break-inside: avoid;
-                }
-                .barcode-cell .lbl-name {
-                    font-size: 8px; font-weight: 700; line-height: 1.1;
-                    margin-bottom: 2px; white-space: nowrap;
-                    overflow: hidden; text-overflow: ellipsis;
-                }
-                .barcode-cell svg { max-width: 100%; height: auto; }
-                .barcode-cell .lbl-price {
-                    font-size: 10px; font-weight: 800; margin-top: 2px;
-                }
-                .qty-badge {
-                    display: inline-block; background: #dbeafe; color: #1e40af;
-                    font-size: 11px; font-weight: 700; padding: 2px 8px;
-                    border-radius: 9999px;
-                }
-            </style>
-            </head><body>
-            <div class="no-print toolbar">
-                <button onclick="window.print()">Print All Barcodes</button>
-                <button onclick="window.close()">Close</button>
-            </div>
-            <div class="store-header">
-                <h1>Discount Discovery Zone</h1>
-                <p>${toPrint.length} products &middot; ${totalLabels} total labels &middot; ${new Date().toLocaleDateString()}</p>
-            </div>
-            <div id="products-container"></div>
-            <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3/dist/JsBarcode.all.min.js"><\/script>
-            <script>
-                const products = ${JSON.stringify(toPrint.map(p => ({
-                    name: p.name,
-                    barcode: p.barcode,
-                    price: p.price,
-                    quantity: p.quantity,
-                    sku: p.sku,
-                    image: p.image_url
-                })))};
-                const container = document.getElementById('products-container');
-
-                products.forEach(p => {
-                    const qty = Math.max(p.quantity, 1);
-                    const section = document.createElement('div');
-                    section.className = 'product-section';
-
-                    // Product header with image and info
-                    const header = document.createElement('div');
-                    header.className = 'product-header';
-                    if (p.image) {
-                        header.innerHTML = '<img class="product-img" src="' + p.image + '" alt="" />';
-                    } else {
-                        header.innerHTML = '<div class="product-img-placeholder">&#128722;</div>';
-                    }
-                    header.innerHTML += '<div class="product-info">' +
-                        '<h2>' + p.name + '</h2>' +
-                        '<div class="meta"><span>SKU: ' + (p.sku || '—') + '</span><span>Barcode: ' + p.barcode + '</span></div>' +
-                        '<div class="price-tag">GH\\u20B5 ' + Number(p.price).toFixed(2) + '</div>' +
-                        '<div style="margin-top:4px"><span class="qty-badge">' + qty + ' labels (matches stock)</span></div>' +
-                    '</div>';
-                    section.appendChild(header);
-
-                    // Barcode grid
-                    const grid = document.createElement('div');
-                    grid.className = 'barcode-grid';
-                    for (let i = 0; i < qty; i++) {
-                        const cell = document.createElement('div');
-                        cell.className = 'barcode-cell';
-                        const nameEl = document.createElement('div');
-                        nameEl.className = 'lbl-name';
-                        nameEl.textContent = p.name;
-                        cell.appendChild(nameEl);
-                        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                        cell.appendChild(svg);
-                        try {
-                            JsBarcode(svg, p.barcode, { format: 'EAN13', width: 1.2, height: 32, displayValue: true, fontSize: 10, margin: 2, background: '#ffffff' });
-                        } catch(e) {
-                            try { JsBarcode(svg, p.barcode, { format: 'CODE128', width: 1.2, height: 32, displayValue: true, fontSize: 10, margin: 2, background: '#ffffff' }); } catch(e2) {}
-                        }
-                        const priceEl = document.createElement('div');
-                        priceEl.className = 'lbl-price';
-                        priceEl.textContent = 'GH\\u20B5 ' + Number(p.price).toFixed(2);
-                        cell.appendChild(priceEl);
-                        grid.appendChild(cell);
-                    }
-                    section.appendChild(grid);
-                    container.appendChild(section);
-                });
-            <\/script>
-            </body></html>
-        `);
-        printWindow.document.close();
+        openPrintWindow(toPrint.map(p => ({
+            name: p.name,
+            barcode: p.barcode!,
+            price: p.price,
+            quantity: labelCounts[p.id] || Math.min(Math.max(p.quantity, 1), 50),
+            sku: p.sku,
+            image: p.image_url || ''
+        })));
     };
 
     const missingCount = products.filter(p => !p.barcode).length;
+    const totalSelectedLabels = (selected.size > 0
+        ? products.filter(p => selected.has(p.id) && p.barcode)
+        : filtered.filter(p => p.barcode)
+    ).reduce((sum, p) => sum + (labelCounts[p.id] || Math.min(Math.max(p.quantity, 1), 50)), 0);
 
     return (
         <div className="space-y-6">
@@ -353,11 +328,11 @@ export default function BarcodesPage() {
                         </button>
                     )}
                     <button
-                        onClick={handlePrint}
+                        onClick={handlePrintSelected}
                         className="flex items-center gap-2 px-4 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-semibold text-sm transition-colors cursor-pointer"
                     >
                         <i className="ri-printer-line"></i>
-                        Print {selected.size > 0 ? `Selected (${selected.size})` : 'All'}
+                        Print {selected.size > 0 ? `Selected (${selected.size})` : 'All'} ({totalSelectedLabels} labels)
                     </button>
                 </div>
             </div>
@@ -379,6 +354,14 @@ export default function BarcodesPage() {
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
                     <p className="text-sm text-gray-500">Selected</p>
                     <p className="text-2xl font-bold text-blue-600">{selected.size}</p>
+                </div>
+            </div>
+
+            {/* Tip */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+                <i className="ri-lightbulb-line text-blue-600 text-lg mt-0.5"></i>
+                <div className="text-sm text-blue-800">
+                    <strong>Tip:</strong> Use the <strong>Print</strong> button on each product row to print one product at a time. You can adjust the label count per product. For bulk printing, select products first then use the top Print button.
                 </div>
             </div>
 
@@ -424,7 +407,7 @@ export default function BarcodesPage() {
                 ) : (
                     <>
                         {/* Table Header */}
-                        <div className="hidden lg:grid grid-cols-[40px_1fr_180px_1fr_120px_80px] gap-4 px-6 py-3 bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase">
+                        <div className="hidden lg:grid grid-cols-[40px_1fr_1fr_100px_100px_100px] gap-3 px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase">
                             <div>
                                 <input
                                     type="checkbox"
@@ -434,16 +417,16 @@ export default function BarcodesPage() {
                                 />
                             </div>
                             <div>Product</div>
-                            <div>SKU</div>
                             <div>Barcode</div>
                             <div>Price</div>
-                            <div></div>
+                            <div>Labels</div>
+                            <div>Actions</div>
                         </div>
 
                         {/* Rows */}
-                        <div ref={printRef} className="divide-y divide-gray-100">
+                        <div className="divide-y divide-gray-100">
                             {filtered.map(product => (
-                                <div key={product.id} className="grid grid-cols-1 lg:grid-cols-[40px_1fr_180px_1fr_120px_80px] gap-4 px-6 py-4 items-center hover:bg-gray-50 transition-colors">
+                                <div key={product.id} className="grid grid-cols-1 lg:grid-cols-[40px_1fr_1fr_100px_100px_100px] gap-3 px-5 py-3 items-center hover:bg-gray-50 transition-colors">
                                     <div>
                                         <input
                                             type="checkbox"
@@ -462,41 +445,59 @@ export default function BarcodesPage() {
                                             </div>
                                         )}
                                         <div className="min-w-0">
-                                            <p className="font-semibold text-gray-900 truncate">{product.name}</p>
-                                            {product.category_name && (
-                                                <p className="text-xs text-gray-500">{product.category_name}</p>
-                                            )}
+                                            <p className="font-semibold text-gray-900 truncate text-sm">{product.name}</p>
+                                            <p className="text-xs text-gray-500">
+                                                {product.category_name && <span>{product.category_name} · </span>}
+                                                <span className="font-mono">{product.sku || '—'}</span>
+                                                <span className="ml-2 text-gray-400">Stock: {product.quantity}</span>
+                                            </p>
                                         </div>
                                     </div>
 
                                     <div>
-                                        <span className="font-mono text-sm text-gray-600">{product.sku || '—'}</span>
-                                    </div>
-
-                                    <div>
                                         {product.barcode ? (
-                                            <BarcodeImage value={product.barcode} width={1.2} height={35} />
+                                            <BarcodeImage value={product.barcode} width={1.1} height={30} />
                                         ) : (
                                             <button
                                                 onClick={() => generateForOne(product.id)}
                                                 className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-xs font-semibold text-amber-700 hover:bg-amber-100 transition-colors cursor-pointer"
                                             >
-                                                <i className="ri-add-line"></i> Generate Barcode
+                                                <i className="ri-add-line"></i> Generate
                                             </button>
                                         )}
                                     </div>
 
                                     <div>
-                                        <span className="font-semibold text-gray-900">GH₵ {Number(product.price).toFixed(2)}</span>
+                                        <span className="font-semibold text-gray-900 text-sm">GH₵ {Number(product.price).toFixed(2)}</span>
                                     </div>
 
                                     <div>
-                                        <Link
-                                            href={`/admin/products/${product.id}`}
-                                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                                        >
-                                            Edit
-                                        </Link>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            value={labelCounts[product.id] || 1}
+                                            onChange={(e) => updateLabelCount(product.id, parseInt(e.target.value) || 1)}
+                                            className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center font-semibold focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                            title="Number of barcode labels to print"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        {product.barcode ? (
+                                            <button
+                                                onClick={() => printSingleProduct(product)}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer"
+                                            >
+                                                <i className="ri-printer-line"></i> Print
+                                            </button>
+                                        ) : (
+                                            <Link
+                                                href={`/admin/products/${product.id}`}
+                                                className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                                            >
+                                                Edit
+                                            </Link>
+                                        )}
                                     </div>
                                 </div>
                             ))}
