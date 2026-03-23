@@ -164,6 +164,7 @@ export default function BarcodesPage() {
             return;
         }
 
+        const totalLabels = toPrint.reduce((sum, p) => sum + Math.max(p.quantity, 1), 0);
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
 
@@ -173,95 +174,148 @@ export default function BarcodesPage() {
             <title>Barcode Labels - Discount Discovery Zone</title>
             <style>
                 * { margin: 0; padding: 0; box-sizing: border-box; }
-                body { font-family: Arial, sans-serif; }
+                body { font-family: Arial, sans-serif; background: #fff; }
                 @media print {
                     @page { margin: 5mm; size: A4; }
                     .no-print { display: none !important; }
+                    .product-section { page-break-inside: avoid; break-inside: avoid; }
+                    .product-section:not(:first-of-type) { page-break-before: always; }
                 }
-                .header { padding: 16px; text-align: center; border-bottom: 2px solid #333; margin-bottom: 8px; }
-                .header h1 { font-size: 18px; margin-bottom: 4px; }
-                .header p { font-size: 12px; color: #666; }
-                .grid {
-                    display: grid;
-                    grid-template-columns: repeat(3, 1fr);
-                    gap: 4px;
-                    padding: 4px;
-                }
-                .label {
-                    border: 1px solid #ddd;
-                    padding: 8px;
-                    text-align: center;
-                    page-break-inside: avoid;
-                    break-inside: avoid;
-                }
-                .label .name {
-                    font-size: 10px;
-                    font-weight: 700;
-                    margin-bottom: 4px;
-                    line-height: 1.2;
-                    max-height: 24px;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                }
-                .label .price {
-                    font-size: 13px;
-                    font-weight: 800;
-                    margin-top: 4px;
-                }
-                .label svg { max-width: 100%; height: auto; }
                 .toolbar {
-                    padding: 12px;
-                    text-align: center;
-                    background: #f5f5f5;
-                    border-bottom: 1px solid #ddd;
+                    padding: 12px; text-align: center;
+                    background: #f5f5f5; border-bottom: 1px solid #ddd;
+                    position: sticky; top: 0; z-index: 10;
                 }
                 .toolbar button {
-                    padding: 10px 24px;
-                    background: #2563eb;
-                    color: white;
-                    border: none;
-                    border-radius: 8px;
-                    font-size: 14px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    margin: 0 4px;
+                    padding: 10px 24px; background: #2563eb; color: white;
+                    border: none; border-radius: 8px; font-size: 14px;
+                    font-weight: 600; cursor: pointer; margin: 0 4px;
                 }
                 .toolbar button:hover { background: #1d4ed8; }
+                .store-header {
+                    padding: 16px; text-align: center;
+                    border-bottom: 2px solid #333; margin-bottom: 16px;
+                }
+                .store-header h1 { font-size: 18px; margin-bottom: 2px; }
+                .store-header p { font-size: 11px; color: #666; }
+                .product-section {
+                    border: 2px solid #e5e7eb; border-radius: 12px;
+                    margin: 16px 12px; overflow: hidden;
+                }
+                .product-header {
+                    display: flex; align-items: center; gap: 16px;
+                    padding: 16px; background: #f9fafb;
+                    border-bottom: 2px solid #e5e7eb;
+                }
+                .product-img {
+                    width: 80px; height: 80px; object-fit: cover;
+                    border-radius: 8px; border: 1px solid #e5e7eb;
+                    flex-shrink: 0;
+                }
+                .product-img-placeholder {
+                    width: 80px; height: 80px; border-radius: 8px;
+                    background: #f3f4f6; display: flex; align-items: center;
+                    justify-content: center; color: #9ca3af; font-size: 28px;
+                    flex-shrink: 0;
+                }
+                .product-info h2 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+                .product-info .meta { font-size: 12px; color: #6b7280; }
+                .product-info .meta span { margin-right: 12px; }
+                .product-info .price-tag {
+                    font-size: 18px; font-weight: 800; color: #1d4ed8; margin-top: 4px;
+                }
+                .barcode-grid {
+                    display: grid; grid-template-columns: repeat(4, 1fr);
+                    gap: 4px; padding: 8px;
+                }
+                .barcode-cell {
+                    border: 1px solid #e5e7eb; border-radius: 6px;
+                    padding: 6px 4px; text-align: center;
+                    break-inside: avoid;
+                }
+                .barcode-cell .lbl-name {
+                    font-size: 8px; font-weight: 700; line-height: 1.1;
+                    margin-bottom: 2px; white-space: nowrap;
+                    overflow: hidden; text-overflow: ellipsis;
+                }
+                .barcode-cell svg { max-width: 100%; height: auto; }
+                .barcode-cell .lbl-price {
+                    font-size: 10px; font-weight: 800; margin-top: 2px;
+                }
+                .qty-badge {
+                    display: inline-block; background: #dbeafe; color: #1e40af;
+                    font-size: 11px; font-weight: 700; padding: 2px 8px;
+                    border-radius: 9999px;
+                }
             </style>
             </head><body>
             <div class="no-print toolbar">
-                <button onclick="window.print()">Print Barcodes</button>
+                <button onclick="window.print()">Print All Barcodes</button>
                 <button onclick="window.close()">Close</button>
             </div>
-            <div class="header">
+            <div class="store-header">
                 <h1>Discount Discovery Zone</h1>
-                <p>${toPrint.length} barcode labels &middot; ${new Date().toLocaleDateString()}</p>
+                <p>${toPrint.length} products &middot; ${totalLabels} total labels &middot; ${new Date().toLocaleDateString()}</p>
             </div>
-            <div class="grid" id="labels"></div>
+            <div id="products-container"></div>
             <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3/dist/JsBarcode.all.min.js"><\/script>
             <script>
-                const products = ${JSON.stringify(toPrint.map(p => ({ name: p.name, barcode: p.barcode, price: p.price })))};
-                const grid = document.getElementById('labels');
-                products.forEach((p, i) => {
-                    const div = document.createElement('div');
-                    div.className = 'label';
-                    const nameEl = document.createElement('div');
-                    nameEl.className = 'name';
-                    nameEl.textContent = p.name;
-                    div.appendChild(nameEl);
-                    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                    div.appendChild(svg);
-                    try {
-                        JsBarcode(svg, p.barcode, { format: 'EAN13', width: 1.5, height: 40, displayValue: true, fontSize: 12, margin: 2, background: '#ffffff' });
-                    } catch(e) {
-                        try { JsBarcode(svg, p.barcode, { format: 'CODE128', width: 1.5, height: 40, displayValue: true, fontSize: 12, margin: 2, background: '#ffffff' }); } catch(e2) {}
+                const products = ${JSON.stringify(toPrint.map(p => ({
+                    name: p.name,
+                    barcode: p.barcode,
+                    price: p.price,
+                    quantity: p.quantity,
+                    sku: p.sku,
+                    image: p.image_url
+                })))};
+                const container = document.getElementById('products-container');
+
+                products.forEach(p => {
+                    const qty = Math.max(p.quantity, 1);
+                    const section = document.createElement('div');
+                    section.className = 'product-section';
+
+                    // Product header with image and info
+                    const header = document.createElement('div');
+                    header.className = 'product-header';
+                    if (p.image) {
+                        header.innerHTML = '<img class="product-img" src="' + p.image + '" alt="" />';
+                    } else {
+                        header.innerHTML = '<div class="product-img-placeholder">&#128722;</div>';
                     }
-                    const priceEl = document.createElement('div');
-                    priceEl.className = 'price';
-                    priceEl.textContent = 'GH₵ ' + Number(p.price).toFixed(2);
-                    div.appendChild(priceEl);
-                    grid.appendChild(div);
+                    header.innerHTML += '<div class="product-info">' +
+                        '<h2>' + p.name + '</h2>' +
+                        '<div class="meta"><span>SKU: ' + (p.sku || '—') + '</span><span>Barcode: ' + p.barcode + '</span></div>' +
+                        '<div class="price-tag">GH\\u20B5 ' + Number(p.price).toFixed(2) + '</div>' +
+                        '<div style="margin-top:4px"><span class="qty-badge">' + qty + ' labels (matches stock)</span></div>' +
+                    '</div>';
+                    section.appendChild(header);
+
+                    // Barcode grid
+                    const grid = document.createElement('div');
+                    grid.className = 'barcode-grid';
+                    for (let i = 0; i < qty; i++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'barcode-cell';
+                        const nameEl = document.createElement('div');
+                        nameEl.className = 'lbl-name';
+                        nameEl.textContent = p.name;
+                        cell.appendChild(nameEl);
+                        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                        cell.appendChild(svg);
+                        try {
+                            JsBarcode(svg, p.barcode, { format: 'EAN13', width: 1.2, height: 32, displayValue: true, fontSize: 10, margin: 2, background: '#ffffff' });
+                        } catch(e) {
+                            try { JsBarcode(svg, p.barcode, { format: 'CODE128', width: 1.2, height: 32, displayValue: true, fontSize: 10, margin: 2, background: '#ffffff' }); } catch(e2) {}
+                        }
+                        const priceEl = document.createElement('div');
+                        priceEl.className = 'lbl-price';
+                        priceEl.textContent = 'GH\\u20B5 ' + Number(p.price).toFixed(2);
+                        cell.appendChild(priceEl);
+                        grid.appendChild(cell);
+                    }
+                    section.appendChild(grid);
+                    container.appendChild(section);
                 });
             <\/script>
             </body></html>
