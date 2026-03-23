@@ -247,13 +247,16 @@ export default function Home() {
           </AnimatedSection>
 
           <AnimatedGrid className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-            {categories.map((category) => (
+            {categories.map((category) => {
+              const categoryImage = category.image || category.image_url || '/og-image.png';
+              return (
               <Link href={`/shop?category=${category.slug}`} key={category.id} className="group cursor-pointer block relative">
                 <div className="aspect-[3/4] rounded-2xl overflow-hidden relative shadow-md group-hover:shadow-xl transition-all duration-300">
                   <Image
-                    src={category.image || category.image_url || 'https://via.placeholder.com/600x800?text=' + encodeURIComponent(category.name)}
+                    src={categoryImage}
                     alt={category.name}
                     fill
+                    unoptimized={Boolean(categoryImage.startsWith('http'))}
                     className="object-cover transition-transform duration-700 group-hover:scale-110"
                     sizes="(max-width: 768px) 50vw, 25vw"
                     quality={75}
@@ -271,7 +274,8 @@ export default function Home() {
                   </div>
                 </div>
               </Link>
-            ))}
+              );
+            })}
           </AnimatedGrid>
 
           <div className="mt-8 text-center md:hidden">
@@ -327,7 +331,7 @@ export default function Home() {
                     name={product.name}
                     price={product.price}
                     originalPrice={product.compare_at_price}
-                    image={product.product_images?.[0]?.url || 'https://via.placeholder.com/400x500'}
+                    image={product.product_images?.[0]?.url || '/og-image.png'}
                     rating={product.rating_avg || 5}
                     reviewCount={product.review_count || 0}
                     badge={product.featured ? 'Featured' : undefined}

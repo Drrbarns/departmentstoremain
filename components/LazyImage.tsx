@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 
 interface LazyImageProps {
@@ -26,6 +26,13 @@ export default function LazyImage({
 }: LazyImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const isRemoteImage = /^https?:\/\//i.test(src);
+
+  useEffect(() => {
+    // Reset loading/error state when image source changes.
+    setIsLoaded(false);
+    setHasError(false);
+  }, [src]);
 
   const handleLoad = () => {
     setIsLoaded(true);
@@ -57,6 +64,7 @@ export default function LazyImage({
         alt={alt}
         fill
         sizes={sizes}
+        unoptimized={isRemoteImage}
         className={`object-cover transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
         onLoad={handleLoad}
         onError={handleError}
