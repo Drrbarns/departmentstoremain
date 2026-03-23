@@ -24,6 +24,7 @@ interface Product {
     quantity: number;
     category_name?: string;
     image_url?: string;
+    barcode_printed_at?: string | null;
 }
 
 function BarcodeImage({ value, width = 1.5, height = 50 }: { value: string; width?: number; height?: number }) {
@@ -173,14 +174,14 @@ export default function BarcodesPage() {
     const [generating, setGenerating] = useState(false);
     const [selected, setSelected] = useState<Set<string>>(new Set());
     const [searchQuery, setSearchQuery] = useState('');
-    const [filter, setFilter] = useState<'all' | 'with' | 'without'>('all');
+    const [filter, setFilter] = useState<'all' | 'with' | 'without' | 'printed' | 'not_printed'>('all');
     const [labelCounts, setLabelCounts] = useState<Record<string, number>>({});
 
     const fetchProducts = useCallback(async () => {
         setLoading(true);
         const { data, error } = await supabase
             .from('products')
-            .select('id, name, sku, barcode, price, quantity, categories(name), product_images(url, position)')
+            .select('id, name, sku, barcode, price, quantity, metadata, categories(name), product_images(url, position)')
             .eq('status', 'active')
             .order('name');
 
@@ -194,6 +195,7 @@ export default function BarcodesPage() {
                 quantity: p.quantity,
                 category_name: p.categories?.name || '',
                 image_url: p.product_images?.sort((a: any, b: any) => a.position - b.position)?.[0]?.url || '',
+                barcode_printed_at: p.metadata?.barcode_printed_at || null,
             }));
             setProducts(mapped);
             const counts: Record<string, number> = {};
@@ -204,6 +206,20 @@ export default function BarcodesPage() {
     }, []);
 
     useEffect(() => { fetchProducts(); }, [fetchProducts]);
+
+    const markAsPrinted = async (productIds: string[]) => {
+        const now = new Date().toISOString();
+        for (const id of productIds) {
+            const { data } = await supabase.from('products').select('metadata').eq('id', id).single();
+            const existing = data?.metadata || {};
+            await supabase.from('products').update({
+                metadata: { ...existing, barcode_printed_at: now }
+            }).eq('id', id);
+        }
+        setProducts(prev => prev.map(p =>
+            productIds.includes(p.id) ? { ...p, barcode_printed_at: now } : p
+        ));
+    };
 
     const generateForAll = async () => {
         const missing = products.filter(p => !p.barcode);
@@ -253,7 +269,10 @@ export default function BarcodesPage() {
         const matchesFilter =
             filter === 'all' ? true :
             filter === 'with' ? !!p.barcode :
-            !p.barcode;
+            filter === 'without' ? !p.barcode :
+            filter === 'printed' ? !!p.barcode_printed_at :
+            filter === 'not_printed' ? (!!p.barcode && !p.barcode_printed_at) :
+            true;
         return matchesSearch && matchesFilter;
     });
 
@@ -261,7 +280,7 @@ export default function BarcodesPage() {
         setLabelCounts(prev => ({ ...prev, [id]: Math.max(1, value) }));
     };
 
-    const printSingleProduct = (product: Product) => {
+    const printSingleProduct = async (product: Product) => {
         if (!product.barcode) return;
         const qty = labelCounts[product.id] || Math.min(Math.max(product.quantity, 1), 50);
         openPrintWindow([{
@@ -272,9 +291,10 @@ export default function BarcodesPage() {
             sku: product.sku,
             image: product.image_url || ''
         }]);
+        await markAsPrinted([product.id]);
     };
 
-    const handlePrintSelected = () => {
+    const handlePrintSelected = async () => {
         const toPrint = selected.size > 0
             ? products.filter(p => selected.has(p.id) && p.barcode)
             : filtered.filter(p => p.barcode);
@@ -292,6 +312,7 @@ export default function BarcodesPage() {
             sku: p.sku,
             image: p.image_url || ''
         })));
+        await markAsPrinted(toPrint.map(p => p.id));
     };
 
     const missingCount = products.filter(p => !p.barcode).length;
@@ -338,7 +359,7 @@ export default function BarcodesPage() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
                     <p className="text-sm text-gray-500">Total Products</p>
                     <p className="text-2xl font-bold text-gray-900">{products.length}</p>
@@ -350,6 +371,10 @@ export default function BarcodesPage() {
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
                     <p className="text-sm text-gray-500">Missing Barcode</p>
                     <p className="text-2xl font-bold text-amber-600">{missingCount}</p>
+                </div>
+                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                    <p className="text-sm text-gray-500">Printed</p>
+                    <p className="text-2xl font-bold text-green-700">{products.filter(p => p.barcode_printed_at).length}</p>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
                     <p className="text-sm text-gray-500">Selected</p>
@@ -378,14 +403,20 @@ export default function BarcodesPage() {
                             className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                     </div>
-                    <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-                        {(['all', 'with', 'without'] as const).map(f => (
+                    <div className="flex rounded-lg border border-gray-200 overflow-hidden flex-wrap">
+                        {([
+                            { key: 'all', label: 'All' },
+                            { key: 'with', label: 'Has Barcode' },
+                            { key: 'without', label: 'No Barcode' },
+                            { key: 'printed', label: 'Printed' },
+                            { key: 'not_printed', label: 'Not Printed' },
+                        ] as const).map(f => (
                             <button
-                                key={f}
-                                onClick={() => setFilter(f)}
-                                className={`px-4 py-2.5 text-sm font-semibold transition-colors cursor-pointer ${filter === f ? 'bg-blue-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                                key={f.key}
+                                onClick={() => setFilter(f.key)}
+                                className={`px-3 py-2.5 text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${filter === f.key ? 'bg-blue-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                             >
-                                {f === 'all' ? 'All' : f === 'with' ? 'Has Barcode' : 'No Barcode'}
+                                {f.label}
                             </button>
                         ))}
                     </div>
@@ -445,11 +476,22 @@ export default function BarcodesPage() {
                                             </div>
                                         )}
                                         <div className="min-w-0">
-                                            <p className="font-semibold text-gray-900 truncate text-sm">{product.name}</p>
+                                            <div className="flex items-center gap-2">
+                                                <p className="font-semibold text-gray-900 truncate text-sm">{product.name}</p>
+                                                {product.barcode_printed_at && (
+                                                    <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full">
+                                                        <i className="ri-printer-fill text-[10px]"></i>
+                                                        Printed
+                                                    </span>
+                                                )}
+                                            </div>
                                             <p className="text-xs text-gray-500">
                                                 {product.category_name && <span>{product.category_name} · </span>}
                                                 <span className="font-mono">{product.sku || '—'}</span>
                                                 <span className="ml-2 text-gray-400">Stock: {product.quantity}</span>
+                                                {product.barcode_printed_at && (
+                                                    <span className="ml-2 text-green-600">· Printed {new Date(product.barcode_printed_at).toLocaleDateString()}</span>
+                                                )}
                                             </p>
                                         </div>
                                     </div>
