@@ -169,6 +169,7 @@ P.forEach(p=>{
 }
 
 export default function BarcodesPage() {
+    const ITEMS_PER_PAGE = 25;
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
@@ -176,6 +177,7 @@ export default function BarcodesPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [filter, setFilter] = useState<'all' | 'with' | 'without' | 'printed' | 'not_printed'>('all');
     const [labelCounts, setLabelCounts] = useState<Record<string, number>>({});
+    const [currentPage, setCurrentPage] = useState(1);
 
     const fetchProducts = useCallback(async () => {
         setLoading(true);
@@ -253,14 +255,6 @@ export default function BarcodesPage() {
         });
     };
 
-    const selectAll = () => {
-        if (selected.size === filtered.length) {
-            setSelected(new Set());
-        } else {
-            setSelected(new Set(filtered.map(p => p.id)));
-        }
-    };
-
     const filtered = products.filter(p => {
         const matchesSearch = !searchQuery ||
             p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -275,6 +269,36 @@ export default function BarcodesPage() {
             true;
         return matchesSearch && matchesFilter;
     });
+
+    const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+    const pageStart = (currentPage - 1) * ITEMS_PER_PAGE;
+    const pageEnd = pageStart + ITEMS_PER_PAGE;
+    const paginatedProducts = filtered.slice(pageStart, pageEnd);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, filter]);
+
+    useEffect(() => {
+        if (currentPage > totalPages) {
+            setCurrentPage(totalPages);
+        }
+    }, [currentPage, totalPages]);
+
+    const selectAll = () => {
+        const currentPageIds = paginatedProducts.map(p => p.id);
+        const isAllCurrentPageSelected = currentPageIds.length > 0 && currentPageIds.every(id => selected.has(id));
+
+        setSelected(prev => {
+            const next = new Set(prev);
+            if (isAllCurrentPageSelected) {
+                currentPageIds.forEach(id => next.delete(id));
+            } else {
+                currentPageIds.forEach(id => next.add(id));
+            }
+            return next;
+        });
+    };
 
     const updateLabelCount = (id: string, value: number) => {
         setLabelCounts(prev => ({ ...prev, [id]: Math.max(1, value) }));
@@ -437,12 +461,19 @@ export default function BarcodesPage() {
                     </div>
                 ) : (
                     <>
+                        <div className="px-5 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between gap-3 text-sm">
+                            <p className="text-gray-600">
+                                Showing <strong>{pageStart + 1}</strong>-<strong>{Math.min(pageEnd, filtered.length)}</strong> of <strong>{filtered.length}</strong> products
+                            </p>
+                            <p className="text-gray-500">Page {currentPage} of {totalPages}</p>
+                        </div>
+
                         {/* Table Header */}
                         <div className="hidden lg:grid grid-cols-[40px_1fr_1fr_100px_100px_100px] gap-3 px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase">
                             <div>
                                 <input
                                     type="checkbox"
-                                    checked={selected.size === filtered.length && filtered.length > 0}
+                                    checked={paginatedProducts.length > 0 && paginatedProducts.every(p => selected.has(p.id))}
                                     onChange={selectAll}
                                     className="w-4 h-4 cursor-pointer"
                                 />
@@ -456,7 +487,7 @@ export default function BarcodesPage() {
 
                         {/* Rows */}
                         <div className="divide-y divide-gray-100">
-                            {filtered.map(product => (
+                            {paginatedProducts.map(product => (
                                 <div key={product.id} className="grid grid-cols-1 lg:grid-cols-[40px_1fr_1fr_100px_100px_100px] gap-3 px-5 py-3 items-center hover:bg-gray-50 transition-colors">
                                     <div>
                                         <input
@@ -543,6 +574,54 @@ export default function BarcodesPage() {
                                     </div>
                                 </div>
                             ))}
+                        </div>
+
+                        <div className="px-5 py-4 border-t border-gray-200 bg-white flex items-center justify-between gap-3">
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <i className="ri-arrow-left-s-line"></i>
+                                Previous
+                            </button>
+
+                            <div className="flex items-center gap-1 flex-wrap justify-center">
+                                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                    .filter(page =>
+                                        page === 1 ||
+                                        page === totalPages ||
+                                        Math.abs(page - currentPage) <= 1
+                                    )
+                                    .map((page, idx, arr) => {
+                                        const prev = arr[idx - 1];
+                                        const showEllipsis = prev && page - prev > 1;
+                                        return (
+                                            <div key={page} className="flex items-center gap-1">
+                                                {showEllipsis && <span className="px-1 text-gray-400">...</span>}
+                                                <button
+                                                    onClick={() => setCurrentPage(page)}
+                                                    className={`w-9 h-9 rounded-lg text-sm font-semibold transition-colors ${
+                                                        currentPage === page
+                                                            ? 'bg-blue-700 text-white'
+                                                            : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                                    }`}
+                                                >
+                                                    {page}
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                            </div>
+
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Next
+                                <i className="ri-arrow-right-s-line"></i>
+                            </button>
                         </div>
                     </>
                 )}

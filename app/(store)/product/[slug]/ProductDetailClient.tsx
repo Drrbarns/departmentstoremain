@@ -1,12 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { cachedQuery } from '@/lib/query-cache';
 import ProductCard from '@/components/ProductCard';
 import ProductReviews from '@/components/ProductReviews';
+import LazyImage from '@/components/LazyImage';
 import { StructuredData, generateProductSchema, generateBreadcrumbSchema } from '@/components/SEOHead';
 import { notFound } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
@@ -55,7 +55,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
       }
     }
     // Fall back to product-level images
-    setDisplayImages(product.images.length > 0 ? product.images : ['https://via.placeholder.com/800x800?text=No+Image']);
+    setDisplayImages(product.images.length > 0 ? product.images : ['/og-image.png']);
     setSelectedImage(0);
   }, [selectedVariant, product]);
 
@@ -146,7 +146,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
         // Ensure at least one image/placeholder
         if (transformedProduct.images.length === 0) {
-          transformedProduct.images = ['https://via.placeholder.com/800x800?text=No+Image'];
+          transformedProduct.images = ['/og-image.png'];
         }
 
         setProduct(transformedProduct);
@@ -189,7 +189,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                 slug: p.slug,
                 name: p.name,
                 price: p.price,
-                image: p.product_images?.[0]?.url || 'https://via.placeholder.com/800?text=No+Image',
+                image: p.product_images?.[0]?.url || '/og-image.png',
                 rating: p.rating_avg || 0,
                 reviewCount: 0,
                 inStock: effectiveStock > 0,
@@ -325,14 +325,12 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
             <div className="grid lg:grid-cols-2 gap-12">
               <div>
                 <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 mb-4 shadow-lg border border-gray-100">
-                  <Image
-                    src={displayImages[selectedImage] || displayImages[0] || 'https://via.placeholder.com/800x800?text=No+Image'}
+                  <LazyImage
+                    src={displayImages[selectedImage] || displayImages[0] || '/og-image.png'}
                     alt={product.name}
-                    fill
                     className="object-cover object-center transition-opacity duration-300"
                     sizes="(max-width: 1024px) 100vw, 50vw"
                     priority
-                    quality={80}
                   />
                   {discount > 0 && (
                     <span className="absolute top-6 right-6 bg-red-600 text-white text-sm font-semibold px-4 py-2 rounded-full">
@@ -350,13 +348,11 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                         className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${selectedImage === index ? 'border-blue-700 shadow-md' : 'border-gray-200 hover:border-gray-300'
                           }`}
                       >
-                        <Image
+                        <LazyImage
                           src={image}
                           alt={`${product.name} view ${index + 1}`}
-                          fill
                           className="object-cover object-center"
                           sizes="(max-width: 1024px) 25vw, 12vw"
-                          quality={60}
                         />
                       </button>
                     ))}

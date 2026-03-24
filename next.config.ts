@@ -5,12 +5,20 @@ const nextConfig: NextConfig = {
     return [{ source: '/manifest.json', destination: '/api/manifest' }];
   },
   images: {
+    // Bypass Next.js image optimizer in production to avoid 402 errors
+    // from the hosted optimizer endpoint and load Supabase images directly.
+    unoptimized: true,
     minimumCacheTTL: 2592000, // Cache optimized images for 30 days
     remotePatterns: [
       {
         protocol: 'https',
         hostname: '*.supabase.co',
         pathname: '/storage/v1/object/public/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/storage/v1/render/image/public/**',
       },
       {
         protocol: 'https',

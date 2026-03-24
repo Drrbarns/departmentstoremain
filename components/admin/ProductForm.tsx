@@ -10,16 +10,22 @@ interface ProductFormProps {
     isEditMode?: boolean;
 }
 
-interface VariantRow {
+interface VariantSizeRow {
+    tempId: string;
+    size: string;
+    price: string;
+    stock: string;
+    sku: string;
+}
+
+interface VariantGroup {
     tempId: string;
     name: string;
     appearanceType: 'color' | 'image';
     colorName: string;
     colorHex: string;
     imageUrl: string;
-    price: string;
-    stock: string;
-    sku: string;
+    sizes: VariantSizeRow[];
 }
 
 export default function ProductForm({ initialData, isEditMode = false }: ProductFormProps) {
@@ -59,53 +65,123 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
         return body + check;
     };
 
-    // --- Variant System (row-based) ---
-    const makeEmptyRow = (): VariantRow => ({
+    // --- Variant System (group + sizes) ---
+    const makeEmptySizeRow = (defaultSize = ''): VariantSizeRow => ({
+        tempId: Math.random().toString(36).slice(2),
+        size: defaultSize,
+        price: '',
+        stock: '0',
+        sku: ''
+    });
+
+    const makeEmptyGroup = (): VariantGroup => ({
         tempId: Math.random().toString(36).slice(2),
         name: '',
         appearanceType: 'color',
         colorName: '',
         colorHex: '#888888',
         imageUrl: '',
-        price: '',
-        stock: '0',
-        sku: ''
+        sizes: [makeEmptySizeRow('Default')]
     });
 
-    const [variantRows, setVariantRows] = useState<VariantRow[]>(() => {
+    const [variantGroups, setVariantGroups] = useState<VariantGroup[]>(() => {
         const existingVariants = initialData?.product_variants || [];
         const allImages = initialData?.product_images || [];
         if (existingVariants.length === 0) return [];
-        return existingVariants.map((v: any) => {
+
+        const groupsByKey = new Map<string, VariantGroup>();
+        existingVariants.forEach((v: any) => {
             const variantImg = allImages.find((img: any) => img.variant_id === v.id);
-            const colorName = v.option2 || '';
-            const colorHex = v.metadata?.color_hex || '#888888';
-            const hasImage = !!variantImg?.url;
-            return {
+            const colorName = (v.option2 || '').trim();
+            const hasLegacyGroupOnlyName = !colorName && !v.option1 && !!v.name;
+            const groupName = colorName || (hasLegacyGroupOnlyName ? (v.name || '').trim() : 'Default');
+            const groupKey = groupName || 'Default';
+
+            if (!groupsByKey.has(groupKey)) {
+                groupsByKey.set(groupKey, {
+                    tempId: Math.random().toString(36).slice(2),
+                    name: groupName === 'Default' ? '' : groupName,
+                    appearanceType: variantImg?.url ? 'image' : 'color',
+                    colorName: colorName || '',
+                    colorHex: v.metadata?.color_hex || '#888888',
+                    imageUrl: variantImg?.url || '',
+                    sizes: []
+                });
+            }
+
+            const group = groupsByKey.get(groupKey)!;
+            if (!group.imageUrl && variantImg?.url) {
+                group.imageUrl = variantImg.url;
+                group.appearanceType = 'image';
+            }
+
+            const sizeLabel = (v.option1 || '').trim() || (colorName ? (v.name || '').trim() : 'Default') || 'Default';
+            group.sizes.push({
                 tempId: v.id || Math.random().toString(36).slice(2),
-                name: v.name || v.option1 || '',
-                appearanceType: (hasImage ? 'image' : 'color') as 'color' | 'image',
-                colorName,
-                colorHex,
-                imageUrl: variantImg?.url || '',
+                size: sizeLabel,
                 price: v.price?.toString() || '',
                 stock: (v.stock ?? v.quantity ?? 0).toString(),
                 sku: v.sku || ''
-            };
+            });
         });
+
+        return Array.from(groupsByKey.values()).map((group) => ({
+            ...group,
+            sizes: group.sizes.length > 0 ? group.sizes : [makeEmptySizeRow('Default')]
+        }));
     });
 
     const [uploadingVariantId, setUploadingVariantId] = useState<string | null>(null);
 
-    const updateRow = (tempId: string, field: keyof VariantRow, value: string) => {
-        setVariantRows(prev => prev.map(r => r.tempId === tempId ? { ...r, [field]: value } : r));
+    const updateGroup = (tempId: string, field: keyof Omit<VariantGroup, 'tempId' | 'sizes'>, value: string) => {
+        setVariantGroups(prev => prev.map(g => g.tempId === tempId ? { ...g, [field]: value } : g));
     };
 
-    const addVariantRow = () => setVariantRows(prev => [...prev, makeEmptyRow()]);
-    const removeVariantRow = (tempId: string) => setVariantRows(prev => prev.filter(r => r.tempId !== tempId));
+    const updateSize = (
+        groupId: string,
+        sizeId: string,
+        field: keyof VariantSizeRow,
+        value: string
+    ) => {
+        setVariantGroups(prev => prev.map(g => {
+            if (g.tempId !== groupId) return g;
+            return {
+                ...g,
+                sizes: g.sizes.map(s => s.tempId === sizeId ? { ...s, [field]: value } : s)
+            };
+        }));
+    };
+
+    const addVariantGroup = () => setVariantGroups(prev => [...prev, makeEmptyGroup()]);
+
+    const removeVariantGroup = (tempId: string) => {
+        setVariantGroups(prev => prev.filter(g => g.tempId !== tempId));
+    };
+
+    const addSizeRow = (groupId: string) => {
+        setVariantGroups(prev => prev.map(g => (
+            g.tempId === groupId
+                ? { ...g, sizes: [...g.sizes, makeEmptySizeRow('')] }
+                : g
+        )));
+    };
+
+    const removeSizeRow = (groupId: string, sizeId: string) => {
+        setVariantGroups(prev => prev.map(g => {
+            if (g.tempId !== groupId) return g;
+            const nextSizes = g.sizes.filter(s => s.tempId !== sizeId);
+            return {
+                ...g,
+                sizes: nextSizes.length > 0 ? nextSizes : [makeEmptySizeRow('Default')]
+            };
+        }));
+    };
 
     const bulkSetVariantField = (field: 'price' | 'stock', value: string) => {
-        setVariantRows(prev => prev.map(r => ({ ...r, [field]: value })));
+        setVariantGroups(prev => prev.map(g => ({
+            ...g,
+            sizes: g.sizes.map(s => ({ ...s, [field]: value }))
+        })));
     };
 
     const handleVariantImageUpload = async (tempId: string, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -117,7 +193,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
             const { error } = await supabase.storage.from('products').upload(fileName, file);
             if (error) throw error;
             const { data: { publicUrl } } = supabase.storage.from('products').getPublicUrl(fileName);
-            updateRow(tempId, 'imageUrl', publicUrl);
+            updateGroup(tempId, 'imageUrl', publicUrl);
         } catch (err: any) {
             alert('Upload failed: ' + err.message);
         } finally {
@@ -198,9 +274,12 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
         try {
             setLoading(true);
 
-            const hasVariants = variantRows.length > 0;
+            const hasVariants = variantGroups.length > 0;
             const variantStockTotal = hasVariants
-                ? variantRows.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0)
+                ? variantGroups.reduce(
+                    (sum, group) => sum + group.sizes.reduce((groupSum, size) => groupSum + (parseInt(size.stock) || 0), 0),
+                    0
+                )
                 : parseInt(stock) || 0;
 
             const productData = {
@@ -249,30 +328,51 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                 const imageInserts: any[] = [];
 
                 if (hasVariants) {
-                    const variantInserts = variantRows.map(v => ({
-                        product_id: productId,
-                        name: v.name || v.colorName || 'Default',
-                        sku: v.sku || null,
-                        price: parseFloat(v.price) || 0,
-                        quantity: parseInt(v.stock) || 0,
-                        option1: v.name || null,
-                        option2: v.colorName?.trim() || null,
-                        metadata: v.colorHex && v.appearanceType === 'color' ? { color_hex: v.colorHex } : {}
-                    }));
+                    const expandedRows: Array<{
+                        imageUrl: string;
+                        label: string;
+                    }> = [];
+
+                    const variantInserts = variantGroups.flatMap(group => {
+                        const groupName = group.name.trim();
+                        const colorName = group.colorName.trim();
+                        const option2Value = colorName || groupName || null;
+
+                        return group.sizes.map(sizeRow => {
+                            const sizeLabel = sizeRow.size.trim() || 'Default';
+                            expandedRows.push({
+                                imageUrl: group.imageUrl,
+                                label: `${option2Value || 'Variant'} / ${sizeLabel}`
+                            });
+
+                            return {
+                                product_id: productId,
+                                name: sizeLabel,
+                                sku: sizeRow.sku || null,
+                                price: parseFloat(sizeRow.price) || parseFloat(price) || 0,
+                                quantity: parseInt(sizeRow.stock) || 0,
+                                option1: sizeLabel,
+                                option2: option2Value,
+                                metadata: group.colorHex && group.appearanceType === 'color'
+                                    ? { color_hex: group.colorHex }
+                                    : {}
+                            };
+                        });
+                    });
 
                     const { data: insertedVariants, error: varError } = await supabase
                         .from('product_variants').insert(variantInserts).select();
                     if (varError) throw varError;
 
-                    // Link variant images to the inserted variant IDs
+                    // Link each size variant row to the group image (if provided)
                     (insertedVariants || []).forEach((iv: any, idx: number) => {
-                        const row = variantRows[idx];
+                        const row = expandedRows[idx];
                         if (row?.imageUrl) {
                             imageInserts.push({
                                 product_id: productId,
                                 url: row.imageUrl,
                                 position: 0,
-                                alt_text: row.name || row.colorName || productName,
+                                alt_text: `${productName} - ${row.label}`,
                                 variant_id: iv.id
                             });
                         }
@@ -542,11 +642,14 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                 <div className="grid md:grid-cols-2 gap-6 mt-6">
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-900 mb-2">Stock Quantity *</label>
-                                        {variantRows.length > 0 ? (
+                                        {variantGroups.length > 0 ? (
                                             <div>
                                                 <input
                                                     type="number"
-                                                    value={variantRows.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0)}
+                                                    value={variantGroups.reduce(
+                                                        (sum, group) => sum + group.sizes.reduce((groupSum, size) => groupSum + (parseInt(size.stock) || 0), 0),
+                                                        0
+                                                    )}
                                                     readOnly
                                                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
                                                 />
@@ -598,10 +701,10 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                             <div className="flex items-center justify-between">
                                 <div>
                                     <h3 className="text-lg font-bold text-gray-900">Product Variants</h3>
-                                    <p className="text-gray-600 mt-1 text-sm">Manage sizes, colors, designs, or other versions of this product</p>
+                                    <p className="text-gray-600 mt-1 text-sm">Create a variant (color/style), then add sizes with different stock and price.</p>
                                 </div>
                                 <button
-                                    onClick={addVariantRow}
+                                    onClick={addVariantGroup}
                                     className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-sm transition-colors cursor-pointer"
                                 >
                                     <i className="ri-add-line text-lg"></i>
@@ -609,13 +712,13 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                 </button>
                             </div>
 
-                            {variantRows.length === 0 ? (
+                            {variantGroups.length === 0 ? (
                                 <div className="p-12 text-center bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
                                     <i className="ri-layout-grid-line text-5xl text-gray-300 mb-3 block"></i>
                                     <p className="font-semibold text-gray-600 text-lg">No variants yet</p>
-                                    <p className="text-sm text-gray-500 mt-1 mb-4">Add variants for different sizes, colors, designs — anything that creates a separate version of this product.</p>
+                                    <p className="text-sm text-gray-500 mt-1 mb-4">Example: Variant = Red, Sizes = S, M, L with separate stock.</p>
                                     <button
-                                        onClick={addVariantRow}
+                                        onClick={addVariantGroup}
                                         className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-sm transition-colors cursor-pointer"
                                     >
                                         <i className="ri-add-line"></i>
@@ -624,13 +727,14 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                 </div>
                             ) : (
                                 <div className="border border-gray-200 rounded-xl overflow-hidden">
-                                    {/* Bulk actions */}
                                     <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-3 flex-wrap">
-                                        <span className="text-sm font-semibold text-gray-700">{variantRows.length} variant{variantRows.length !== 1 ? 's' : ''}</span>
+                                        <span className="text-sm font-semibold text-gray-700">
+                                            {variantGroups.length} variant{variantGroups.length !== 1 ? 's' : ''} • {variantGroups.reduce((sum, g) => sum + g.sizes.length, 0)} size row{variantGroups.reduce((sum, g) => sum + g.sizes.length, 0) !== 1 ? 's' : ''}
+                                        </span>
                                         <div className="flex gap-2 ml-auto">
                                             <button
                                                 onClick={() => {
-                                                    const val = prompt('Set price for ALL variants:', price?.toString() || '0');
+                                                    const val = prompt('Set price for ALL sizes in all variants:', price?.toString() || '0');
                                                     if (val !== null) bulkSetVariantField('price', val);
                                                 }}
                                                 className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors cursor-pointer"
@@ -639,7 +743,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                             </button>
                                             <button
                                                 onClick={() => {
-                                                    const val = prompt('Set stock for ALL variants:', '0');
+                                                    const val = prompt('Set stock for ALL sizes in all variants:', '0');
                                                     if (val !== null) bulkSetVariantField('stock', val);
                                                 }}
                                                 className="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors cursor-pointer"
@@ -649,136 +753,175 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                         </div>
                                     </div>
 
-                                    {/* Table header */}
-                                    <div className="hidden sm:grid grid-cols-[2fr_2fr_1.5fr_1.5fr_40px] gap-3 px-4 py-2.5 bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-600 uppercase tracking-wide">
-                                        <span>Variant Name</span>
-                                        <span>Appearance</span>
-                                        <span>Price (GH₵)</span>
-                                        <span>Stock</span>
-                                        <span></span>
-                                    </div>
-
-                                    {/* Rows */}
-                                    <div className="divide-y divide-gray-100">
-                                        {variantRows.map((row) => (
-                                            <div key={row.tempId} className="grid grid-cols-1 sm:grid-cols-[2fr_2fr_1.5fr_1.5fr_40px] gap-3 px-4 py-4 items-center hover:bg-gray-50 transition-colors">
-
-                                                {/* Name */}
-                                                <div>
-                                                    <label className="text-xs font-semibold text-gray-500 sm:hidden mb-1 block">Variant Name</label>
-                                                    <input
-                                                        type="text"
-                                                        value={row.name}
-                                                        onChange={(e) => updateRow(row.tempId, 'name', e.target.value)}
-                                                        placeholder="e.g. Red, XL, 128GB, Floral..."
-                                                        className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                                    />
-                                                </div>
-
-                                                {/* Appearance */}
-                                                <div>
-                                                    <label className="text-xs font-semibold text-gray-500 sm:hidden mb-1 block">Appearance</label>
-                                                    <div className="flex flex-col gap-2">
-                                                        {/* Toggle */}
-                                                        <div className="flex rounded-lg border border-gray-200 overflow-hidden w-fit">
-                                                            <button
-                                                                onClick={() => updateRow(row.tempId, 'appearanceType', 'color')}
-                                                                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${row.appearanceType === 'color' ? 'bg-blue-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                                                            >
-                                                                <i className="ri-palette-line"></i> Color
-                                                            </button>
-                                                            <button
-                                                                onClick={() => updateRow(row.tempId, 'appearanceType', 'image')}
-                                                                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${row.appearanceType === 'image' ? 'bg-blue-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-                                                            >
-                                                                <i className="ri-image-line"></i> Image
-                                                            </button>
-                                                        </div>
-
-                                                        {/* Color inputs */}
-                                                        {row.appearanceType === 'color' && (
-                                                            <div className="flex items-center gap-2">
-                                                                <input
-                                                                    type="color"
-                                                                    value={row.colorHex}
-                                                                    onChange={(e) => updateRow(row.tempId, 'colorHex', e.target.value)}
-                                                                    className="w-9 h-9 rounded-lg border border-gray-300 cursor-pointer p-0.5 flex-shrink-0"
-                                                                />
+                                    <div className="p-4 space-y-4">
+                                        {variantGroups.map((group) => (
+                                            <div key={group.tempId} className="border border-gray-200 rounded-xl overflow-hidden">
+                                                <div className="p-4 bg-white border-b border-gray-100 space-y-4">
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="flex-1 grid md:grid-cols-2 gap-3">
+                                                            <div>
+                                                                <label className="block text-xs font-semibold text-gray-500 mb-1">Variant (Color/Style)</label>
                                                                 <input
                                                                     type="text"
-                                                                    value={row.colorName}
-                                                                    onChange={(e) => updateRow(row.tempId, 'colorName', e.target.value)}
-                                                                    placeholder="e.g. Red"
-                                                                    className="flex-1 px-2 py-1.5 border border-gray-200 rounded-lg text-xs min-w-0"
+                                                                    value={group.name}
+                                                                    onChange={(e) => updateGroup(group.tempId, 'name', e.target.value)}
+                                                                    placeholder="e.g. Red, Floral, Leather..."
+                                                                    className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                                                 />
                                                             </div>
-                                                        )}
-
-                                                        {/* Image upload */}
-                                                        {row.appearanceType === 'image' && (
-                                                            <div className="flex items-center gap-2">
-                                                                {row.imageUrl ? (
-                                                                    <div className="relative w-12 h-12 flex-shrink-0">
-                                                                        <img src={row.imageUrl} alt="variant" className="w-12 h-12 rounded-lg object-cover border border-gray-200" />
+                                                            <div>
+                                                                <label className="block text-xs font-semibold text-gray-500 mb-1">Appearance</label>
+                                                                <div className="flex flex-wrap items-center gap-2">
+                                                                    <div className="flex rounded-lg border border-gray-200 overflow-hidden">
                                                                         <button
-                                                                            onClick={() => updateRow(row.tempId, 'imageUrl', '')}
-                                                                            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] cursor-pointer hover:bg-red-600"
+                                                                            onClick={() => updateGroup(group.tempId, 'appearanceType', 'color')}
+                                                                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${group.appearanceType === 'color' ? 'bg-blue-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                                                                         >
-                                                                            <i className="ri-close-line"></i>
+                                                                            <i className="ri-palette-line"></i> Color
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => updateGroup(group.tempId, 'appearanceType', 'image')}
+                                                                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${group.appearanceType === 'image' ? 'bg-blue-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                                                                        >
+                                                                            <i className="ri-image-line"></i> Image
                                                                         </button>
                                                                     </div>
-                                                                ) : null}
-                                                                <label className={`flex items-center gap-1.5 px-3 py-1.5 border-2 border-dashed border-gray-300 rounded-lg text-xs font-medium text-gray-500 hover:border-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-colors cursor-pointer ${uploadingVariantId === row.tempId ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                                                                    {uploadingVariantId === row.tempId ? (
-                                                                        <><i className="ri-loader-4-line animate-spin"></i> Uploading...</>
-                                                                    ) : (
-                                                                        <><i className="ri-upload-2-line"></i> {row.imageUrl ? 'Change' : 'Upload'}</>
+
+                                                                    {group.appearanceType === 'color' && (
+                                                                        <>
+                                                                            <input
+                                                                                type="color"
+                                                                                value={group.colorHex}
+                                                                                onChange={(e) => updateGroup(group.tempId, 'colorHex', e.target.value)}
+                                                                                className="w-9 h-9 rounded-lg border border-gray-300 cursor-pointer p-0.5"
+                                                                            />
+                                                                            <input
+                                                                                type="text"
+                                                                                value={group.colorName}
+                                                                                onChange={(e) => updateGroup(group.tempId, 'colorName', e.target.value)}
+                                                                                placeholder="Color name (optional)"
+                                                                                className="px-3 py-2 border border-gray-200 rounded-lg text-xs min-w-[170px]"
+                                                                            />
+                                                                        </>
                                                                     )}
-                                                                    <input
-                                                                        type="file"
-                                                                        accept="image/jpeg,image/png,image/webp,image/gif"
-                                                                        className="hidden"
-                                                                        disabled={uploadingVariantId !== null}
-                                                                        onChange={(e) => handleVariantImageUpload(row.tempId, e)}
-                                                                    />
-                                                                </label>
+
+                                                                    {group.appearanceType === 'image' && (
+                                                                        <div className="flex items-center gap-2">
+                                                                            {group.imageUrl ? (
+                                                                                <div className="relative w-12 h-12 flex-shrink-0">
+                                                                                    <img src={group.imageUrl} alt="variant" className="w-12 h-12 rounded-lg object-cover border border-gray-200" />
+                                                                                    <button
+                                                                                        onClick={() => updateGroup(group.tempId, 'imageUrl', '')}
+                                                                                        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] cursor-pointer hover:bg-red-600"
+                                                                                    >
+                                                                                        <i className="ri-close-line"></i>
+                                                                                    </button>
+                                                                                </div>
+                                                                            ) : null}
+                                                                            <label className={`flex items-center gap-1.5 px-3 py-1.5 border-2 border-dashed border-gray-300 rounded-lg text-xs font-medium text-gray-500 hover:border-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-colors cursor-pointer ${uploadingVariantId === group.tempId ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                                                                {uploadingVariantId === group.tempId ? (
+                                                                                    <><i className="ri-loader-4-line animate-spin"></i> Uploading...</>
+                                                                                ) : (
+                                                                                    <><i className="ri-upload-2-line"></i> {group.imageUrl ? 'Change' : 'Upload'}</>
+                                                                                )}
+                                                                                <input
+                                                                                    type="file"
+                                                                                    accept="image/jpeg,image/png,image/webp,image/gif"
+                                                                                    className="hidden"
+                                                                                    disabled={uploadingVariantId !== null}
+                                                                                    onChange={(e) => handleVariantImageUpload(group.tempId, e)}
+                                                                                />
+                                                                            </label>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                        )}
+                                                        </div>
+
+                                                        <button
+                                                            onClick={() => removeVariantGroup(group.tempId)}
+                                                            className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                                            title="Remove variant"
+                                                        >
+                                                            <i className="ri-delete-bin-line text-lg"></i>
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="overflow-x-auto">
+                                                        <table className="w-full text-sm">
+                                                            <thead>
+                                                                <tr className="text-left text-xs uppercase tracking-wide text-gray-500 border-b border-gray-100">
+                                                                    <th className="py-2 pr-3 font-semibold">Size</th>
+                                                                    <th className="py-2 px-3 font-semibold">Price (GH₵)</th>
+                                                                    <th className="py-2 px-3 font-semibold">Stock</th>
+                                                                    <th className="py-2 px-3 font-semibold">SKU</th>
+                                                                    <th className="py-2 pl-3 pr-0"></th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {group.sizes.map((sizeRow) => (
+                                                                    <tr key={sizeRow.tempId} className="border-b border-gray-50 last:border-b-0">
+                                                                        <td className="py-2 pr-3">
+                                                                            <input
+                                                                                type="text"
+                                                                                value={sizeRow.size}
+                                                                                onChange={(e) => updateSize(group.tempId, sizeRow.tempId, 'size', e.target.value)}
+                                                                                placeholder="e.g. S, M, L, 42, 128GB"
+                                                                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                                            />
+                                                                        </td>
+                                                                        <td className="py-2 px-3">
+                                                                            <input
+                                                                                type="number"
+                                                                                value={sizeRow.price}
+                                                                                onChange={(e) => updateSize(group.tempId, sizeRow.tempId, 'price', e.target.value)}
+                                                                                step="0.01"
+                                                                                placeholder={price?.toString() || '0.00'}
+                                                                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                                            />
+                                                                        </td>
+                                                                        <td className="py-2 px-3">
+                                                                            <input
+                                                                                type="number"
+                                                                                value={sizeRow.stock}
+                                                                                onChange={(e) => updateSize(group.tempId, sizeRow.tempId, 'stock', e.target.value)}
+                                                                                placeholder="0"
+                                                                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                                            />
+                                                                        </td>
+                                                                        <td className="py-2 px-3">
+                                                                            <input
+                                                                                type="text"
+                                                                                value={sizeRow.sku}
+                                                                                onChange={(e) => updateSize(group.tempId, sizeRow.tempId, 'sku', e.target.value)}
+                                                                                placeholder="Optional"
+                                                                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                                            />
+                                                                        </td>
+                                                                        <td className="py-2 pl-3 pr-0 text-right">
+                                                                            <button
+                                                                                onClick={() => removeSizeRow(group.tempId, sizeRow.tempId)}
+                                                                                className="w-8 h-8 inline-flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                                                                title="Remove size"
+                                                                            >
+                                                                                <i className="ri-close-line"></i>
+                                                                            </button>
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+
+                                                    <div className="pt-3">
+                                                        <button
+                                                            onClick={() => addSizeRow(group.tempId)}
+                                                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-700 hover:text-green-800 cursor-pointer"
+                                                        >
+                                                            <i className="ri-add-line"></i> Add size
+                                                        </button>
                                                     </div>
                                                 </div>
-
-                                                {/* Price */}
-                                                <div>
-                                                    <label className="text-xs font-semibold text-gray-500 sm:hidden mb-1 block">Price (GH₵)</label>
-                                                    <input
-                                                        type="number"
-                                                        value={row.price}
-                                                        onChange={(e) => updateRow(row.tempId, 'price', e.target.value)}
-                                                        className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                                        step="0.01"
-                                                        placeholder={price?.toString() || '0.00'}
-                                                    />
-                                                </div>
-
-                                                {/* Stock */}
-                                                <div>
-                                                    <label className="text-xs font-semibold text-gray-500 sm:hidden mb-1 block">Stock</label>
-                                                    <input
-                                                        type="number"
-                                                        value={row.stock}
-                                                        onChange={(e) => updateRow(row.tempId, 'stock', e.target.value)}
-                                                        className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                                        placeholder="0"
-                                                    />
-                                                </div>
-
-                                                {/* Delete */}
-                                                <button
-                                                    onClick={() => removeVariantRow(row.tempId)}
-                                                    className="w-9 h-9 flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                                                >
-                                                    <i className="ri-delete-bin-line text-lg"></i>
-                                                </button>
                                             </div>
                                         ))}
                                     </div>
@@ -786,13 +929,18 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                     <div className="px-4 py-3 bg-blue-50 border-t border-blue-100 flex items-center justify-between">
                                         <p className="text-xs text-blue-800 flex items-center">
                                             <i className="ri-information-line mr-1.5"></i>
-                                            Total stock: <strong className="ml-1">{variantRows.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0)}</strong>
+                                            Total stock: <strong className="ml-1">{
+                                                variantGroups.reduce(
+                                                    (sum, group) => sum + group.sizes.reduce((groupSum, size) => groupSum + (parseInt(size.stock) || 0), 0),
+                                                    0
+                                                )
+                                            }</strong>
                                         </p>
                                         <button
-                                            onClick={addVariantRow}
+                                            onClick={addVariantGroup}
                                             className="flex items-center gap-1.5 text-xs font-semibold text-green-700 hover:text-green-800 cursor-pointer"
                                         >
-                                            <i className="ri-add-line"></i> Add another
+                                            <i className="ri-add-line"></i> Add another variant
                                         </button>
                                     </div>
                                 </div>
@@ -801,7 +949,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                             <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
                                 <p className="text-sm text-amber-800">
                                     <i className="ri-lightbulb-line mr-1.5"></i>
-                                    <strong>Tip:</strong> Use <strong>Image</strong> appearance to upload a photo for each variant. When a customer selects that variant on the product page, the gallery will switch to show that image.
+                                    <strong>Tip:</strong> Keep one image per variant (e.g., Red). All its sizes will use the same image for cleaner management.
                                 </p>
                             </div>
                         </div>
