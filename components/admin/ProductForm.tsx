@@ -760,28 +760,28 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                                     <div className="flex items-start justify-between gap-3">
                                                         <div className="flex-1 grid md:grid-cols-2 gap-3">
                                                             <div>
-                                                                <label className="block text-xs font-semibold text-gray-500 mb-1">Variant (Color/Style)</label>
+                                                                <label className="block text-sm font-semibold text-gray-600 mb-1.5">Variant (Color/Style)</label>
                                                                 <input
                                                                     type="text"
                                                                     value={group.name}
                                                                     onChange={(e) => updateGroup(group.tempId, 'name', e.target.value)}
                                                                     placeholder="e.g. Red, Floral, Leather..."
-                                                                    className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                                    className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-base md:text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                                                 />
                                                             </div>
                                                             <div>
-                                                                <label className="block text-xs font-semibold text-gray-500 mb-1">Appearance</label>
+                                                                <label className="block text-sm font-semibold text-gray-600 mb-1.5">Appearance</label>
                                                                 <div className="flex flex-wrap items-center gap-2">
                                                                     <div className="flex rounded-lg border border-gray-200 overflow-hidden">
                                                                         <button
                                                                             onClick={() => updateGroup(group.tempId, 'appearanceType', 'color')}
-                                                                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${group.appearanceType === 'color' ? 'bg-blue-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                                                                            className={`flex items-center gap-1.5 px-3.5 py-2 text-sm md:text-xs font-semibold transition-colors cursor-pointer ${group.appearanceType === 'color' ? 'bg-blue-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                                                                         >
                                                                             <i className="ri-palette-line"></i> Color
                                                                         </button>
                                                                         <button
                                                                             onClick={() => updateGroup(group.tempId, 'appearanceType', 'image')}
-                                                                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${group.appearanceType === 'image' ? 'bg-blue-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                                                                            className={`flex items-center gap-1.5 px-3.5 py-2 text-sm md:text-xs font-semibold transition-colors cursor-pointer ${group.appearanceType === 'image' ? 'bg-blue-700 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                                                                         >
                                                                             <i className="ri-image-line"></i> Image
                                                                         </button>
@@ -793,14 +793,14 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                                                                 type="color"
                                                                                 value={group.colorHex}
                                                                                 onChange={(e) => updateGroup(group.tempId, 'colorHex', e.target.value)}
-                                                                                className="w-9 h-9 rounded-lg border border-gray-300 cursor-pointer p-0.5"
+                                                                                className="w-10 h-10 rounded-lg border border-gray-300 cursor-pointer p-0.5"
                                                                             />
                                                                             <input
                                                                                 type="text"
                                                                                 value={group.colorName}
                                                                                 onChange={(e) => updateGroup(group.tempId, 'colorName', e.target.value)}
                                                                                 placeholder="Color name (optional)"
-                                                                                className="px-3 py-2 border border-gray-200 rounded-lg text-xs min-w-[170px]"
+                                                                                className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm min-w-[170px]"
                                                                             />
                                                                         </>
                                                                     )}
@@ -847,7 +847,74 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                                         </button>
                                                     </div>
 
-                                                    <div className="overflow-x-auto">
+                                                    {/* Mobile/Tablet: stacked size cards */}
+                                                    <div className="lg:hidden space-y-3">
+                                                        {group.sizes.map((sizeRow, index) => (
+                                                            <div key={sizeRow.tempId} className="border border-gray-200 rounded-xl p-3 bg-gray-50">
+                                                                <div className="flex items-center justify-between mb-3">
+                                                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Size Row {index + 1}</p>
+                                                                    <button
+                                                                        onClick={() => removeSizeRow(group.tempId, sizeRow.tempId)}
+                                                                        className="w-8 h-8 inline-flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                                                        title="Remove size"
+                                                                    >
+                                                                        <i className="ri-close-line"></i>
+                                                                    </button>
+                                                                </div>
+
+                                                                <div className="space-y-3">
+                                                                    <div>
+                                                                        <label className="block text-xs font-semibold text-gray-500 mb-1">Size</label>
+                                                                        <input
+                                                                            type="text"
+                                                                            value={sizeRow.size}
+                                                                            onChange={(e) => updateSize(group.tempId, sizeRow.tempId, 'size', e.target.value)}
+                                                                            placeholder="e.g. S, M, L, 42, 128GB"
+                                                                            className="w-full px-3 py-3 border border-gray-200 rounded-lg text-base font-medium focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                                        />
+                                                                    </div>
+
+                                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                                        <div>
+                                                                            <label className="block text-xs font-semibold text-gray-500 mb-1">Price (GH₵)</label>
+                                                                            <input
+                                                                                type="number"
+                                                                                value={sizeRow.price}
+                                                                                onChange={(e) => updateSize(group.tempId, sizeRow.tempId, 'price', e.target.value)}
+                                                                                step="0.01"
+                                                                                placeholder={price?.toString() || '0.00'}
+                                                                                className="w-full px-3 py-3 border border-gray-200 rounded-lg text-base font-medium focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                                            />
+                                                                        </div>
+                                                                        <div>
+                                                                            <label className="block text-xs font-semibold text-gray-500 mb-1">Stock</label>
+                                                                            <input
+                                                                                type="number"
+                                                                                value={sizeRow.stock}
+                                                                                onChange={(e) => updateSize(group.tempId, sizeRow.tempId, 'stock', e.target.value)}
+                                                                                placeholder="0"
+                                                                                className="w-full px-3 py-3 border border-gray-200 rounded-lg text-base font-medium focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <label className="block text-xs font-semibold text-gray-500 mb-1">SKU</label>
+                                                                        <input
+                                                                            type="text"
+                                                                            value={sizeRow.sku}
+                                                                            onChange={(e) => updateSize(group.tempId, sizeRow.tempId, 'sku', e.target.value)}
+                                                                            placeholder="Optional"
+                                                                            className="w-full px-3 py-3 border border-gray-200 rounded-lg text-base font-medium focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                    {/* Desktop: table layout */}
+                                                    <div className="hidden lg:block overflow-x-auto">
                                                         <table className="w-full text-sm">
                                                             <thead>
                                                                 <tr className="text-left text-xs uppercase tracking-wide text-gray-500 border-b border-gray-100">
@@ -867,7 +934,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                                                                 value={sizeRow.size}
                                                                                 onChange={(e) => updateSize(group.tempId, sizeRow.tempId, 'size', e.target.value)}
                                                                                 placeholder="e.g. S, M, L, 42, 128GB"
-                                                                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                                                className="w-full min-w-[110px] px-3 py-2.5 border border-gray-200 rounded-lg text-sm font-medium focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                                                             />
                                                                         </td>
                                                                         <td className="py-2 px-3">
@@ -877,7 +944,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                                                                 onChange={(e) => updateSize(group.tempId, sizeRow.tempId, 'price', e.target.value)}
                                                                                 step="0.01"
                                                                                 placeholder={price?.toString() || '0.00'}
-                                                                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                                                className="w-full min-w-[90px] px-3 py-2.5 border border-gray-200 rounded-lg text-sm font-medium focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                                                             />
                                                                         </td>
                                                                         <td className="py-2 px-3">
@@ -886,7 +953,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                                                                 value={sizeRow.stock}
                                                                                 onChange={(e) => updateSize(group.tempId, sizeRow.tempId, 'stock', e.target.value)}
                                                                                 placeholder="0"
-                                                                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                                                className="w-full min-w-[90px] px-3 py-2.5 border border-gray-200 rounded-lg text-sm font-medium focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                                                             />
                                                                         </td>
                                                                         <td className="py-2 px-3">
@@ -895,7 +962,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                                                                 value={sizeRow.sku}
                                                                                 onChange={(e) => updateSize(group.tempId, sizeRow.tempId, 'sku', e.target.value)}
                                                                                 placeholder="Optional"
-                                                                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                                                className="w-full min-w-[90px] px-3 py-2.5 border border-gray-200 rounded-lg text-sm font-medium focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                                                             />
                                                                         </td>
                                                                         <td className="py-2 pl-3 pr-0 text-right">
@@ -916,7 +983,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                                     <div className="pt-3">
                                                         <button
                                                             onClick={() => addSizeRow(group.tempId)}
-                                                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-700 hover:text-green-800 cursor-pointer"
+                                                            className="inline-flex items-center gap-1.5 text-sm md:text-xs font-semibold text-green-700 hover:text-green-800 cursor-pointer py-1"
                                                         >
                                                             <i className="ri-add-line"></i> Add size
                                                         </button>
