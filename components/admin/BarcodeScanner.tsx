@@ -3,6 +3,42 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 
+let sharedAudioContext: AudioContext | null = null;
+
+function getScanAudioContext(): AudioContext | null {
+    if (typeof window === 'undefined') return null;
+    try {
+        if (!sharedAudioContext || sharedAudioContext.state === 'closed') {
+            const Ctor = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+            if (!Ctor) return null;
+            sharedAudioContext = new Ctor();
+        }
+        return sharedAudioContext;
+    } catch {
+        return null;
+    }
+}
+
+/** Short success beep when a barcode is decoded (store-scanner style). */
+function playScanBeep() {
+    const ctx = getScanAudioContext();
+    if (!ctx) return;
+    void ctx.resume().then(() => {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, now);
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.14, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+        osc.start(now);
+        osc.stop(now + 0.15);
+    });
+}
+
 interface BarcodeScannerProps {
     onScan: (barcode: string) => void;
     onClose: () => void;
@@ -45,6 +81,7 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
                 (decodedText) => {
                     if (cooldownRef.current) return;
                     cooldownRef.current = true;
+                    playScanBeep();
                     setLastScanned(decodedText);
                     onScan(decodedText);
                     setTimeout(() => { cooldownRef.current = false; }, 1500);
@@ -65,6 +102,7 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
                         (decodedText) => {
                             if (cooldownRef.current) return;
                             cooldownRef.current = true;
+                            playScanBeep();
                             setLastScanned(decodedText);
                             onScan(decodedText);
                             setTimeout(() => { cooldownRef.current = false; }, 1500);
