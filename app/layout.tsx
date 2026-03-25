@@ -12,7 +12,11 @@ export const viewport: Viewport = {
   themeColor: '#2563eb',
 };
 
-const siteUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://discount-discovery-zone.vercel.app';
+const PRIMARY_SITE_URL = 'https://www.discountdiscoveryzone.com';
+const configuredSiteUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+const siteUrl = configuredSiteUrl && !configuredSiteUrl.includes('vercel.app')
+  ? configuredSiteUrl
+  : PRIMARY_SITE_URL;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -153,8 +157,8 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "Organization",
               "name": "Discount Discovery Zone",
-              "url": "https://discount-discovery-zone.vercel.app",
-              "logo": "https://discount-discovery-zone.vercel.app/logo.png",
+              "url": siteUrl,
+              "logo": `${siteUrl}/icons/icon-512x512.png`,
               "description": "Shop dresses, electronics, bags, shoes and more at Discount Discovery Zone. Quality products delivered across Ghana from Accra.",
               "address": {
                 "@type": "PostalAddress",
