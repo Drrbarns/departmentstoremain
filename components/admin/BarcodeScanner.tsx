@@ -20,10 +20,28 @@ function getScanAudioContext(): AudioContext | null {
 }
 
 /** Short success beep when a barcode is decoded (store-scanner style). */
-function playScanBeep() {
+async function primeScanAudio(): Promise<boolean> {
     const ctx = getScanAudioContext();
-    if (!ctx) return;
-    void ctx.resume().then(() => {
+    if (!ctx) return false;
+    try {
+        if (ctx.state !== 'running') {
+            await ctx.resume();
+        }
+        return ctx.state === 'running';
+    } catch {
+        return false;
+    }
+}
+
+/** Short success beep when a barcode is decoded (store-scanner style). */
+async function playScanBeep(): Promise<boolean> {
+    const ctx = getScanAudioContext();
+    if (!ctx) return false;
+    try {
+        if (ctx.state !== 'running') {
+            await ctx.resume();
+        }
+        if (ctx.state !== 'running') return false;
         const now = ctx.currentTime;
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -36,7 +54,10 @@ function playScanBeep() {
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
         osc.start(now);
         osc.stop(now + 0.15);
-    });
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 interface BarcodeScannerProps {
@@ -49,6 +70,7 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
     const [error, setError] = useState<string | null>(null);
     const [lastScanned, setLastScanned] = useState<string | null>(null);
     const [isStarting, setIsStarting] = useState(true);
+    const [soundReady, setSoundReady] = useState(true);
     const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
     const cooldownRef = useRef(false);
     const containerIdRef = useRef(`scanner-${Date.now()}`);
@@ -81,7 +103,9 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
                 (decodedText) => {
                     if (cooldownRef.current) return;
                     cooldownRef.current = true;
-                    playScanBeep();
+                    void playScanBeep().then((ok) => {
+                        if (!ok) setSoundReady(false);
+                    });
                     setLastScanned(decodedText);
                     onScan(decodedText);
                     setTimeout(() => { cooldownRef.current = false; }, 1500);
@@ -102,7 +126,9 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
                         (decodedText) => {
                             if (cooldownRef.current) return;
                             cooldownRef.current = true;
-                            playScanBeep();
+                            void playScanBeep().then((ok) => {
+                                if (!ok) setSoundReady(false);
+                            });
                             setLastScanned(decodedText);
                             onScan(decodedText);
                             setTimeout(() => { cooldownRef.current = false; }, 1500);
@@ -125,7 +151,23 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
     useEffect(() => {
         startScanner(facingMode);
 
+        // iOS/Safari often requires a fresh user gesture to unlock audio output.
+        const unlockSound = () => {
+            void primeScanAudio().then(setSoundReady);
+            window.removeEventListener('pointerdown', unlockSound);
+            window.removeEventListener('keydown', unlockSound);
+            window.removeEventListener('touchstart', unlockSound);
+        };
+
+        void primeScanAudio().then(setSoundReady);
+        window.addEventListener('pointerdown', unlockSound, { passive: true });
+        window.addEventListener('touchstart', unlockSound, { passive: true });
+        window.addEventListener('keydown', unlockSound);
+
         return () => {
+            window.removeEventListener('pointerdown', unlockSound);
+            window.removeEventListener('keydown', unlockSound);
+            window.removeEventListener('touchstart', unlockSound);
             if (scannerRef.current) {
                 scannerRef.current.stop().catch(() => {});
                 scannerRef.current.clear();
@@ -202,6 +244,15 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
 
                 {/* Footer */}
                 <div className="p-4 bg-gray-50 border-t border-gray-100">
+                    {!soundReady && (
+                        <button
+                            onClick={() => { void primeScanAudio().then(setSoundReady); }}
+                            className="w-full mb-3 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm font-semibold hover:bg-amber-100 transition-colors"
+                        >
+                            <i className="ri-volume-up-line mr-1"></i>
+                            Tap to enable scan sound
+                        </button>
+                    )}
                     {lastScanned ? (
                         <div className="flex items-center gap-2 text-sm">
                             <i className="ri-checkbox-circle-fill text-green-500"></i>
