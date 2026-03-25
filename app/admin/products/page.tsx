@@ -1,8 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+
+const PRODUCTS_SCROLL_KEY = 'admin_products_scroll_y';
 
 export default function ProductsPage() {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
@@ -13,6 +15,7 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<any[]>([]);
+  const pendingScrollRestoreRef = useRef<number | null>(null);
 
   // Statistics
   const [stats, setStats] = useState({
@@ -26,6 +29,36 @@ export default function ProductsPage() {
     'active': 'bg-blue-100 text-blue-700',
     'draft': 'bg-gray-100 text-gray-700',
     'archived': 'bg-amber-100 text-amber-700',
+  };
+
+  useEffect(() => {
+    // Restore scroll when returning from the edit page.
+    if (typeof window === 'undefined') return;
+    const savedScroll = sessionStorage.getItem(PRODUCTS_SCROLL_KEY);
+    if (!savedScroll) return;
+    const parsed = Number(savedScroll);
+    if (!Number.isNaN(parsed) && parsed > 0) {
+      pendingScrollRestoreRef.current = parsed;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (loading) return;
+    if (pendingScrollRestoreRef.current === null) return;
+
+    const y = pendingScrollRestoreRef.current;
+    pendingScrollRestoreRef.current = null;
+    sessionStorage.removeItem(PRODUCTS_SCROLL_KEY);
+
+    // Wait one paint so table rows exist before restoring.
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: y, behavior: 'auto' });
+    });
+  }, [loading, products.length]);
+
+  const saveScrollForReturn = () => {
+    if (typeof window === 'undefined') return;
+    sessionStorage.setItem(PRODUCTS_SCROLL_KEY, String(window.scrollY));
   };
 
   useEffect(() => {
@@ -339,6 +372,7 @@ export default function ProductsPage() {
                       <div className="flex items-center space-x-2">
                         <Link
                           href={`/admin/products/${product.id}`}
+                          onClick={saveScrollForReturn}
                           className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                         >
                           <i className="ri-edit-line text-lg"></i>
@@ -385,6 +419,7 @@ export default function ProductsPage() {
                 <div className="flex items-center space-x-2">
                   <Link
                     href={`/admin/products/${product.id}`}
+                    onClick={saveScrollForReturn}
                     className="flex-1 bg-blue-700 hover:bg-blue-800 text-white py-2 rounded-lg text-sm font-medium text-center transition-colors whitespace-nowrap cursor-pointer"
                   >
                     Edit
