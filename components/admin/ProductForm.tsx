@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { generateNextPosCode, getPosCodeFromMetadata } from '@/lib/posCode';
 
 interface ProductFormProps {
     initialData?: any;
@@ -39,6 +40,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
     const [comparePrice, setComparePrice] = useState(initialData?.compare_at_price || '');
     const [sku, setSku] = useState(initialData?.sku || '');
     const [barcode, setBarcode] = useState(initialData?.barcode || '');
+    const [posCode, setPosCode] = useState(getPosCodeFromMetadata(initialData?.metadata));
     const [stock, setStock] = useState(initialData?.quantity || '');
     const [moq, setMoq] = useState(initialData?.moq || '1');
     const [lowStockThreshold, setLowStockThreshold] = useState(initialData?.metadata?.low_stock_threshold || '5');
@@ -64,6 +66,18 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
         const check = (10 - (sum % 10)) % 10;
         return body + check;
     };
+
+    const generatePosCode = useCallback(async () => {
+        const { data } = await supabase.from('products').select('id, metadata');
+        const existingCodes = new Set<string>();
+        (data || []).forEach((p: any) => {
+            const code = getPosCodeFromMetadata(p.metadata);
+            if (code) existingCodes.add(code);
+        });
+        const nextCode = generateNextPosCode(existingCodes);
+        setPosCode(nextCode);
+        return nextCode;
+    }, []);
 
     // --- Variant System (group + sizes) ---
     const makeEmptySizeRow = (defaultSize = ''): VariantSizeRow => ({
@@ -241,6 +255,9 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
     useEffect(() => {
         if (!isEditMode && !sku) setSku(generateSku());
         if (!isEditMode && !barcode) setBarcode(generateBarcode());
+        if (!isEditMode && !posCode) {
+            void generatePosCode();
+        }
     }, [isEditMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -273,6 +290,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
     const handleSubmit = async () => {
         try {
             setLoading(true);
+            const ensuredPosCode = (posCode || '').trim() || await generatePosCode();
 
             const hasVariants = variantGroups.length > 0;
             const variantStockTotal = hasVariants
@@ -299,6 +317,8 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                 seo_description: metaDescription,
                 tags: (keywords as string).split(',').map((k: string) => k.trim()).filter(Boolean),
                 metadata: {
+                    ...(initialData?.metadata || {}),
+                    pos_code: ensuredPosCode || null,
                     low_stock_threshold: parseInt(lowStockThreshold) || 5,
                     preorder_shipping: preorderShipping.trim() || null,
                 }
@@ -636,6 +656,29 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                                 <i className="ri-refresh-line text-lg"></i>
                                             </button>
                                         </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid md:grid-cols-2 gap-6 mt-6">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-gray-900 mb-2">POS Code (Short Code)</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={posCode}
+                                                className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono bg-gray-50"
+                                                readOnly
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => { void generatePosCode(); }}
+                                                className="px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors cursor-pointer"
+                                                title="Generate new POS code"
+                                            >
+                                                <i className="ri-refresh-line text-lg"></i>
+                                            </button>
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-1">Auto-generated as 3 digits, expands to 4+ if all 3-digit codes are used.</p>
                                     </div>
                                 </div>
 

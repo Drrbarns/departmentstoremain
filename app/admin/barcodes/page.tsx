@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import JsBarcode from 'jsbarcode';
+import { generateNextPosCode, getPosCodeFromMetadata } from '@/lib/posCode';
 
 function generateBarcode(): string {
     const prefix = '200';
@@ -20,6 +21,7 @@ interface Product {
     name: string;
     sku: string;
     barcode: string | null;
+    pos_code: string;
     price: number;
     quantity: number;
     category_name?: string;
@@ -168,6 +170,122 @@ P.forEach(p=>{
     printWindow.document.close();
 }
 
+function openPosCodePrintWindow(productsToPrint: { name: string; posCode: string; price: number; quantity: number; sku: string; image: string }[]) {
+    const totalLabels = productsToPrint.reduce((sum, p) => sum + p.quantity, 0);
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html><head>
+<title>POS Code Labels - Discount Discovery Zone</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: Arial, sans-serif; background: #fff; }
+@media print {
+    @page { margin: 5mm; size: A4; }
+    .no-print { display: none !important; }
+    .product-section { break-before: page; }
+    .product-section:first-of-type { break-before: auto; }
+}
+.toolbar {
+    padding: 12px; text-align: center;
+    background: #f5f5f5; border-bottom: 1px solid #ddd;
+    position: sticky; top: 0; z-index: 10;
+}
+.toolbar button {
+    padding: 10px 24px; background: #2563eb; color: white;
+    border: none; border-radius: 8px; font-size: 14px;
+    font-weight: 600; cursor: pointer; margin: 0 4px;
+}
+.toolbar button:hover { background: #1d4ed8; }
+.store-header {
+    padding: 16px; text-align: center;
+    border-bottom: 2px solid #333; margin-bottom: 8px;
+}
+.store-header h1 { font-size: 18px; margin-bottom: 2px; }
+.store-header p { font-size: 11px; color: #666; }
+.product-section {
+    border: 2px solid #e5e7eb; border-radius: 12px;
+    margin: 12px; overflow: hidden;
+}
+.product-header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 12px 16px; background: #f9fafb;
+    border-bottom: 2px solid #e5e7eb;
+}
+.product-img {
+    width: 64px; height: 64px; object-fit: cover;
+    border-radius: 8px; border: 1px solid #e5e7eb; flex-shrink: 0;
+}
+.product-img-placeholder {
+    width: 64px; height: 64px; border-radius: 8px;
+    background: #f3f4f6; display: flex; align-items: center;
+    justify-content: center; color: #9ca3af; font-size: 24px; flex-shrink: 0;
+}
+.product-info h2 { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+.product-info .meta { font-size: 11px; color: #6b7280; }
+.product-info .meta span { margin-right: 10px; }
+.product-info .price-tag { font-size: 16px; font-weight: 800; color: #1d4ed8; margin-top: 2px; }
+.qty-badge {
+    display: inline-block; background: #dbeafe; color: #1e40af;
+    font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 9999px;
+}
+.code-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 4px; padding: 8px;
+}
+.code-cell {
+    border: 1px solid #e5e7eb; border-radius: 6px;
+    padding: 8px 4px; text-align: center;
+}
+.code-cell .lbl-name {
+    font-size: 8px; font-weight: 700; line-height: 1.2;
+    margin-bottom: 2px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+}
+.code-cell .lbl-code {
+    font-size: 24px; line-height: 1; font-weight: 900; letter-spacing: 1px;
+    color: #111827;
+}
+.code-cell .lbl-price { font-size: 10px; font-weight: 800; margin-top: 2px; }
+</style>
+</head><body>
+<div class="no-print toolbar">
+    <button onclick="window.print()">Print POS Codes</button>
+    <button onclick="window.close()">Close</button>
+</div>
+<div class="store-header">
+    <h1>Discount Discovery Zone</h1>
+    <p>${productsToPrint.length} product${productsToPrint.length !== 1 ? 's' : ''} &middot; ${totalLabels} total labels &middot; ${new Date().toLocaleDateString()}</p>
+</div>
+<div id="c"></div>
+<script>
+const P=${JSON.stringify(productsToPrint)};
+const c=document.getElementById('c');
+P.forEach(p=>{
+    const s=document.createElement('div');s.className='product-section';
+    const h=document.createElement('div');h.className='product-header';
+    h.innerHTML=(p.image?'<img class="product-img" src="'+p.image+'" />':'<div class="product-img-placeholder">&#128722;</div>')+
+        '<div class="product-info"><h2>'+p.name+'</h2>'+
+        '<div class="meta"><span>SKU: '+(p.sku||'\\u2014')+'</span><span>POS Code: '+p.posCode+'</span></div>'+
+        '<div class="price-tag">GH\\u20B5 '+Number(p.price).toFixed(2)+'</div>'+
+        '<div style="margin-top:3px"><span class="qty-badge">'+p.quantity+' labels</span></div></div>';
+    s.appendChild(h);
+    const g=document.createElement('div');g.className='code-grid';
+    for(let i=0;i<p.quantity;i++){
+        const d=document.createElement('div');d.className='code-cell';
+        const n=document.createElement('div');n.className='lbl-name';n.textContent=p.name;d.appendChild(n);
+        const code=document.createElement('div');code.className='lbl-code';code.textContent=p.posCode;d.appendChild(code);
+        const pr=document.createElement('div');pr.className='lbl-price';pr.textContent='GH\\u20B5 '+Number(p.price).toFixed(2);d.appendChild(pr);
+        g.appendChild(d);
+    }
+    s.appendChild(g);c.appendChild(s);
+});
+</script>
+</body></html>`);
+    printWindow.document.close();
+}
+
 export default function BarcodesPage() {
     const ITEMS_PER_PAGE = 25;
     const [products, setProducts] = useState<Product[]>([]);
@@ -178,6 +296,7 @@ export default function BarcodesPage() {
     const [filter, setFilter] = useState<'all' | 'with' | 'without' | 'printed' | 'not_printed'>('all');
     const [labelCounts, setLabelCounts] = useState<Record<string, number>>({});
     const [currentPage, setCurrentPage] = useState(1);
+    const [autoGeneratedPosCodes, setAutoGeneratedPosCodes] = useState(false);
 
     const fetchProducts = useCallback(async () => {
         setLoading(true);
@@ -193,6 +312,7 @@ export default function BarcodesPage() {
                 name: p.name,
                 sku: p.sku,
                 barcode: p.barcode,
+                pos_code: getPosCodeFromMetadata(p.metadata),
                 price: p.price,
                 quantity: p.quantity,
                 category_name: p.categories?.name || '',
@@ -239,11 +359,39 @@ export default function BarcodesPage() {
         setGenerating(false);
     };
 
+    const generatePosCodesForAll = async () => {
+        const missing = products.filter(p => !p.pos_code);
+        if (missing.length === 0) return;
+        setGenerating(true);
+        const used = new Set(products.filter(p => p.pos_code).map(p => p.pos_code));
+        for (const product of missing) {
+            const code = generateNextPosCode(used);
+            used.add(code);
+            const existingMeta = (await supabase.from('products').select('metadata').eq('id', product.id).single()).data?.metadata || {};
+            await supabase.from('products').update({
+                metadata: { ...existingMeta, pos_code: code }
+            }).eq('id', product.id);
+            await new Promise(r => setTimeout(r, 40));
+        }
+        await fetchProducts();
+        setGenerating(false);
+    };
+
     const generateForOne = async (productId: string) => {
         const used = new Set(products.filter(p => p.barcode).map(p => p.barcode!));
         let code: string;
         do { code = generateBarcode(); } while (used.has(code));
         await supabase.from('products').update({ barcode: code }).eq('id', productId);
+        await fetchProducts();
+    };
+
+    const generatePosCodeForOne = async (productId: string) => {
+        const used = new Set(products.filter(p => p.pos_code).map(p => p.pos_code));
+        const code = generateNextPosCode(used);
+        const existingMeta = (await supabase.from('products').select('metadata').eq('id', productId).single()).data?.metadata || {};
+        await supabase.from('products').update({
+            metadata: { ...existingMeta, pos_code: code }
+        }).eq('id', productId);
         await fetchProducts();
     };
 
@@ -259,7 +407,8 @@ export default function BarcodesPage() {
         const matchesSearch = !searchQuery ||
             p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             p.sku?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            p.barcode?.includes(searchQuery);
+            p.barcode?.includes(searchQuery) ||
+            p.pos_code?.includes(searchQuery);
         const matchesFilter =
             filter === 'all' ? true :
             filter === 'with' ? !!p.barcode :
@@ -339,11 +488,53 @@ export default function BarcodesPage() {
         await markAsPrinted(toPrint.map(p => p.id));
     };
 
+    const printSinglePosCode = (product: Product) => {
+        if (!product.pos_code) return;
+        const qty = labelCounts[product.id] || Math.min(Math.max(product.quantity, 1), 50);
+        openPosCodePrintWindow([{
+            name: product.name,
+            posCode: product.pos_code,
+            price: product.price,
+            quantity: qty,
+            sku: product.sku,
+            image: product.image_url || ''
+        }]);
+    };
+
+    const handlePrintPosCodes = () => {
+        const toPrint = selected.size > 0
+            ? products.filter(p => selected.has(p.id) && p.pos_code)
+            : filtered.filter(p => p.pos_code);
+
+        if (toPrint.length === 0) {
+            alert('No products with POS codes to print. Generate POS codes first.');
+            return;
+        }
+
+        openPosCodePrintWindow(toPrint.map(p => ({
+            name: p.name,
+            posCode: p.pos_code,
+            price: p.price,
+            quantity: labelCounts[p.id] || Math.min(Math.max(p.quantity, 1), 50),
+            sku: p.sku,
+            image: p.image_url || ''
+        })));
+    };
+
     const missingCount = products.filter(p => !p.barcode).length;
+    const missingPosCodeCount = products.filter(p => !p.pos_code).length;
     const totalSelectedLabels = (selected.size > 0
         ? products.filter(p => selected.has(p.id) && p.barcode)
         : filtered.filter(p => p.barcode)
     ).reduce((sum, p) => sum + (labelCounts[p.id] || Math.min(Math.max(p.quantity, 1), 50)), 0);
+
+    useEffect(() => {
+        if (loading || generating || autoGeneratedPosCodes) return;
+        if (missingPosCodeCount > 0) {
+            setAutoGeneratedPosCodes(true);
+            void generatePosCodesForAll();
+        }
+    }, [loading, generating, autoGeneratedPosCodes, missingPosCodeCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
     return (
         <div className="space-y-6">
@@ -372,6 +563,19 @@ export default function BarcodesPage() {
                             )}
                         </button>
                     )}
+                    {missingPosCodeCount > 0 && (
+                        <button
+                            onClick={generatePosCodesForAll}
+                            disabled={generating}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold text-sm transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                            {generating ? (
+                                <><i className="ri-loader-4-line animate-spin"></i> Generating...</>
+                            ) : (
+                                <><i className="ri-hashtag"></i> Generate Missing POS Codes ({missingPosCodeCount})</>
+                            )}
+                        </button>
+                    )}
                     <button
                         onClick={handlePrintSelected}
                         className="flex items-center gap-2 px-4 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-semibold text-sm transition-colors cursor-pointer"
@@ -379,11 +583,18 @@ export default function BarcodesPage() {
                         <i className="ri-printer-line"></i>
                         Print {selected.size > 0 ? `Selected (${selected.size})` : 'All'} ({totalSelectedLabels} labels)
                     </button>
+                    <button
+                        onClick={handlePrintPosCodes}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-violet-700 hover:bg-violet-800 text-white rounded-lg font-semibold text-sm transition-colors cursor-pointer"
+                    >
+                        <i className="ri-price-tag-3-line"></i>
+                        Print POS Codes
+                    </button>
                 </div>
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-6 gap-4">
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
                     <p className="text-sm text-gray-500">Total Products</p>
                     <p className="text-2xl font-bold text-gray-900">{products.length}</p>
@@ -395,6 +606,10 @@ export default function BarcodesPage() {
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
                     <p className="text-sm text-gray-500">Missing Barcode</p>
                     <p className="text-2xl font-bold text-amber-600">{missingCount}</p>
+                </div>
+                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                    <p className="text-sm text-gray-500">Missing POS Code</p>
+                    <p className="text-2xl font-bold text-purple-600">{missingPosCodeCount}</p>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
                     <p className="text-sm text-gray-500">Printed</p>
@@ -410,7 +625,7 @@ export default function BarcodesPage() {
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
                 <i className="ri-lightbulb-line text-blue-600 text-lg mt-0.5"></i>
                 <div className="text-sm text-blue-800">
-                    <strong>Tip:</strong> Use the <strong>Print</strong> button on each product row to print one product at a time. You can adjust the label count per product. For bulk printing, select products first then use the top Print button.
+                    <strong>Tip:</strong> Use per-row print for one product at a time. You can print either traditional barcodes or POS short-code labels, and adjust label counts before printing.
                 </div>
             </div>
 
@@ -423,7 +638,7 @@ export default function BarcodesPage() {
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search by name, SKU, or barcode..."
+                            placeholder="Search by name, SKU, barcode, or POS code..."
                             className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                     </div>
@@ -479,7 +694,7 @@ export default function BarcodesPage() {
                                 />
                             </div>
                             <div>Product</div>
-                            <div>Barcode</div>
+                            <div>Barcode / POS Code</div>
                             <div>Price</div>
                             <div>Labels</div>
                             <div>Actions</div>
@@ -519,6 +734,7 @@ export default function BarcodesPage() {
                                             <p className="text-xs text-gray-500">
                                                 {product.category_name && <span>{product.category_name} · </span>}
                                                 <span className="font-mono">{product.sku || '—'}</span>
+                                                <span className="ml-2 text-purple-700 font-mono">POS: {product.pos_code || '—'}</span>
                                                 <span className="ml-2 text-gray-400">Stock: {product.quantity}</span>
                                                 {product.barcode_printed_at && (
                                                     <span className="ml-2 text-green-600">· Printed {new Date(product.barcode_printed_at).toLocaleDateString()}</span>
@@ -528,16 +744,28 @@ export default function BarcodesPage() {
                                     </div>
 
                                     <div>
-                                        {product.barcode ? (
-                                            <BarcodeImage value={product.barcode} width={1.1} height={30} />
-                                        ) : (
-                                            <button
-                                                onClick={() => generateForOne(product.id)}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-xs font-semibold text-amber-700 hover:bg-amber-100 transition-colors cursor-pointer"
-                                            >
-                                                <i className="ri-add-line"></i> Generate
-                                            </button>
-                                        )}
+                                        <div className="space-y-2">
+                                            {product.barcode ? (
+                                                <BarcodeImage value={product.barcode} width={1.1} height={30} />
+                                            ) : (
+                                                <button
+                                                    onClick={() => generateForOne(product.id)}
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-xs font-semibold text-amber-700 hover:bg-amber-100 transition-colors cursor-pointer"
+                                                >
+                                                    <i className="ri-add-line"></i> Generate Barcode
+                                                </button>
+                                            )}
+                                            {product.pos_code ? (
+                                                <p className="text-xs font-bold text-purple-700 font-mono">POS: {product.pos_code}</p>
+                                            ) : (
+                                                <button
+                                                    onClick={() => generatePosCodeForOne(product.id)}
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 border border-purple-200 rounded-lg text-xs font-semibold text-purple-700 hover:bg-purple-100 transition-colors cursor-pointer"
+                                                >
+                                                    <i className="ri-hashtag"></i> Generate POS Code
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
 
                                     <div>
@@ -556,21 +784,32 @@ export default function BarcodesPage() {
                                     </div>
 
                                     <div>
-                                        {product.barcode ? (
-                                            <button
-                                                onClick={() => printSingleProduct(product)}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer"
-                                            >
-                                                <i className="ri-printer-line"></i> Print
-                                            </button>
-                                        ) : (
-                                            <Link
-                                                href={`/admin/products/${product.id}`}
-                                                className="text-blue-600 hover:text-blue-800 text-xs font-medium"
-                                            >
-                                                Edit
-                                            </Link>
-                                        )}
+                                        <div className="flex flex-col gap-1.5">
+                                            {product.barcode && (
+                                                <button
+                                                    onClick={() => printSingleProduct(product)}
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer"
+                                                >
+                                                    <i className="ri-printer-line"></i> Print Barcode
+                                                </button>
+                                            )}
+                                            {product.pos_code && (
+                                                <button
+                                                    onClick={() => printSinglePosCode(product)}
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 border border-purple-200 rounded-lg text-xs font-semibold text-purple-700 hover:bg-purple-100 transition-colors cursor-pointer"
+                                                >
+                                                    <i className="ri-price-tag-3-line"></i> Print POS Code
+                                                </button>
+                                            )}
+                                            {!product.barcode && !product.pos_code && (
+                                                <Link
+                                                    href={`/admin/products/${product.id}`}
+                                                    className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                                                >
+                                                    Edit
+                                                </Link>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             ))}

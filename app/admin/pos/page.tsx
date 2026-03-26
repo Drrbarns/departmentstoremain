@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabase';
+import { getPosCodeFromMetadata } from '@/lib/posCode';
 
 const BarcodeScanner = dynamic(() => import('@/components/admin/BarcodeScanner'), { ssr: false });
 
@@ -15,6 +16,7 @@ interface Product {
     image: string;
     sku: string;
     barcode: string | null;
+    posCode: string;
 }
 
 interface CartItem extends Product {
@@ -77,7 +79,7 @@ export default function POSPage() {
             const { data: prodData } = await supabase
                 .from('products')
                 .select(`
-          id, name, price, quantity, sku, barcode,
+          id, name, price, quantity, sku, barcode, metadata,
           categories(name),
           product_images(url)
         `)
@@ -92,7 +94,8 @@ export default function POSPage() {
                     category: p.categories?.name || 'Uncategorized',
                     image: p.product_images?.[0]?.url || 'https://via.placeholder.com/150',
                     sku: p.sku,
-                    barcode: p.barcode || null
+                    barcode: p.barcode || null,
+                    posCode: getPosCodeFromMetadata(p.metadata)
                 }));
                 setProducts(formatted);
 
@@ -150,7 +153,7 @@ export default function POSPage() {
 
     const handleBarcodeScan = useCallback((barcode: string) => {
         const match = products.find(p =>
-            p.barcode === barcode || p.sku === barcode
+            p.barcode === barcode || p.sku === barcode || p.posCode === barcode
         );
         if (match) {
             addToCart(match);
@@ -167,7 +170,8 @@ export default function POSPage() {
             const q = searchQuery.toLowerCase();
             const matchesSearch = p.name.toLowerCase().includes(q) ||
                 p.sku?.toLowerCase().includes(q) ||
-                p.barcode?.includes(searchQuery);
+                p.barcode?.includes(searchQuery) ||
+                p.posCode?.includes(searchQuery);
             const matchesCat = activeCategory === 'All' || p.category === activeCategory;
             return matchesSearch && matchesCat;
         });
@@ -217,13 +221,6 @@ export default function POSPage() {
         if (paymentMethod === 'cash') {
             const tendered = parseFloat(amountTendered || '0');
             if (tendered < grandTotal) return 'Insufficient amount tendered';
-        }
-
-        // For guest, require at least a name or phone
-        if (!selectedCustomer) {
-            const hasName = guestDetails.firstName.trim() || guestDetails.lastName.trim();
-            const hasContact = guestDetails.email.trim() || guestDetails.phone.trim();
-            if (!hasName && !hasContact) return 'Please enter customer name or contact info';
         }
 
         // Require address for doorstep delivery
@@ -460,12 +457,29 @@ export default function POSPage() {
                             <i className="ri-search-line absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                             <input
                                 type="text"
-                                placeholder="Search by name, SKU, or barcode..."
+                                placeholder="Search by name, SKU, barcode, or POS code..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key !== 'Enter') return;
+                                    const code = searchQuery.trim();
+                                    if (!code) return;
+                                    const exactMatch = products.find(p =>
+                                        p.posCode === code || p.barcode === code || p.sku === code
+                                    );
+                                    if (exactMatch) {
+                                        addToCart(exactMatch);
+                                        setScanFeedback({ message: `Added: ${exactMatch.name}`, type: 'success' });
+                                        setSearchQuery('');
+                                        setTimeout(() => setScanFeedback(null), 2500);
+                                    }
+                                }}
                                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                 autoFocus
                             />
+                            <p className="mt-1 text-xs text-gray-500">
+                                Tip: Type barcode, SKU, or POS code then press Enter.
+                            </p>
                         </div>
                         <button
                             onClick={() => setShowScanner(true)}
@@ -809,7 +823,7 @@ export default function POSPage() {
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <input
                                                         type="text"
-                                                        placeholder="First Name *"
+                                                        placeholder="First Name"
                                                         value={guestDetails.firstName}
                                                         onChange={e => setGuestDetails({ ...guestDetails, firstName: e.target.value })}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
