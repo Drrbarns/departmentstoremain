@@ -83,7 +83,7 @@ const articles: any = {
       
       <h2>Return Policy Details</h2>
       <ul>
-        <li>You have 30 days from delivery to start a return</li>
+        <li>Returns are available for eligible items after delivery</li>
         <li>Items must be unused and in original packaging</li>
         <li>Return shipping is free for defective items</li>
         <li>Standard returns have a small shipping fee</li>

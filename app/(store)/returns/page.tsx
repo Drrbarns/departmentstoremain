@@ -156,7 +156,7 @@ export default function ReturnsPortalPage() {
                   <div className="text-sm text-blue-700">
                     <p className="font-semibold mb-1">Return Policy Highlights</p>
                     <ul className="space-y-1">
-                      <li>• Returns accepted within 30 days of delivery</li>
+                      <li>• Returns accepted for eligible delivered items</li>
                       <li>• Items must be unused with original tags</li>
                       <li>• Free return shipping for defective items</li>
                       <li>• Refunds processed within 5-7 business days</li>
