@@ -504,7 +504,7 @@ export default function BarcodesPage() {
     const handlePrintPosCodes = () => {
         const toPrint = selected.size > 0
             ? products.filter(p => selected.has(p.id) && p.pos_code)
-            : filtered.filter(p => p.pos_code);
+            : paginatedProducts.filter(p => p.pos_code);
 
         if (toPrint.length === 0) {
             alert('No products with POS codes to print. Generate POS codes first.');
