@@ -40,6 +40,7 @@ export default function POSPage() {
     const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
     const [showScanner, setShowScanner] = useState(false);
     const [scanFeedback, setScanFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+    const [mobileCategoryIndex, setMobileCategoryIndex] = useState(0);
 
     // Checkout State
     const [showCheckoutModal, setShowCheckoutModal] = useState(false);
@@ -71,6 +72,12 @@ export default function POSPage() {
     useEffect(() => {
         fetchData();
     }, []);
+
+    useEffect(() => {
+        if (!categories.length) return;
+        const currentIdx = categories.indexOf(activeCategory);
+        setMobileCategoryIndex(currentIdx >= 0 ? currentIdx : 0);
+    }, [categories, activeCategory]);
 
     const fetchData = async () => {
         try {
@@ -150,6 +157,20 @@ export default function POSPage() {
     };
 
     const emptyCart = () => setCart([]);
+
+    const showPreviousCategory = () => {
+        if (!categories.length) return;
+        const nextIndex = (mobileCategoryIndex - 1 + categories.length) % categories.length;
+        setMobileCategoryIndex(nextIndex);
+        setActiveCategory(categories[nextIndex]);
+    };
+
+    const showNextCategory = () => {
+        if (!categories.length) return;
+        const nextIndex = (mobileCategoryIndex + 1) % categories.length;
+        setMobileCategoryIndex(nextIndex);
+        setActiveCategory(categories[nextIndex]);
+    };
 
     const handleBarcodeScan = useCallback((barcode: string) => {
         const match = products.find(p =>
@@ -451,8 +472,8 @@ export default function POSPage() {
             {/* LEFT: Product Grid */}
             <div className={`flex-1 flex flex-col h-full min-w-0 ${isMobileCartOpen ? 'hidden lg:flex' : 'flex'}`}>
                 {/* Header / Search */}
-                <div className="bg-white p-4 border-b border-gray-200 flex items-center justify-between space-x-4 shrink-0">
-                    <div className="relative flex-1 max-w-lg flex gap-2">
+                <div className="bg-white p-4 border-b border-gray-200 flex flex-col gap-3 shrink-0">
+                    <div className="relative w-full max-w-lg flex gap-2">
                         <div className="relative flex-1">
                             <i className="ri-search-line absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
                             <input
@@ -477,7 +498,7 @@ export default function POSPage() {
                                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                 autoFocus
                             />
-                            <p className="mt-1 text-xs text-gray-500">
+                            <p className="hidden sm:block mt-1 text-xs text-gray-500">
                                 Tip: Type barcode, SKU, or POS code then press Enter.
                             </p>
                         </div>
@@ -490,7 +511,32 @@ export default function POSPage() {
                             <span className="hidden sm:inline">Scan</span>
                         </button>
                     </div>
-                    <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar">
+
+                    <div className="flex md:hidden items-center gap-2">
+                        <button
+                            onClick={showPreviousCategory}
+                            className="w-9 h-9 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors"
+                            title="Previous category"
+                        >
+                            <i className="ri-arrow-left-s-line text-lg"></i>
+                        </button>
+                        <button
+                            onClick={() => setActiveCategory(categories[mobileCategoryIndex] || 'All')}
+                            className="flex-1 px-4 py-2 rounded-full text-sm font-semibold bg-blue-700 text-white shadow-md text-center truncate"
+                            title={categories[mobileCategoryIndex] || 'All'}
+                        >
+                            {categories[mobileCategoryIndex] || 'All'}
+                        </button>
+                        <button
+                            onClick={showNextCategory}
+                            className="w-9 h-9 rounded-full border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors"
+                            title="Next category"
+                        >
+                            <i className="ri-arrow-right-s-line text-lg"></i>
+                        </button>
+                    </div>
+
+                    <div className="hidden md:flex items-center space-x-2 overflow-x-auto no-scrollbar">
                         {categories.map(cat => (
                             <button
                                 key={cat}
