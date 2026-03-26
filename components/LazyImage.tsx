@@ -58,14 +58,20 @@ export default function LazyImage({
   // Fallback for invalid/empty URLs
   if (!safeSrc || hasError) {
     return (
-      <div className={`relative overflow-hidden bg-gray-200 flex items-center justify-center ${className}`} style={{ width, height }}>
+      <div
+        className={`relative overflow-hidden bg-gray-200 flex items-center justify-center w-full h-full ${className}`}
+        style={width || height ? { width, height } : undefined}
+      >
         <span className="text-gray-400 text-xs">No Image</span>
       </div>
     );
   }
 
   return (
-    <div className={`relative overflow-hidden ${className}`} style={{ width, height }}>
+    <div
+      className={`relative overflow-hidden w-full h-full ${className}`}
+      style={width || height ? { width, height } : undefined}
+    >
       {!isLoaded && (
         <div className="absolute inset-0 bg-gray-200 animate-pulse z-10"></div>
       )}
