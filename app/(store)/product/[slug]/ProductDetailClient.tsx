@@ -118,6 +118,12 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
           if (!variantImagesMap[img.variant_id]) variantImagesMap[img.variant_id] = [];
           variantImagesMap[img.variant_id].push(img.url);
         });
+        // Fallback: use image_url from variant row if no product_images entry
+        rawVariants.forEach((v: any) => {
+          if (!variantImagesMap[v.id] && v.image_url) {
+            variantImagesMap[v.id] = [v.image_url];
+          }
+        });
 
         // Each variant is its own selectable option — label is name OR colorName, whichever is set
         // "colors" here means the unique option1 values that drive image swapping
@@ -504,16 +510,10 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                           Min. order: {product.moq} units
                         </span>
                       )}
-                      {activeStock > 10 && (
+                      {activeStock > 0 && (
                         <span className="text-gray-600 font-medium text-sm">
                           <i className="ri-checkbox-circle-line mr-1 text-blue-600"></i>
-                          {activeStock} in stock
-                        </span>
-                      )}
-                      {activeStock > 0 && activeStock <= 10 && (
-                        <span className="text-amber-600 font-medium text-sm">
-                          <i className="ri-error-warning-line mr-1"></i>
-                          Only {activeStock} left in stock
+                          In stock
                         </span>
                       )}
                       {activeStock === 0 && (

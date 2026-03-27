@@ -645,6 +645,7 @@ export default function CheckoutPage() {
               shipping={shippingCost}
               tax={tax}
               total={total}
+              deliveryMethod={deliveryMethod}
             />
           </div>
         </div>

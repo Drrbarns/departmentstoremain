@@ -4,6 +4,7 @@ import { escapeHtml } from '@/lib/sanitize';
 
 const resend = new Resend(process.env.RESEND_API_KEY || 'missing_api_key');
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@standardecom.com';
+const ADMIN_PHONE = process.env.ADMIN_PHONE || '';
 const EMAIL_FROM = process.env.EMAIL_FROM || 'Discount Discovery Zone <noreply@discount-discovery-zone.vercel.app>';
 const BRAND = {
     name: 'Discount Discovery Zone',
@@ -301,6 +302,15 @@ ${emailButton('View Order in Admin', `${baseUrl}/admin/orders/${id}`)}
         await sendSMS({
             to: phone,
             message: smsMessage
+        });
+    }
+
+    // 4. SMS to Admin (if ADMIN_PHONE is configured)
+    if (ADMIN_PHONE) {
+        const adminSms = `New order #${order_number || id} from ${name} — GH₵${Number(total).toFixed(2)}. View: ${baseUrl}/admin/orders/${id}`;
+        await sendSMS({
+            to: ADMIN_PHONE,
+            message: adminSms
         });
     }
 }

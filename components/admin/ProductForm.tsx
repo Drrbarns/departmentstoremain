@@ -106,26 +106,32 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
         const groupsByKey = new Map<string, VariantGroup>();
         existingVariants.forEach((v: any) => {
             const variantImg = allImages.find((img: any) => img.variant_id === v.id);
+            const imgUrl = v.image_url || variantImg?.url || '';
             const colorName = (v.option2 || '').trim();
             const hasLegacyGroupOnlyName = !colorName && !v.option1 && !!v.name;
             const groupName = colorName || (hasLegacyGroupOnlyName ? (v.name || '').trim() : 'Default');
-            const groupKey = groupName || 'Default';
+
+            // Use image URL as secondary grouping key when option2 is empty,
+            // so variants with different images stay in separate groups
+            const groupKey = colorName
+                ? colorName
+                : (imgUrl ? `img:${imgUrl}` : (groupName || 'Default'));
 
             if (!groupsByKey.has(groupKey)) {
                 groupsByKey.set(groupKey, {
                     tempId: Math.random().toString(36).slice(2),
                     name: groupName === 'Default' ? '' : groupName,
-                    appearanceType: variantImg?.url ? 'image' : 'color',
+                    appearanceType: imgUrl ? 'image' : 'color',
                     colorName: colorName || '',
                     colorHex: v.metadata?.color_hex || '#888888',
-                    imageUrl: variantImg?.url || '',
+                    imageUrl: imgUrl,
                     sizes: []
                 });
             }
 
             const group = groupsByKey.get(groupKey)!;
-            if (!group.imageUrl && variantImg?.url) {
-                group.imageUrl = variantImg.url;
+            if (!group.imageUrl && imgUrl) {
+                group.imageUrl = imgUrl;
                 group.appearanceType = 'image';
             }
 
@@ -373,6 +379,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                 quantity: parseInt(sizeRow.stock) || 0,
                                 option1: sizeLabel,
                                 option2: option2Value,
+                                image_url: group.imageUrl || null,
                                 metadata: group.colorHex && group.appearanceType === 'color'
                                     ? { color_hex: group.colorHex }
                                     : {}
