@@ -21,6 +21,7 @@ export default function AdminLayout({
 
   // Module Filtering State
   const [enabledModules, setEnabledModules] = useState<string[]>([]);
+  const [clearingCache, setClearingCache] = useState(false);
 
   useEffect(() => {
     async function checkAuth() {
@@ -137,6 +138,31 @@ export default function AdminLayout({
     document.cookie = 'sb-refresh-token=; path=/; max-age=0; SameSite=Lax; Secure';
     await supabase.auth.signOut();
     router.push('/admin/login');
+  };
+
+  const handleClearCache = async () => {
+    setClearingCache(true);
+    try {
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+
+      const registrations = await navigator.serviceWorker?.getRegistrations();
+      if (registrations) {
+        await Promise.all(registrations.map(r => r.unregister()));
+      }
+
+      localStorage.clear();
+      sessionStorage.clear();
+
+      alert('Cache cleared successfully. The page will now reload.');
+      window.location.reload();
+    } catch (err) {
+      console.error('Cache clear error:', err);
+      alert('Cache partially cleared. The page will now reload.');
+      window.location.reload();
+    }
   };
 
   if (isLoading) {
@@ -303,6 +329,14 @@ export default function AdminLayout({
           </nav>
 
           <div className="mt-8 pt-8 border-t border-gray-200">
+            <button
+              onClick={handleClearCache}
+              disabled={clearingCache}
+              className="w-full flex items-center space-x-3 px-4 py-3 text-amber-700 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <i className={`${clearingCache ? 'ri-loader-4-line animate-spin' : 'ri-delete-bin-2-line'} text-xl w-5 h-5 flex items-center justify-center`}></i>
+              <span>{clearingCache ? 'Clearing...' : 'Clear Cache'}</span>
+            </button>
             <Link
               href="/"
               target="_blank"

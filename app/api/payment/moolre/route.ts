@@ -106,8 +106,8 @@ export async function POST(req: Request) {
         console.log('[Payment] Response status:', result.status, '| Has URL:', !!result.data?.authorization_url);
 
         if (result.status === 1 && result.data?.authorization_url) {
-            // Store the Moolre external reference on the order so verify can use it
-            await supabaseAdmin
+            // Store the Moolre external reference on the order so verify/callback can use it
+            const { error: metaError } = await supabaseAdmin
                 .from('orders')
                 .update({
                     metadata: {
@@ -117,6 +117,12 @@ export async function POST(req: Request) {
                     }
                 })
                 .eq('id', order.id);
+
+            if (metaError) {
+                console.error('[Payment] Failed to store moolre_externalref:', metaError.message);
+            } else {
+                console.log('[Payment] Stored externalref:', uniqueRef, 'for order:', orderRef);
+            }
 
             return NextResponse.json({ success: true, url: result.data.authorization_url, reference: result.data.reference });
         } else {
