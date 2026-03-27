@@ -36,11 +36,18 @@ export async function POST(req: Request) {
 
         // SECURITY: Fetch the order from the database and use its total.
         // NEVER trust the amount from the client.
-        const { data: order, error: orderError } = await supabaseAdmin
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId);
+        let query = supabaseAdmin
             .from('orders')
-            .select('id, order_number, total, email, payment_status')
-            .or(`id.eq.${orderId},order_number.eq.${orderId}`)
-            .single();
+            .select('id, order_number, total, email, payment_status');
+
+        if (isUUID) {
+            query = query.or(`id.eq.${orderId},order_number.eq.${orderId}`);
+        } else {
+            query = query.eq('order_number', orderId);
+        }
+
+        const { data: order, error: orderError } = await query.single();
 
         if (orderError || !order) {
             console.error('[Payment] Order not found:', orderId);

@@ -248,19 +248,25 @@ export default function Home() {
 
           <AnimatedGrid className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
             {categories.map((category) => {
-              const categoryImage = category.image || category.image_url || '/og-image.png';
+              const categoryImage = category.image || category.image_url || '';
               return (
               <Link href={`/shop?category=${category.slug}`} key={category.id} className="group cursor-pointer block relative">
                 <div className="aspect-[3/4] rounded-2xl overflow-hidden relative shadow-md group-hover:shadow-xl transition-all duration-300">
-                  <Image
-                    src={categoryImage}
-                    alt={category.name}
-                    fill
-                    unoptimized={Boolean(categoryImage.startsWith('http'))}
-                    className="object-cover transition-transform duration-700 group-hover:scale-110"
-                    sizes="(max-width: 768px) 50vw, 25vw"
-                    quality={75}
-                  />
+                  {categoryImage ? (
+                    <Image
+                      src={categoryImage}
+                      alt={category.name}
+                      fill
+                      unoptimized={Boolean(categoryImage.startsWith('http'))}
+                      className="object-cover transition-transform duration-700 group-hover:scale-110"
+                      sizes="(max-width: 768px) 50vw, 25vw"
+                      quality={75}
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+                      <i className="ri-image-line text-4xl text-gray-400"></i>
+                    </div>
+                  )}
                   {/* Gradient Overlay */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300"></div>
                   
@@ -331,7 +337,7 @@ export default function Home() {
                     name={product.name}
                     price={product.price}
                     originalPrice={product.compare_at_price}
-                    image={product.product_images?.[0]?.url || '/og-image.png'}
+                    image={product.product_images?.[0]?.url || ''}
                     rating={product.rating_avg || 5}
                     reviewCount={product.review_count || 0}
                     badge={product.featured ? 'Featured' : undefined}

@@ -55,7 +55,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
       }
     }
     // Fall back to product-level images
-    setDisplayImages(product.images.length > 0 ? product.images : ['/og-image.png']);
+    setDisplayImages(product.images.length > 0 ? product.images : []);
     setSelectedImage(0);
   }, [selectedVariant, product]);
 
@@ -144,10 +144,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
           preorderShipping: productData.metadata?.preorder_shipping || null
         };
 
-        // Ensure at least one image/placeholder
-        if (transformedProduct.images.length === 0) {
-          transformedProduct.images = ['/og-image.png'];
-        }
+        // No placeholder — LazyImage handles empty/missing src gracefully
 
         setProduct(transformedProduct);
         setDisplayImages(transformedProduct.images);
@@ -189,7 +186,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                 slug: p.slug,
                 name: p.name,
                 price: p.price,
-                image: p.product_images?.[0]?.url || '/og-image.png',
+                image: p.product_images?.[0]?.url || '',
                 rating: p.rating_avg || 0,
                 reviewCount: 0,
                 inStock: effectiveStock > 0,
@@ -326,7 +323,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
               <div>
                 <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 mb-4 shadow-lg border border-gray-100">
                   <LazyImage
-                    src={displayImages[selectedImage] || displayImages[0] || '/og-image.png'}
+                    src={displayImages[selectedImage] || displayImages[0] || ''}
                     alt={product.name}
                     className="object-cover object-center transition-opacity duration-300"
                     sizes="(max-width: 1024px) 100vw, 50vw"
