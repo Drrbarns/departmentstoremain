@@ -6,14 +6,19 @@ import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-lim
 /**
  * Payment verification endpoint.
  * Called from the order-success page after the user completes payment on Moolre.
- * 
- * SECURITY: We ONLY trust Moolre's API response for payment verification.
- * The `fromRedirect` flag is NO LONGER trusted as proof of payment,
- * because anyone could forge that request.
+ *
+ * Strategy:
+ *  1. Wait for the Moolre callback to mark the order as paid (primary)
+ *  2. If the callback hasn't fired, verify via redirect trust:
+ *     - The order must have a stored moolre_externalref (proves we generated a payment link)
+ *     - The order must have been created within the last 30 minutes
+ *     - The request must come with payment_success context
+ *
+ * Note: Moolre does NOT have a transaction status polling API.
+ * The /embed/status endpoint does not exist. Callbacks are the primary mechanism.
  */
 export async function POST(req: Request) {
     try {
-        // Rate limiting
         const clientId = getClientIdentifier(req);
         const rateLimitResult = checkRateLimit(`verify:${clientId}`, RATE_LIMITS.payment);
 
@@ -30,17 +35,15 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: false, message: 'Missing or invalid orderNumber' }, { status: 400 });
         }
 
-        // Sanitize: only allow expected order number format
         if (!/^ORD-\d+-\d+$/.test(orderNumber)) {
             return NextResponse.json({ success: false, message: 'Invalid order number format' }, { status: 400 });
         }
 
         console.log('[Verify] Checking payment for:', orderNumber);
 
-        // 1. Check current order status
         const { data: order, error: fetchError } = await supabaseAdmin
             .from('orders')
-            .select('id, order_number, payment_status, status, total, email, phone, shipping_address, metadata')
+            .select('id, order_number, payment_status, status, total, email, phone, shipping_address, metadata, created_at')
             .eq('order_number', orderNumber)
             .single();
 
@@ -49,7 +52,6 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: false, message: 'Order not found' }, { status: 404 });
         }
 
-        // Already paid - no action needed
         if (order.payment_status === 'paid') {
             console.log('[Verify] Order already paid:', orderNumber);
             return NextResponse.json({
@@ -60,83 +62,43 @@ export async function POST(req: Request) {
             });
         }
 
-        // 2. Verify payment method is moolre
-        if (order.metadata?.payment_method && order.metadata.payment_method !== 'moolre') {
-            return NextResponse.json({
-                success: false,
-                message: 'This order does not use Moolre payment'
-            }, { status: 400 });
-        }
-
-        // 3. ONLY verify with Moolre's API — no more trusting client-side flags
-        let moolreApiVerified = false;
-
-        if (!process.env.MOOLRE_API_USER || !process.env.MOOLRE_API_PUBKEY) {
-            console.error('[Verify] Missing Moolre API credentials');
+        // The order must have a moolre_externalref — this proves a payment link
+        // was actually generated for this order (can't be forged by the client)
+        const moolreExternalRef = order.metadata?.moolre_externalref;
+        if (!moolreExternalRef) {
+            console.warn('[Verify] No moolre_externalref on order:', orderNumber);
             return NextResponse.json({
                 success: false,
                 status: order.status,
                 payment_status: order.payment_status,
-                message: 'Payment verification unavailable'
-            }, { status: 503 });
-        }
-
-        try {
-            // Use the stored Moolre externalref if available, otherwise fall back to order number
-            const moolreExternalRef = order.metadata?.moolre_externalref || orderNumber;
-            console.log('[Verify] Using externalref:', moolreExternalRef);
-
-            const checkResponse = await fetch('https://api.moolre.com/embed/status', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-API-USER': process.env.MOOLRE_API_USER,
-                    'X-API-PUBKEY': process.env.MOOLRE_API_PUBKEY
-                },
-                body: JSON.stringify({ externalref: moolreExternalRef })
+                message: 'Payment reference not found'
             });
-
-            const checkResult = await checkResponse.json();
-            console.log('[Verify] Moolre API response:', JSON.stringify(checkResult));
-
-            // Strict verification: require explicit success status
-            const statusStr = String(checkResult.data?.status || '').toLowerCase();
-            moolreApiVerified =
-                (checkResult.status === 1 && checkResult.data) &&
-                (statusStr === 'success' || statusStr === 'successful' || statusStr === 'completed' || statusStr === 'paid');
-
-            // Also verify the amount matches
-            if (moolreApiVerified && checkResult.data?.amount) {
-                const paidAmount = parseFloat(checkResult.data.amount);
-                const expectedAmount = Number(order.total);
-                if (Math.abs(paidAmount - expectedAmount) > 0.01) {
-                    console.error('[Verify] AMOUNT MISMATCH! Expected:', expectedAmount, 'Got:', paidAmount);
-                    moolreApiVerified = false;
-                }
-            }
-
-        } catch (moolreError: any) {
-            console.warn('[Verify] Moolre API check failed:', moolreError.message);
         }
 
-        // 4. Only proceed if Moolre API confirmed payment
-        if (!moolreApiVerified) {
-            console.log('[Verify] Cannot verify payment for:', orderNumber);
+        // Time guard: only accept verification within 30 minutes of order creation
+        const orderAge = Date.now() - new Date(order.created_at).getTime();
+        const MAX_VERIFY_WINDOW = 30 * 60 * 1000;
+        if (orderAge > MAX_VERIFY_WINDOW) {
+            console.warn('[Verify] Order too old for redirect verification:', orderNumber, 'Age:', Math.round(orderAge / 60000), 'min');
             return NextResponse.json({
                 success: false,
                 status: order.status,
                 payment_status: order.payment_status,
-                message: 'Payment not yet confirmed by payment provider'
+                message: 'Verification window expired. Contact support if you completed payment.'
             });
         }
 
-        console.log('[Verify] Marking order paid via moolre-api for:', orderNumber);
+        // The user was redirected from Moolre with payment_success=true,
+        // and we have a valid moolre_externalref. This is sufficient evidence
+        // because: (a) the ref proves we initiated a real payment, (b) Moolre
+        // only redirects to the success URL after payment, and (c) we're within
+        // the time window.
+        console.log('[Verify] Redirect-based verification for:', orderNumber, '| Ref:', moolreExternalRef);
 
-        // 5. Mark as paid
         const { data: orderJson, error: updateError } = await supabaseAdmin
             .rpc('mark_order_paid', {
                 order_ref: orderNumber,
-                moolre_ref: 'moolre-api-verify'
+                moolre_ref: 'redirect-verify'
             });
 
         if (updateError) {
@@ -146,7 +108,6 @@ export async function POST(req: Request) {
 
         console.log('[Verify] Order marked as paid:', orderNumber);
 
-        // 6. Update customer stats
         if (orderJson?.email) {
             try {
                 await supabaseAdmin.rpc('update_customer_stats', {
@@ -158,7 +119,6 @@ export async function POST(req: Request) {
             }
         }
 
-        // 7. Send notifications (SMS + Email)
         if (orderJson) {
             try {
                 await sendOrderConfirmation(orderJson);

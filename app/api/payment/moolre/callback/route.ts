@@ -75,13 +75,13 @@ export async function POST(req: Request) {
         // ============================================================
         const expectedSecret = process.env.MOOLRE_CALLBACK_SECRET;
         if (expectedSecret) {
-            // If we have a configured secret, the callback MUST match it
             if (!body.secret || body.secret !== expectedSecret) {
-                console.error('[Callback] Secret mismatch or missing! Rejecting callback.');
+                console.error('[Callback] Secret mismatch! Expected:', expectedSecret.substring(0, 8) + '...', 'Got:', String(body.secret || '').substring(0, 8) + '...');
+                console.error('[Callback] Full body for debugging:', JSON.stringify(body).substring(0, 1000));
                 return NextResponse.json({ success: false, message: 'Invalid callback signature' }, { status: 403 });
             }
+            console.log('[Callback] Secret verified OK');
         } else {
-            // Log a warning if no secret is configured — this should be fixed
             console.warn('[Callback] WARNING: MOOLRE_CALLBACK_SECRET not configured. Callback origin cannot be verified.');
         }
 
