@@ -154,7 +154,7 @@ export async function sendSMS({ to, message }: { to: string; message: string }) 
             },
             body: JSON.stringify({
                 type: 1,
-                senderid: 'DDZ',
+                senderid: process.env.MOOLRE_SMS_SENDER_ID || 'DD Zone',
                 messages: [
                     {
                         recipient: recipient,

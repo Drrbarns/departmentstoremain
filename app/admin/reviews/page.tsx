@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 export default function AdminReviewsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedReviews, setSelectedReviews] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState('date');
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -70,7 +71,14 @@ export default function AdminReviewsPage() {
 
   const filteredReviews = reviews.filter(r =>
     statusFilter === 'all' || r.status.toLowerCase() === statusFilter
-  );
+  ).sort((a, b) => {
+    switch (sortBy) {
+      case 'rating': return (b.rating || 0) - (a.rating || 0);
+      case 'helpful': return (b.helpful || 0) - (a.helpful || 0);
+      case 'date':
+      default: return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+    }
+  });
 
   const stats = {
     total: reviews.length,
@@ -187,10 +195,14 @@ export default function AdminReviewsPage() {
             <h2 className="text-lg font-bold text-gray-900 text-transform capitalize">
               {statusFilter === 'all' ? 'All Reviews' : `${statusFilter} Reviews`}
             </h2>
-            <select className="px-4 py-2 pr-8 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium cursor-pointer">
-              <option>Sort by Date</option>
-              <option>Sort by Rating</option>
-              <option>Sort by Helpful</option>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-4 py-2 pr-8 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium cursor-pointer"
+            >
+              <option value="date">Sort by Date</option>
+              <option value="rating">Sort by Rating</option>
+              <option value="helpful">Sort by Helpful</option>
             </select>
           </div>
         </div>

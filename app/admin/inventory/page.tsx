@@ -232,7 +232,7 @@ export default function InventoryManagementPage() {
               </button>
 
               <button
-                onClick={() => setShowExportModal(true)}
+                onClick={handleExportCSV}
                 className="border-2 border-gray-300 hover:border-gray-400 text-gray-700 px-4 py-3 rounded-lg font-semibold transition-colors flex items-center space-x-2 whitespace-nowrap cursor-pointer"
               >
                 <i className="ri-download-line"></i>
@@ -340,18 +340,20 @@ export default function InventoryManagementPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center space-x-2">
-                          <button
+                          <Link
+                            href={`/admin/products/${product.id}`}
                             className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-blue-700 transition-colors cursor-pointer"
-                            title="Edit"
+                            title="Edit Product"
                           >
                             <i className="ri-edit-line text-lg"></i>
-                          </button>
-                          <button
+                          </Link>
+                          <Link
+                            href={`/admin/products/${product.id}`}
                             className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-blue-700 transition-colors cursor-pointer"
                             title="View Details"
                           >
                             <i className="ri-eye-line text-lg"></i>
-                          </button>
+                          </Link>
                         </div>
                       </td>
                     </tr>
@@ -362,8 +364,19 @@ export default function InventoryManagementPage() {
           </div>
         </div>
       </div>
-      {showImportModal && <div className="hidden">Mock Modal</div>}
-      {showExportModal && <div className="hidden">Mock Export</div>}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Import Inventory (CSV)</h2>
+            <p className="text-sm text-gray-600 mb-4">Upload a CSV file with columns: SKU, Quantity. This will update stock levels for matching products.</p>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center mb-4">
+              <i className="ri-upload-cloud-line text-3xl text-gray-400 mb-2"></i>
+              <p className="text-sm text-gray-500">CSV import coming soon</p>
+            </div>
+            <button onClick={() => setShowImportModal(false)} className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 rounded-lg font-semibold transition-colors cursor-pointer">Close</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

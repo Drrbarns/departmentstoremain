@@ -39,7 +39,7 @@ export async function POST(req: Request) {
         const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId);
         let query = supabaseAdmin
             .from('orders')
-            .select('id, order_number, total, email, payment_status');
+            .select('id, order_number, total, email, payment_status, metadata');
 
         if (isUUID) {
             query = query.or(`id.eq.${orderId},order_number.eq.${orderId}`);
@@ -106,6 +106,18 @@ export async function POST(req: Request) {
         console.log('[Payment] Response status:', result.status, '| Has URL:', !!result.data?.authorization_url);
 
         if (result.status === 1 && result.data?.authorization_url) {
+            // Store the Moolre external reference on the order so verify can use it
+            await supabaseAdmin
+                .from('orders')
+                .update({
+                    metadata: {
+                        ...(order.metadata || {}),
+                        moolre_externalref: uniqueRef,
+                        moolre_reference: result.data.reference || null
+                    }
+                })
+                .eq('id', order.id);
+
             return NextResponse.json({ success: true, url: result.data.authorization_url, reference: result.data.reference });
         } else {
             return NextResponse.json({ success: false, message: result.message || 'Failed to generate payment link' }, { status: 400 });

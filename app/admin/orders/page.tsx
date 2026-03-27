@@ -322,6 +322,18 @@ export default function AdminOrdersPage() {
     const matchesProduct = productFilter === 'all' || 
       order.order_items?.some((item: any) => item.product_name === productFilter);
     return matchesViewTab && matchesSearch && matchesStatus && matchesProduct;
+  }).sort((a, b) => {
+    switch (sortBy) {
+      case 'total':
+        return (b.total || 0) - (a.total || 0);
+      case 'customer':
+        return getCustomerName(a).localeCompare(getCustomerName(b));
+      case 'status':
+        return (a.status || '').localeCompare(b.status || '');
+      case 'date':
+      default:
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
   });
 
   return (

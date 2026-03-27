@@ -229,6 +229,45 @@ export default function AdminCustomersPage() {
     }
   };
 
+  const handleExportCustomers = (subset?: any[]) => {
+    const data = subset || customers;
+    const csvContent = `Name,Email,Phone,Orders,Total Spent,Status,Joined\n${data.map(c =>
+      `"${c.name}","${c.email}","${c.phone}",${c.orders},${c.totalSpent.toFixed(2)},${c.status},"${c.joined}"`
+    ).join('\n')}`;
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'customers.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleDeleteCustomer = async (customerId: string) => {
+    if (!confirm('Are you sure you want to delete this customer?')) return;
+    if (customerId.startsWith('guest-')) {
+      setCustomers(customers.filter(c => c.id !== customerId));
+      return;
+    }
+    const { error } = await supabase.from('customers').delete().eq('id', customerId);
+    if (!error) {
+      setCustomers(customers.filter(c => c.id !== customerId));
+    } else {
+      alert('Failed to delete customer: ' + error.message);
+    }
+  };
+
+  const handleEmailCustomer = (customer: any) => {
+    window.open(`mailto:${customer.email}?subject=Hello from Discount Discovery Zone`);
+  };
+
+  const handleBulkExport = () => {
+    const subset = customers.filter(c => selectedCustomers.includes(c.id));
+    handleExportCustomers(subset);
+  };
+
   // Memoized filter and sort
   const filteredCustomers = useMemo(() => {
     let result = customers;
@@ -279,7 +318,10 @@ export default function AdminCustomersPage() {
           <h1 className="text-3xl font-bold text-gray-900">Customers</h1>
           <p className="text-gray-600 mt-1">Manage your customer base and relationships</p>
         </div>
-        <button className="bg-blue-700 hover:bg-blue-800 text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer">
+        <button
+          onClick={handleExportCustomers}
+          className="bg-blue-700 hover:bg-blue-800 text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer"
+        >
           <i className="ri-download-line mr-2"></i>
           Export Customers
         </button>
@@ -352,15 +394,21 @@ export default function AdminCustomersPage() {
               {selectedCustomers.length} customer{selectedCustomers.length > 1 ? 's' : ''} selected
             </p>
             <div className="flex items-center space-x-2">
-              <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-pointer">
+              <button
+                onClick={() => {
+                  const selected = customers.filter(c => selectedCustomers.includes(c.id));
+                  const emails = selected.map(c => c.email).filter(Boolean).join(',');
+                  window.open(`mailto:${emails}?subject=Hello from Discount Discovery Zone`);
+                }}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-pointer"
+              >
                 <i className="ri-mail-line mr-2"></i>
                 Send Email
               </button>
-              <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-pointer">
-                <i className="ri-vip-crown-line mr-2"></i>
-                Mark as VIP
-              </button>
-              <button className="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-pointer">
+              <button
+                onClick={handleBulkExport}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-800 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-pointer"
+              >
                 <i className="ri-download-line mr-2"></i>
                 Export
               </button>
@@ -445,10 +493,18 @@ export default function AdminCustomersPage() {
                         >
                           <i className="ri-eye-line text-lg"></i>
                         </Link>
-                        <button className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer">
+                        <button
+                          onClick={() => handleEmailCustomer(customer)}
+                          className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                          title="Send Email"
+                        >
                           <i className="ri-mail-line text-lg"></i>
                         </button>
-                        <button className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer">
+                        <button
+                          onClick={() => handleDeleteCustomer(customer.id)}
+                          className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                          title="Delete Customer"
+                        >
                           <i className="ri-delete-bin-line text-lg"></i>
                         </button>
                       </div>

@@ -59,9 +59,71 @@ export default function AdminCouponsPage() {
     'Disabled': 'bg-red-100 text-red-700'
   };
 
+  const [couponForm, setCouponForm] = useState({
+    code: '',
+    discount_type: 'percentage',
+    discount_value: 0,
+    min_purchase_amount: 0,
+    usage_limit: 0,
+    end_date: '',
+    is_active: true
+  });
+
   const handleEdit = (coupon: any) => {
     setEditingCoupon(coupon);
+    setCouponForm({
+      code: coupon.code || '',
+      discount_type: (coupon.type || 'percentage').toLowerCase().replace(' ', '_'),
+      discount_value: coupon.value || 0,
+      min_purchase_amount: coupon.minPurchase || 0,
+      usage_limit: coupon.usageLimit || 0,
+      end_date: coupon.endDate || '',
+      is_active: coupon.status === 'Active'
+    });
     setShowEditModal(true);
+  };
+
+  const resetForm = () => {
+    setCouponForm({ code: '', discount_type: 'percentage', discount_value: 0, min_purchase_amount: 0, usage_limit: 0, end_date: '', is_active: true });
+  };
+
+  const handleSaveCoupon = async () => {
+    if (!couponForm.code.trim()) { alert('Please enter a coupon code'); return; }
+    if (couponForm.discount_value <= 0) { alert('Please enter a discount value'); return; }
+
+    const payload = {
+      code: couponForm.code.toUpperCase().trim(),
+      discount_type: couponForm.discount_type,
+      discount_value: couponForm.discount_value,
+      min_purchase_amount: couponForm.min_purchase_amount || 0,
+      usage_limit: couponForm.usage_limit || null,
+      end_date: couponForm.end_date || null,
+      is_active: couponForm.is_active
+    };
+
+    if (showEditModal && editingCoupon) {
+      const { error } = await supabase.from('coupons').update(payload).eq('id', editingCoupon.id);
+      if (error) { alert('Failed to update coupon: ' + error.message); return; }
+    } else {
+      const { error } = await supabase.from('coupons').insert([{ ...payload, start_date: new Date().toISOString() }]);
+      if (error) { alert('Failed to create coupon: ' + error.message); return; }
+    }
+
+    setShowAddModal(false);
+    setShowEditModal(false);
+    resetForm();
+    fetchCoupons();
+  };
+
+  const handleDeleteCoupon = async (couponId: string) => {
+    if (!confirm('Are you sure you want to delete this coupon?')) return;
+    const { error } = await supabase.from('coupons').delete().eq('id', couponId);
+    if (error) { alert('Failed to delete coupon: ' + error.message); return; }
+    setCoupons(coupons.filter(c => c.id !== couponId));
+  };
+
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code).then(() => alert('Coupon code copied!')).catch(() => {});
   };
 
   const activeCoupons = coupons.filter(c => c.status === 'Active');
@@ -75,7 +137,7 @@ export default function AdminCouponsPage() {
           <p className="text-gray-600 mt-1">Create and manage discount codes</p>
         </div>
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={() => { resetForm(); setShowAddModal(true); }}
           className="bg-blue-700 hover:bg-blue-800 text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer"
         >
           <i className="ri-add-line mr-2"></i>
@@ -147,7 +209,11 @@ export default function AdminCouponsPage() {
                     <td className="py-4 px-6">
                       <div className="flex items-center space-x-2">
                         <span className="font-mono font-bold text-gray-900 bg-gray-100 px-3 py-1 rounded">{coupon.code}</span>
-                        <button className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors cursor-pointer">
+                        <button
+                          onClick={() => handleCopyCode(coupon.code)}
+                          className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors cursor-pointer"
+                          title="Copy code"
+                        >
                           <i className="ri-file-copy-line"></i>
                         </button>
                       </div>
@@ -191,7 +257,11 @@ export default function AdminCouponsPage() {
                         >
                           <i className="ri-edit-line text-lg"></i>
                         </button>
-                        <button className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer">
+                        <button
+                          onClick={() => handleDeleteCoupon(coupon.id)}
+                          className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                          title="Delete coupon"
+                        >
                           <i className="ri-delete-bin-line text-lg"></i>
                         </button>
                       </div>
@@ -204,18 +274,104 @@ export default function AdminCouponsPage() {
         </div>
       </div>
 
-      {/* Modals omitted for brevity but logic remains for state */}
       {(showAddModal || showEditModal) && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-8 rounded-lg max-w-lg w-full">
-            <h2 className="text-xl font-bold mb-4">Manage Coupon</h2>
-            <p className="text-gray-600 mb-6">Coupon management functionality coming soon.</p>
-            <button
-              onClick={() => { setShowAddModal(false); setShowEditModal(false); }}
-              className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-            >
-              Close
-            </button>
+          <div className="bg-white p-6 rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">
+              {showEditModal ? 'Edit Coupon' : 'Create New Coupon'}
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Coupon Code *</label>
+                <input
+                  type="text"
+                  value={couponForm.code}
+                  onChange={(e) => setCouponForm({ ...couponForm, code: e.target.value.toUpperCase() })}
+                  placeholder="e.g. SAVE20"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Discount Type</label>
+                  <select
+                    value={couponForm.discount_type}
+                    onChange={(e) => setCouponForm({ ...couponForm, discount_type: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg cursor-pointer"
+                  >
+                    <option value="percentage">Percentage (%)</option>
+                    <option value="fixed_amount">Fixed Amount (GH₵)</option>
+                    <option value="free_shipping">Free Shipping</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    {couponForm.discount_type === 'percentage' ? 'Percentage (%)' : 'Amount (GH₵)'}
+                  </label>
+                  <input
+                    type="number"
+                    value={couponForm.discount_value || ''}
+                    onChange={(e) => setCouponForm({ ...couponForm, discount_value: parseFloat(e.target.value) || 0 })}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg"
+                    disabled={couponForm.discount_type === 'free_shipping'}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Min Purchase (GH₵)</label>
+                  <input
+                    type="number"
+                    value={couponForm.min_purchase_amount || ''}
+                    onChange={(e) => setCouponForm({ ...couponForm, min_purchase_amount: parseFloat(e.target.value) || 0 })}
+                    placeholder="0 = no minimum"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Usage Limit</label>
+                  <input
+                    type="number"
+                    value={couponForm.usage_limit || ''}
+                    onChange={(e) => setCouponForm({ ...couponForm, usage_limit: parseInt(e.target.value) || 0 })}
+                    placeholder="0 = unlimited"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Expiry Date (optional)</label>
+                <input
+                  type="date"
+                  value={couponForm.end_date}
+                  onChange={(e) => setCouponForm({ ...couponForm, end_date: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg"
+                />
+              </div>
+              <label className="flex items-center space-x-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={couponForm.is_active}
+                  onChange={(e) => setCouponForm({ ...couponForm, is_active: e.target.checked })}
+                  className="w-5 h-5 text-blue-700 rounded"
+                />
+                <span className="text-sm font-medium text-gray-700">Active</span>
+              </label>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => { setShowAddModal(false); setShowEditModal(false); resetForm(); }}
+                className="flex-1 border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveCoupon}
+                className="flex-1 bg-blue-700 hover:bg-blue-800 text-white py-3 rounded-lg font-semibold transition-colors cursor-pointer"
+              >
+                {showEditModal ? 'Save Changes' : 'Create Coupon'}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1,237 +1,99 @@
 # Supabase Database Migrations
 
-This folder contains all SQL migration files for your e-commerce store database.
+This folder contains the SQL migration for the Discount Discovery Zone e-commerce database.
 
-## 📁 Migration Files
+## Migration File
 
-### 001_initial_schema.sql
-**Complete database schema** with all tables:
-- User profiles and addresses
-- Products, variants, and categories
-- Orders and order items
-- Cart and wishlist
-- Reviews and ratings
-- Coupons and loyalty program
-- Blog posts
-- Support tickets and returns
-- Notifications
-- All indexes for optimal performance
+### `20260327000000_complete_schema.sql`
 
-### 002_row_level_security.sql
-**Security policies (RLS)** to protect user data:
-- Users can only access their own data
-- Public read access for products, categories, blog posts
-- Secure order and payment information
-- Protected personal information
-- Admin-only access where needed
+A single, comprehensive migration (~1200 lines) that creates the entire database from scratch. It covers:
 
-### 003_functions_and_triggers.sql
-**Automated database operations**:
-- Auto-generate order/ticket/return numbers
-- Update timestamps automatically
-- Create user profiles on signup
-- Award loyalty points on orders
-- Update product inventory
-- Calculate order totals
-- Manage default addresses
-- Track coupon usage
+| Section | Contents |
+|---------|----------|
+| Extensions | `uuid-ossp` |
+| Enum types (13) | `user_role`, `gender_type`, `address_type`, `product_status`, `category_status`, `order_status`, `payment_status`, `discount_type`, `review_status`, `blog_status`, `ticket_status`, `ticket_priority`, `return_status` |
+| Functions (11) | `is_admin_or_staff`, `update_updated_at_column`, `handle_new_user`, `update_product_rating_stats`, `upsert_customer_from_order`, `update_customer_stats`, `mark_order_paid`, `reduce_stock_on_order`, `get_all_customer_emails`, `get_all_customer_phones`, `rls_auto_enable` |
+| Tables (30) | `profiles`, `addresses`, `store_settings`, `audit_logs`, `categories`, `products`, `product_images`, `product_variants`, `coupons`, `orders`, `order_items`, `order_status_history`, `cart_items`, `wishlist_items`, `reviews`, `review_images`, `blog_posts`, `support_tickets`, `support_messages`, `return_requests`, `return_items`, `notifications`, `pages`, `site_settings`, `cms_content`, `banners`, `navigation_menus`, `navigation_items`, `store_modules`, `customers` |
+| Indexes (40+) | B-tree, GIN (tags), partial indexes (pending reminders, unread notifications, featured products) |
+| Triggers (16) | `updated_at` auto-management on 13 tables, product rating recalculation on review changes, profile creation on auth signup |
+| RLS policies (68) | Row-level security on all 30 tables with role-based access control |
+| Storage (5 buckets) | `products`, `avatars`, `blog`, `media`, `reviews` with read/write policies |
 
-### 004_storage_buckets.sql
-**File storage configuration**:
-- Product images
-- User avatars
-- Review images
-- Blog images
-- Category images
-- Upload/download policies
+## How to Use
 
-### 005_sample_data.sql (Optional)
-**Test data for development**:
-- Sample categories
-- Sample products
-- Sample coupons
-- Sample blog posts
+### Option 1: Supabase Dashboard (Recommended for first setup)
 
-## 🚀 How to Use
+1. Go to your Supabase Dashboard → **SQL Editor**
+2. Copy the contents of `20260327000000_complete_schema.sql`
+3. Paste and run
 
-### Method 1: Supabase Dashboard (Recommended)
-
-1. **Connect to Supabase** in Readdy.ai
-2. **Copy each SQL file content**
-3. **Go to Supabase Dashboard** → SQL Editor
-4. **Run migrations in order** (001 → 002 → 003 → 004 → 005)
-5. **Execute each file** one by one
-
-### Method 2: Supabase CLI
+### Option 2: Supabase CLI
 
 ```bash
-# Install Supabase CLI
-npm install -g supabase
-
-# Login to Supabase
-supabase login
-
 # Link your project
 supabase link --project-ref your-project-ref
 
-# Run migrations
+# Push migrations
 supabase db push
 ```
 
-### Method 3: Manual SQL Execution
-
-1. **Open Supabase Dashboard**
-2. **Navigate to SQL Editor**
-3. **Copy and paste each file**
-4. **Run in correct order**
-
-## ⚠️ Important Notes
-
-### Migration Order
-**Must run in this exact order:**
-1. ✅ 001_initial_schema.sql (creates tables)
-2. ✅ 002_row_level_security.sql (adds security)
-3. ✅ 003_functions_and_triggers.sql (adds automation)
-4. ✅ 004_storage_buckets.sql (configures storage)
-5. ✅ 005_sample_data.sql (optional test data)
-
-### Security
-- **RLS is enabled** on all tables
-- **Users can only access their own data**
-- **Products and blog posts are public**
-- **Admin functions require authentication**
-
-### Sample Data
-- File `005_sample_data.sql` is **optional**
-- Use for **testing and development only**
-- **Delete or comment out** before production deployment
-
-## 🔧 Customization
-
-### Adding New Tables
-Add to `001_initial_schema.sql`:
-```sql
-CREATE TABLE IF NOT EXISTS your_table (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  -- your columns
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-### Adding RLS Policies
-Add to `002_row_level_security.sql`:
-```sql
-ALTER TABLE your_table ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "policy_name"
-  ON your_table FOR SELECT
-  USING (auth.uid() = user_id);
-```
-
-### Adding Triggers
-Add to `003_functions_and_triggers.sql`:
-```sql
-CREATE TRIGGER your_trigger
-  BEFORE INSERT ON your_table
-  FOR EACH ROW
-  EXECUTE FUNCTION your_function();
-```
-
-## 📊 Database Schema Overview
+## Database Schema Overview
 
 ### Core Tables
-- **profiles** - User profile information
-- **addresses** - Shipping and billing addresses
-- **products** - Product catalog
-- **product_variants** - Product options (size, color, etc.)
-- **categories** - Product categories
+- **profiles** — User profile (auto-created on signup)
+- **addresses** — Shipping/billing addresses
+- **customers** — Consolidated customer records (guests + registered)
 
-### E-commerce Tables
-- **orders** - Order information
-- **order_items** - Products in each order
-- **cart_items** - Shopping cart
-- **wishlist_items** - User wishlists
-- **reviews** - Product reviews and ratings
+### Catalog
+- **products** — Product catalog with MOQ, SEO, variants support
+- **product_variants** — Size/color/option variations
+- **product_images** — Product and variant images
+- **categories** — Hierarchical categories (self-referencing `parent_id`)
 
-### Marketing Tables
-- **coupons** - Discount codes
-- **loyalty_points** - Customer loyalty program
-- **loyalty_transactions** - Points history
-- **blog_posts** - Content marketing
+### E-Commerce
+- **orders** — Orders with Moolre payment integration
+- **order_items** — Line items per order
+- **order_status_history** — Status change audit trail
+- **cart_items** — Server-side shopping cart
+- **wishlist_items** — User wishlists
+- **coupons** — Discount codes (percentage, fixed, free shipping)
 
-### Support Tables
-- **support_tickets** - Customer support
-- **support_messages** - Ticket conversations
-- **return_requests** - Product returns
-- **return_items** - Items being returned
-- **notifications** - User notifications
+### Reviews & Content
+- **reviews** — Product reviews (1-5 rating, moderation)
+- **review_images** — Images attached to reviews
+- **blog_posts** — Blog/content marketing
+- **pages** — Static pages (about, contact, etc.)
+- **cms_content** — CMS content blocks
+- **banners** — Promotional banners
 
-## 🔐 Default Policies
+### Support
+- **support_tickets** — Customer support with auto-numbered tickets
+- **support_messages** — Ticket conversation threads
+- **return_requests** — Return/refund workflows
+- **return_items** — Individual items in a return
 
-### User Data
-✅ Users can view/edit their own profile  
-✅ Users can manage their addresses  
-✅ Users can view their orders  
-✅ Users can manage their cart/wishlist  
+### System
+- **store_settings** — Key-value store settings
+- **site_settings** — Site-level configuration
+- **store_modules** — Feature flag toggles (POS, blog, etc.)
+- **navigation_menus** / **navigation_items** — Dynamic menus
+- **notifications** — In-app notifications
+- **audit_logs** — Admin action trail
 
-### Public Data
-✅ Anyone can view products  
-✅ Anyone can view categories  
-✅ Anyone can view blog posts  
-✅ Anyone can view approved reviews  
+## Security
 
-### Protected Data
-🔒 Orders are private  
-🔒 Personal information is private  
-🔒 Payment details are secure  
-🔒 Admin functions require authentication  
+- RLS is enabled on **all 30 tables**
+- `is_admin_or_staff()` helper function used across policies
+- `rls_auto_enable` event trigger protects new tables automatically
+- Service role bypass for server-side operations (customers table)
+- Guest order support (orders with `user_id IS NULL`)
 
-## 🎯 Next Steps
+## Key Functions
 
-After running migrations:
-
-1. **Connect Supabase** in Readdy.ai
-2. **Set up authentication** (email, Google, etc.)
-3. **Configure storage** for image uploads
-4. **Add products** via admin panel or API
-5. **Test RLS policies** with different users
-6. **Deploy edge functions** for checkout/payments
-
-## 📚 Resources
-
-- [Supabase Documentation](https://supabase.com/docs)
-- [Row Level Security Guide](https://supabase.com/docs/guides/auth/row-level-security)
-- [PostgreSQL Functions](https://www.postgresql.org/docs/current/plpgsql.html)
-- [Storage Policies](https://supabase.com/docs/guides/storage)
-
-## 🆘 Troubleshooting
-
-### Migration Fails
-- Check if tables already exist
-- Run migrations in correct order
-- Check for syntax errors
-- Verify Supabase connection
-
-### RLS Issues
-- Ensure policies are created
-- Check user authentication
-- Verify policy conditions
-- Test with different users
-
-### Trigger Problems
-- Check function definitions
-- Verify trigger timing (BEFORE/AFTER)
-- Test with sample data
-- Review error messages
-
-## 💡 Tips
-
-✅ **Always backup** before running migrations  
-✅ **Test in development** environment first  
-✅ **Review policies** before production  
-✅ **Monitor performance** with indexes  
-✅ **Document changes** for your team  
-
----
-
-**Ready to deploy?** Connect your Supabase project in Readdy.ai and run these migrations! 🚀
+| Function | Purpose |
+|----------|---------|
+| `mark_order_paid(order_ref, moolre_ref)` | Mark order paid, reduce stock, record payment |
+| `upsert_customer_from_order(...)` | Create or deduplicate customer from checkout |
+| `update_customer_stats(email, total)` | Increment order count and spend |
+| `handle_new_user()` | Auto-create profile on signup (trigger) |
+| `update_product_rating_stats()` | Recalculate product rating (trigger) |

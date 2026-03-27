@@ -188,7 +188,65 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
     }
   };
 
+  const [markingPaid, setMarkingPaid] = useState(false);
+  const [resendingPayment, setResendingPayment] = useState(false);
   const [resendingNotification, setResendingNotification] = useState(false);
+
+  const handleMarkAsPaid = async () => {
+    if (!order) return;
+    if (!confirm('Are you sure you want to mark this order as paid? This should only be done after confirming payment was received.')) return;
+
+    try {
+      setMarkingPaid(true);
+      const { error } = await supabase
+        .from('orders')
+        .update({ payment_status: 'paid', status: order.status === 'pending' ? 'processing' : order.status })
+        .eq('id', order.id);
+
+      if (error) throw error;
+
+      setOrder({
+        ...order,
+        payment_status: 'paid',
+        status: order.status === 'pending' ? 'processing' : order.status
+      });
+      alert('Order marked as paid successfully!');
+    } catch (err: any) {
+      console.error('Error marking as paid:', err);
+      alert('Failed to mark as paid: ' + (err.message || 'Unknown error'));
+    } finally {
+      setMarkingPaid(false);
+    }
+  };
+
+  const handleResendPaymentLink = async () => {
+    if (!order) return;
+    try {
+      setResendingPayment(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      const authToken = session?.access_token;
+
+      const response = await fetch('/api/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+        },
+        body: JSON.stringify({
+          type: 'payment_link',
+          payload: order
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to send payment link');
+      alert('Payment link sent successfully!');
+    } catch (err: any) {
+      console.error('Error resending payment link:', err);
+      alert('Failed to send payment link: ' + (err.message || 'Unknown error'));
+    } finally {
+      setResendingPayment(false);
+    }
+  };
 
   const handleResendNotification = async () => {
     if (!order) return;
@@ -601,18 +659,46 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Status</span>
-                  <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold whitespace-nowrap capitalize">
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold whitespace-nowrap capitalize ${
+                    order.payment_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                  }`}>
                     {order.payment_status}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  {/* Transaction ID might be in metadata depending on callback */}
                   <span className="text-gray-600">Transaction</span>
                   <span className="text-sm text-gray-900 font-mono truncate max-w-[150px]">
                     {order.metadata?.moolre_reference || order.payment_transaction_id || 'N/A'}
                   </span>
                 </div>
               </div>
+
+              {order.payment_status !== 'paid' && (
+                <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
+                  <button
+                    onClick={handleMarkAsPaid}
+                    disabled={markingPaid}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold transition-colors whitespace-nowrap disabled:opacity-50 flex items-center justify-center cursor-pointer"
+                  >
+                    {markingPaid ? (
+                      <><i className="ri-loader-4-line animate-spin mr-2"></i>Processing...</>
+                    ) : (
+                      <><i className="ri-checkbox-circle-line mr-2"></i>Mark as Paid</>
+                    )}
+                  </button>
+                  <button
+                    onClick={handleResendPaymentLink}
+                    disabled={resendingPayment}
+                    className="w-full bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-lg font-semibold transition-colors whitespace-nowrap disabled:opacity-50 flex items-center justify-center cursor-pointer"
+                  >
+                    {resendingPayment ? (
+                      <><i className="ri-loader-4-line animate-spin mr-2"></i>Sending...</>
+                    ) : (
+                      <><i className="ri-send-plane-line mr-2"></i>Resend Payment Link</>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

@@ -12,6 +12,8 @@ export default function ProductsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<any[]>([]);
@@ -141,36 +143,55 @@ export default function ProductsPage() {
     }
   };
 
+  const deleteProductWithRelations = async (productIds: string[]) => {
+    // Delete related records first to avoid FK constraint errors
+    await supabase.from('cart_items').delete().in('product_id', productIds);
+    await supabase.from('wishlist_items').delete().in('product_id', productIds);
+    await supabase.from('reviews').delete().in('product_id', productIds);
+    await supabase.from('product_images').delete().in('product_id', productIds);
+    await supabase.from('product_variants').delete().in('product_id', productIds);
+    // Nullify order_items reference instead of deleting (preserve order history)
+    await supabase.from('order_items').update({ product_id: null }).in('product_id', productIds);
+    // Now delete the product(s)
+    const { error } = await supabase.from('products').delete().in('id', productIds);
+    return error;
+  };
+
   const handleDeleteProduct = async (productId: string) => {
-    if (confirm('Are you sure you want to delete this product?')) {
-      const { error } = await supabase.from('products').delete().eq('id', productId);
+    if (confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+      const error = await deleteProductWithRelations([productId]);
       if (!error) {
         setProducts(products.filter(p => p.id !== productId));
         alert('Product deleted successfully');
       } else {
-        alert('Error deleting product');
+        console.error('Delete error:', error);
+        alert('Error deleting product: ' + error.message);
       }
     }
   };
 
   const handleBulkDelete = async () => {
-    if (confirm(`Are you sure you want to delete ${selectedProducts.length} products?`)) {
-      const { error } = await supabase.from('products').delete().in('id', selectedProducts);
+    if (confirm(`Are you sure you want to delete ${selectedProducts.length} products? This action cannot be undone.`)) {
+      const error = await deleteProductWithRelations(selectedProducts);
       if (!error) {
         setProducts(products.filter(p => !selectedProducts.includes(p.id)));
         setSelectedProducts([]);
         alert('Products deleted successfully');
       } else {
-        alert('Error deleting products');
+        console.error('Bulk delete error:', error);
+        alert('Error deleting products: ' + error.message);
       }
     }
   };
 
   const filteredProducts = products.filter(product => {
     const term = searchQuery.toLowerCase();
-    return product.name.toLowerCase().includes(term) ||
+    const matchesSearch = product.name.toLowerCase().includes(term) ||
       (product.sku && product.sku.toLowerCase().includes(term)) ||
       (product.category && product.category.toLowerCase().includes(term));
+    const matchesCategory = !categoryFilter || product.category === categoryFilter;
+    const matchesStatus = !statusFilter || product.status === statusFilter;
+    return matchesSearch && matchesCategory && matchesStatus;
   });
 
   return (
@@ -264,15 +285,23 @@ export default function ProductsPage() {
 
           {showFilters && (
             <div className="mt-4 p-4 bg-gray-50 rounded-lg grid md:grid-cols-4 gap-4">
-              <select className="px-3 py-2 pr-8 border-2 border-gray-300 rounded-lg text-sm cursor-pointer">
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="px-3 py-2 pr-8 border-2 border-gray-300 rounded-lg text-sm cursor-pointer"
+              >
                 <option value="">All Categories</option>
                 {categories.map((cat: any) => <option key={cat.name} value={cat.name}>{cat.name}</option>)}
               </select>
-              <select className="px-3 py-2 pr-8 border-2 border-gray-300 rounded-lg text-sm cursor-pointer">
-                <option>All Status</option>
-                <option>Active</option>
-                <option>Draft</option>
-                <option>Archived</option>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-3 py-2 pr-8 border-2 border-gray-300 rounded-lg text-sm cursor-pointer"
+              >
+                <option value="">All Status</option>
+                <option value="active">Active</option>
+                <option value="draft">Draft</option>
+                <option value="archived">Archived</option>
               </select>
             </div>
           )}

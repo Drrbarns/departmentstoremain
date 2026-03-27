@@ -183,7 +183,7 @@ export default function AdminDashboard() {
         const { data: productData } = await supabase.from('products').select('*, product_images(url)').limit(4);
         if (productData) {
           setTopProducts(productData.map((p: any) => ({
-            id: p.slug, // Use slug for link
+            id: p.id,
             name: p.name,
             image: p.product_images?.[0]?.url || 'https://via.placeholder.com/200',
             sales: 0, // Mocked for now
