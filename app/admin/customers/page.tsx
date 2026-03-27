@@ -319,7 +319,7 @@ export default function AdminCustomersPage() {
           <p className="text-gray-600 mt-1">Manage your customer base and relationships</p>
         </div>
         <button
-          onClick={handleExportCustomers}
+          onClick={() => handleExportCustomers()}
           className="bg-blue-700 hover:bg-blue-800 text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer"
         >
           <i className="ri-download-line mr-2"></i>
