@@ -16,6 +16,7 @@ export default function ProductsPage() {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [variantFilter, setVariantFilter] = useState('');
+  const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all');
   const [bulkStatus, setBulkStatus] = useState('draft');
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -244,7 +245,11 @@ export default function ProductsPage() {
     const matchesVariants = !variantFilter
       || (variantFilter === 'with' && product.variantsCount > 0)
       || (variantFilter === 'without' && product.variantsCount === 0);
-    return matchesSearch && matchesCategory && matchesStatus && matchesVariants;
+    const lowStockThreshold = product.metadata?.low_stock_threshold || 5;
+    const matchesStock = stockFilter === 'all'
+      || (stockFilter === 'out' && product.stock === 0)
+      || (stockFilter === 'low' && product.stock > 0 && product.stock <= lowStockThreshold);
+    return matchesSearch && matchesCategory && matchesStatus && matchesVariants && matchesStock;
   });
 
   return (
@@ -264,22 +269,46 @@ export default function ProductsPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border-2 border-gray-200 p-4">
+        <button
+          onClick={() => {
+            setStatusFilter('');
+            setStockFilter('all');
+          }}
+          className="bg-white rounded-xl border-2 border-gray-200 p-4 text-left hover:border-blue-300 transition-colors cursor-pointer"
+        >
           <p className="text-sm text-gray-600 mb-1">Total Products</p>
           <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-        </div>
-        <div className="bg-white rounded-xl border-2 border-gray-200 p-4">
+        </button>
+        <button
+          onClick={() => {
+            setStatusFilter('active');
+            setStockFilter('all');
+          }}
+          className={`bg-white rounded-xl border-2 p-4 text-left transition-colors cursor-pointer ${statusFilter === 'active' && stockFilter === 'all' ? 'border-blue-300 bg-blue-50' : 'border-gray-200 hover:border-blue-300'}`}
+        >
           <p className="text-sm text-gray-600 mb-1">Active</p>
           <p className="text-2xl font-bold text-blue-700">{stats.active}</p>
-        </div>
-        <div className="bg-white rounded-xl border-2 border-gray-200 p-4">
+        </button>
+        <button
+          onClick={() => {
+            setStatusFilter('');
+            setStockFilter('low');
+          }}
+          className={`bg-white rounded-xl border-2 p-4 text-left transition-colors cursor-pointer ${stockFilter === 'low' ? 'border-amber-300 bg-amber-50' : 'border-gray-200 hover:border-amber-300'}`}
+        >
           <p className="text-sm text-gray-600 mb-1">Low Stock</p>
           <p className="text-2xl font-bold text-amber-700">{stats.lowStock}</p>
-        </div>
-        <div className="bg-white rounded-xl border-2 border-gray-200 p-4">
+        </button>
+        <button
+          onClick={() => {
+            setStatusFilter('');
+            setStockFilter('out');
+          }}
+          className={`bg-white rounded-xl border-2 p-4 text-left transition-colors cursor-pointer ${stockFilter === 'out' ? 'border-red-300 bg-red-50' : 'border-gray-200 hover:border-red-300'}`}
+        >
           <p className="text-sm text-gray-600 mb-1">Out of Stock</p>
           <p className="text-2xl font-bold text-red-700">{stats.outOfStock}</p>
-        </div>
+        </button>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
@@ -337,7 +366,7 @@ export default function ProductsPage() {
           </div>
 
           {showFilters && (
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg grid md:grid-cols-4 gap-4">
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg grid md:grid-cols-5 gap-4">
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
@@ -364,6 +393,15 @@ export default function ProductsPage() {
                 <option value="">All Products</option>
                 <option value="with">Only With Variants</option>
                 <option value="without">Only Without Variants</option>
+              </select>
+              <select
+                value={stockFilter}
+                onChange={(e) => setStockFilter(e.target.value as 'all' | 'low' | 'out')}
+                className="px-3 py-2 pr-8 border-2 border-gray-300 rounded-lg text-sm cursor-pointer"
+              >
+                <option value="all">All Stock Levels</option>
+                <option value="low">Low Stock Only</option>
+                <option value="out">Out of Stock Only</option>
               </select>
             </div>
           )}
