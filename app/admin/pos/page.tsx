@@ -17,9 +17,26 @@ interface Product {
     sku: string;
     barcode: string | null;
     posCode: string;
+    variants: ProductVariant[];
+}
+
+interface ProductVariant {
+    id: string;
+    name: string;
+    option1: string | null;
+    option2: string | null;
+    sku: string | null;
+    barcode: string | null;
+    price: number;
+    quantity: number;
+    image_url: string | null;
 }
 
 interface CartItem extends Product {
+    cartKey: string;
+    productId: string;
+    variantId?: string;
+    variantName?: string;
     cartQuantity: number;
 }
 
@@ -41,6 +58,7 @@ export default function POSPage() {
     const [showScanner, setShowScanner] = useState(false);
     const [scanFeedback, setScanFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const [mobileCategoryIndex, setMobileCategoryIndex] = useState(0);
+    const [variantPickerProduct, setVariantPickerProduct] = useState<Product | null>(null);
 
     // Checkout State
     const [showCheckoutModal, setShowCheckoutModal] = useState(false);
@@ -88,7 +106,8 @@ export default function POSPage() {
                 .select(`
           id, name, price, quantity, sku, barcode, metadata,
           categories(name),
-          product_images(url)
+          product_images(url),
+          product_variants(id, name, option1, option2, sku, barcode, price, quantity, image_url)
         `)
                 .order('name');
 
@@ -102,7 +121,18 @@ export default function POSPage() {
                     image: p.product_images?.[0]?.url || 'https://via.placeholder.com/150',
                     sku: p.sku,
                     barcode: p.barcode || null,
-                    posCode: getPosCodeFromMetadata(p.metadata)
+                    posCode: getPosCodeFromMetadata(p.metadata),
+                    variants: (p.product_variants || []).map((v: any) => ({
+                        id: v.id,
+                        name: v.name || '',
+                        option1: v.option1 || null,
+                        option2: v.option2 || null,
+                        sku: v.sku || null,
+                        barcode: v.barcode || null,
+                        price: Number(v.price ?? p.price ?? 0),
+                        quantity: Number(v.quantity ?? 0),
+                        image_url: v.image_url || null
+                    }))
                 }));
                 setProducts(formatted);
 
@@ -127,30 +157,54 @@ export default function POSPage() {
         }
     };
 
+    const getVariantLabel = (variant: ProductVariant) => {
+        const left = variant.option2?.trim();
+        const right = variant.option1?.trim() || variant.name?.trim();
+        if (left && right) return `${left} / ${right}`;
+        return left || right || variant.name || 'Variant';
+    };
+
     // Cart Functions
-    const addToCart = (product: Product) => {
+    const addToCart = (product: Product, variant?: ProductVariant) => {
+        const cartKey = variant ? `${product.id}:${variant.id}` : product.id;
+        const availableStock = variant ? variant.quantity : product.quantity;
+        if (availableStock <= 0) return;
+
         setCart(prev => {
-            const existing = prev.find(item => item.id === product.id);
+            const existing = prev.find(item => item.cartKey === cartKey);
             if (existing) {
                 return prev.map(item =>
-                    item.id === product.id
-                        ? { ...item, cartQuantity: item.cartQuantity + 1 }
+                    item.cartKey === cartKey
+                        ? { ...item, cartQuantity: Math.min(item.cartQuantity + 1, availableStock) }
                         : item
                 );
             }
-            return [...prev, { ...product, cartQuantity: 1 }];
+            return [...prev, {
+                ...product,
+                cartKey,
+                productId: product.id,
+                variantId: variant?.id,
+                variantName: variant ? getVariantLabel(variant) : undefined,
+                price: variant?.price ?? product.price,
+                quantity: availableStock,
+                sku: variant?.sku || product.sku,
+                barcode: variant?.barcode || product.barcode,
+                image: variant?.image_url || product.image,
+                cartQuantity: 1
+            }];
         });
     };
 
-    const removeFromCart = (productId: string) => {
-        setCart(prev => prev.filter(item => item.id !== productId));
+    const removeFromCart = (cartKey: string) => {
+        setCart(prev => prev.filter(item => item.cartKey !== cartKey));
     };
 
-    const updateQuantity = (productId: string, delta: number) => {
+    const updateQuantity = (cartKey: string, delta: number) => {
         setCart(prev => prev.map(item => {
-            if (item.id === productId) {
+            if (item.cartKey === cartKey) {
                 const newQty = item.cartQuantity + delta;
-                return newQty > 0 ? { ...item, cartQuantity: newQty } : item;
+                if (newQty <= 0) return item;
+                return { ...item, cartQuantity: Math.min(newQty, item.quantity) };
             }
             return item;
         }));
@@ -173,17 +227,50 @@ export default function POSPage() {
     };
 
     const handleBarcodeScan = useCallback((barcode: string) => {
+        const code = barcode.trim();
+        const productWithMatchedVariant = products.find((p) =>
+            p.variants.some((v) => v.barcode === code || v.sku === code)
+        );
+
+        if (productWithMatchedVariant) {
+            const matchedVariant = productWithMatchedVariant.variants.find(
+                (v) => v.barcode === code || v.sku === code
+            );
+            if (matchedVariant) {
+                addToCart(productWithMatchedVariant, matchedVariant);
+                setScanFeedback({
+                    message: `Added: ${productWithMatchedVariant.name} (${getVariantLabel(matchedVariant)})`,
+                    type: 'success'
+                });
+            }
+            setTimeout(() => setScanFeedback(null), 3000);
+            return;
+        }
+
         const match = products.find(p =>
-            p.barcode === barcode || p.sku === barcode || p.posCode === barcode
+            p.barcode === code || p.sku === code || p.posCode === code
         );
         if (match) {
-            addToCart(match);
-            setScanFeedback({ message: `Added: ${match.name}`, type: 'success' });
+            if (match.variants.length > 0) {
+                setVariantPickerProduct(match);
+                setScanFeedback({ message: `Select a variant for: ${match.name}`, type: 'success' });
+            } else {
+                addToCart(match);
+                setScanFeedback({ message: `Added: ${match.name}`, type: 'success' });
+            }
         } else {
             setScanFeedback({ message: `No product found for: ${barcode}`, type: 'error' });
         }
         setTimeout(() => setScanFeedback(null), 3000);
     }, [products]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const handleProductClick = (product: Product) => {
+        if (product.variants.length > 0) {
+            setVariantPickerProduct(product);
+            return;
+        }
+        addToCart(product);
+    };
 
     // Computed
     const filteredProducts = useMemo(() => {
@@ -329,8 +416,11 @@ export default function POSPage() {
             // 2. Create Order Items (with product_name, unit_price, total_price)
             const orderItems = cart.map(item => ({
                 order_id: order.id,
-                product_id: item.id,
+                product_id: item.productId,
+                variant_id: item.variantId || null,
                 product_name: item.name,
+                variant_name: item.variantName || null,
+                sku: item.sku || null,
                 quantity: item.cartQuantity,
                 unit_price: item.price,
                 total_price: item.price * item.cartQuantity,
@@ -345,9 +435,14 @@ export default function POSPage() {
 
             // 3. Upsert Customer Record (email is required in customers table)
             const hasRealEmail = customerEmail && customerEmail !== 'pos-walkin@store.local';
+            const guestHasIdentityDetails = !selectedCustomer && (
+                !!guestDetails.firstName.trim() ||
+                !!guestDetails.lastName.trim() ||
+                !!guestDetails.email.trim()
+            );
             const upsertEmail = hasRealEmail
                 ? customerEmail
-                : customerPhone
+                : guestHasIdentityDetails && customerPhone
                     ? `${customerPhone.replace(/[^0-9]/g, '')}@pos.local`
                     : null;
 
@@ -385,6 +480,18 @@ export default function POSPage() {
                 // Success — show completed
                 setCompletedOrder({ id: order.id, orderNumber, total: grandTotal, items: cart });
                 setCart([]);
+
+                // Send POS receipt SMS for walk-in customers when phone is provided
+                if (!selectedCustomer && customerPhone) {
+                    fetch('/api/notifications', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            type: 'pos_receipt_sms',
+                            payload: { order_number: orderNumber }
+                        })
+                    }).catch(err => console.error('POS receipt SMS error:', err));
+                }
 
                 // Send notification
                 if (customerEmail && customerEmail !== 'pos-walkin@store.local') {
@@ -485,12 +592,37 @@ export default function POSPage() {
                                     if (e.key !== 'Enter') return;
                                     const code = searchQuery.trim();
                                     if (!code) return;
+
+                                    const productWithMatchedVariant = products.find((p) =>
+                                        p.variants.some((v) => v.barcode === code || v.sku === code)
+                                    );
+                                    if (productWithMatchedVariant) {
+                                        const matchedVariant = productWithMatchedVariant.variants.find(
+                                            (v) => v.barcode === code || v.sku === code
+                                        );
+                                        if (matchedVariant) {
+                                            addToCart(productWithMatchedVariant, matchedVariant);
+                                            setScanFeedback({
+                                                message: `Added: ${productWithMatchedVariant.name} (${getVariantLabel(matchedVariant)})`,
+                                                type: 'success'
+                                            });
+                                        }
+                                        setSearchQuery('');
+                                        setTimeout(() => setScanFeedback(null), 2500);
+                                        return;
+                                    }
+
                                     const exactMatch = products.find(p =>
                                         p.posCode === code || p.barcode === code || p.sku === code
                                     );
                                     if (exactMatch) {
-                                        addToCart(exactMatch);
-                                        setScanFeedback({ message: `Added: ${exactMatch.name}`, type: 'success' });
+                                        if (exactMatch.variants.length > 0) {
+                                            setVariantPickerProduct(exactMatch);
+                                            setScanFeedback({ message: `Select a variant for: ${exactMatch.name}`, type: 'success' });
+                                        } else {
+                                            addToCart(exactMatch);
+                                            setScanFeedback({ message: `Added: ${exactMatch.name}`, type: 'success' });
+                                        }
                                         setSearchQuery('');
                                         setTimeout(() => setScanFeedback(null), 2500);
                                     }
@@ -566,7 +698,7 @@ export default function POSPage() {
                             {filteredProducts.map(product => (
                                 <div
                                     key={product.id}
-                                    onClick={() => addToCart(product)}
+                                    onClick={() => handleProductClick(product)}
                                     className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow cursor-pointer overflow-hidden border border-gray-100 group flex flex-col h-full"
                                 >
                                     <div className="aspect-square relative bg-gray-50 shrink-0">
@@ -578,6 +710,11 @@ export default function POSPage() {
                                         <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
                                             Qty: {product.quantity}
                                         </div>
+                                        {product.variants.length > 0 && (
+                                            <div className="absolute top-2 left-2 bg-blue-700/90 text-white text-[11px] px-2 py-1 rounded-full backdrop-blur-sm">
+                                                {product.variants.length} variants
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="p-3 flex flex-col flex-1">
                                         <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 mb-auto">{product.name}</h3>
@@ -641,24 +778,29 @@ export default function POSPage() {
                         </div>
                     ) : (
                         cart.map(item => (
-                            <div key={item.id} className="flex gap-3 p-3 bg-gray-50 rounded-lg group hover:bg-gray-100 transition-colors">
+                            <div key={item.cartKey} className="flex gap-3 p-3 bg-gray-50 rounded-lg group hover:bg-gray-100 transition-colors">
                                 <div className="w-16 h-16 bg-white rounded-md overflow-hidden flex-shrink-0 border border-gray-200">
                                     <img src={item.image} className="w-full h-full object-cover" alt="" />
                                 </div>
                                 <div className="flex-1 min-w-0 flex flex-col justify-between">
                                     <div className="flex justify-between items-start">
-                                        <p className="text-sm font-semibold text-gray-900 line-clamp-1">{item.name}</p>
-                                        <button onClick={() => removeFromCart(item.id)} className="text-gray-400 hover:text-red-500">
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-semibold text-gray-900 line-clamp-1">{item.name}</p>
+                                            {item.variantName && (
+                                                <p className="text-xs text-gray-500 mt-0.5">{item.variantName}</p>
+                                            )}
+                                        </div>
+                                        <button onClick={() => removeFromCart(item.cartKey)} className="text-gray-400 hover:text-red-500">
                                             <i className="ri-delete-bin-line"></i>
                                         </button>
                                     </div>
                                     <div className="flex items-center justify-between mt-2">
                                         <div className="flex items-center space-x-2 bg-white rounded border border-gray-200 px-1 py-0.5">
-                                            <button onClick={() => updateQuantity(item.id, -1)} className="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded">
+                                            <button onClick={() => updateQuantity(item.cartKey, -1)} className="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded">
                                                 <i className="ri-subtract-line text-xs"></i>
                                             </button>
                                             <span className="text-sm font-semibold w-6 text-center">{item.cartQuantity}</span>
-                                            <button onClick={() => updateQuantity(item.id, 1)} className="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded">
+                                            <button onClick={() => updateQuantity(item.cartKey, 1)} className="w-6 h-6 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded">
                                                 <i className="ri-add-line text-xs"></i>
                                             </button>
                                         </div>
@@ -723,6 +865,59 @@ export default function POSPage() {
                 }`}>
                     <i className={scanFeedback.type === 'success' ? 'ri-checkbox-circle-fill' : 'ri-error-warning-fill'}></i>
                     {scanFeedback.message}
+                </div>
+            )}
+
+            {/* Variant Picker Modal */}
+            {variantPickerProduct && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-900">Select Variant</h3>
+                                <p className="text-sm text-gray-500">{variantPickerProduct.name}</p>
+                            </div>
+                            <button
+                                onClick={() => setVariantPickerProduct(null)}
+                                className="w-8 h-8 rounded-full hover:bg-gray-100 text-gray-500"
+                            >
+                                <i className="ri-close-line text-lg"></i>
+                            </button>
+                        </div>
+                        <div className="p-4 overflow-y-auto space-y-2">
+                            {variantPickerProduct.variants.length === 0 ? (
+                                <div className="text-sm text-gray-500 p-4">No variants available.</div>
+                            ) : (
+                                variantPickerProduct.variants.map((variant) => {
+                                    const stock = variant.quantity || 0;
+                                    const disabled = stock <= 0;
+                                    return (
+                                        <button
+                                            key={variant.id}
+                                            onClick={() => {
+                                                addToCart(variantPickerProduct, variant);
+                                                setVariantPickerProduct(null);
+                                            }}
+                                            disabled={disabled}
+                                            className={`w-full flex items-center justify-between p-3 rounded-lg border text-left transition-colors ${
+                                                disabled
+                                                    ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
+                                                    : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                                            }`}
+                                        >
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-semibold text-gray-900">{getVariantLabel(variant)}</p>
+                                                <p className="text-xs text-gray-500">
+                                                    {variant.sku ? `SKU: ${variant.sku} • ` : ''}Stock: {stock}
+                                                </p>
+                                            </div>
+                                            <span className="text-sm font-bold text-blue-700">GH₵{variant.price.toFixed(2)}</span>
+                                        </button>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -864,7 +1059,7 @@ export default function POSPage() {
                                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mt-2 space-y-3">
                                                 <h4 className="text-sm font-bold text-gray-900 border-b border-gray-200 pb-2 mb-2">
                                                     New Customer Details
-                                                    <span className="text-xs font-normal text-gray-500 ml-2">(will be saved to customer list)</span>
+                                                    <span className="text-xs font-normal text-gray-500 ml-2">(optional)</span>
                                                 </h4>
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <input

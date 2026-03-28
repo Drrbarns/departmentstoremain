@@ -153,6 +153,44 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: true, message: 'Payment link sent' });
         }
 
+        // POS walk-in receipt SMS (order must exist and be recent)
+        if (type === 'pos_receipt_sms') {
+            if (!payload.order_number && !payload.id) {
+                return NextResponse.json({ error: 'Missing order identifier' }, { status: 400 });
+            }
+
+            const orderRef = payload.order_number || payload.id;
+            const { data: order, error: orderError } = await supabaseAdmin
+                .from('orders')
+                .select('id, order_number, created_at, total, phone, shipping_address, metadata')
+                .or(`order_number.eq.${orderRef},id.eq.${orderRef}`)
+                .single();
+
+            if (orderError || !order) {
+                return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+            }
+
+            const orderAge = Date.now() - new Date(order.created_at).getTime();
+            if (orderAge > 30 * 60 * 1000) {
+                return NextResponse.json({ error: 'Receipt SMS can only be sent for recent orders' }, { status: 400 });
+            }
+
+            const phone = order.phone || order.shipping_address?.phone;
+            if (!phone) {
+                return NextResponse.json({ error: 'No phone number found for this order' }, { status: 400 });
+            }
+
+            const customerName = order.shipping_address?.firstName || order.metadata?.first_name || 'Customer';
+            const smsMessage = `Hi ${customerName}, receipt for order #${order.order_number || order.id}: GH₵${Number(order.total || 0).toFixed(2)} paid. Thank you for shopping with Discount Discovery Zone.`;
+
+            await sendSMS({
+                to: phone,
+                message: smsMessage
+            });
+
+            return NextResponse.json({ success: true, message: 'POS receipt SMS sent' });
+        }
+
         // ============================================================
         // campaign — admin only, with HTML sanitization
         // ============================================================
