@@ -4,17 +4,19 @@ type ImageOptimizationOptions = {
   format?: 'origin' | 'webp' | 'avif';
 };
 
-const DEFAULT_OPTIONS: Required<ImageOptimizationOptions> = {
-  width: 1200,
-  quality: 70,
-  format: 'webp',
-};
+/**
+ * Returns the image URL as-is. Supabase image transforms (/render/image/)
+ * require a paid plan. If you upgrade, flip USE_RENDER_API to true to enable
+ * automatic resize + WebP conversion.
+ */
+const USE_RENDER_API = false;
 
 export function getOptimizedImageUrl(
   src: string,
   options: ImageOptimizationOptions = {}
 ): string {
   if (!src || !/^https?:\/\//i.test(src)) return src;
+  if (!USE_RENDER_API) return src;
 
   try {
     const url = new URL(src);
@@ -26,7 +28,7 @@ export function getOptimizedImageUrl(
 
     if (!isSupabasePublicObject) return src;
 
-    const { width, quality, format } = { ...DEFAULT_OPTIONS, ...options };
+    const { width = 1200, quality = 70, format = 'webp' } = options;
     const renderPath = pathname.replace(
       '/storage/v1/object/public/',
       '/storage/v1/render/image/public/'
