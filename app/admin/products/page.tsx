@@ -14,6 +14,7 @@ export default function ProductsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [variantFilter, setVariantFilter] = useState('');
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<any[]>([]);
@@ -191,7 +192,10 @@ export default function ProductsPage() {
       (product.category && product.category.toLowerCase().includes(term));
     const matchesCategory = !categoryFilter || product.category === categoryFilter;
     const matchesStatus = !statusFilter || product.status === statusFilter;
-    return matchesSearch && matchesCategory && matchesStatus;
+    const matchesVariants = !variantFilter
+      || (variantFilter === 'with' && product.variantsCount > 0)
+      || (variantFilter === 'without' && product.variantsCount === 0);
+    return matchesSearch && matchesCategory && matchesStatus && matchesVariants;
   });
 
   return (
@@ -302,6 +306,15 @@ export default function ProductsPage() {
                 <option value="active">Active</option>
                 <option value="draft">Draft</option>
                 <option value="archived">Archived</option>
+              </select>
+              <select
+                value={variantFilter}
+                onChange={(e) => setVariantFilter(e.target.value)}
+                className="px-3 py-2 pr-8 border-2 border-gray-300 rounded-lg text-sm cursor-pointer"
+              >
+                <option value="">All Products</option>
+                <option value="with">Only With Variants</option>
+                <option value="without">Only Without Variants</option>
               </select>
             </div>
           )}

@@ -180,8 +180,28 @@ export async function POST(request: Request) {
                 return NextResponse.json({ error: 'No phone number found for this order' }, { status: 400 });
             }
 
+            const { data: orderItems } = await supabaseAdmin
+                .from('order_items')
+                .select('product_name, variant_name, quantity')
+                .eq('order_id', order.id)
+                .limit(3);
+
+            const itemSummary = (orderItems || [])
+                .slice(0, 2)
+                .map((item: any) => {
+                    const label = item.variant_name
+                        ? `${item.product_name} (${item.variant_name})`
+                        : item.product_name;
+                    return `${item.quantity}x ${label}`;
+                })
+                .join(', ');
+            const extraCount = Math.max(0, (orderItems || []).length - 2);
+            const itemsText = itemSummary
+                ? `${itemSummary}${extraCount > 0 ? ` +${extraCount} more` : ''}`
+                : '';
+
             const customerName = order.shipping_address?.firstName || order.metadata?.first_name || 'Customer';
-            const smsMessage = `Hi ${customerName}, receipt for order #${order.order_number || order.id}: GH₵${Number(order.total || 0).toFixed(2)} paid. Thank you for shopping with Discount Discovery Zone.`;
+            const smsMessage = `Hi ${customerName}, receipt #${order.order_number || order.id}: GH₵${Number(order.total || 0).toFixed(2)} paid.${itemsText ? ` Items: ${itemsText}.` : ''} Thank you.`;
 
             await sendSMS({
                 to: phone,
