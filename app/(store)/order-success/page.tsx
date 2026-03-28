@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { getOptimizedImageUrl } from '@/lib/imageOptimization';
 
 function OrderSuccessContent() {
   const searchParams = useSearchParams();
@@ -222,7 +223,10 @@ function OrderSuccessContent() {
                   <div key={item.id} className="flex items-center space-x-4">
                     <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 border border-gray-200">
                       <img
-                        src={item.metadata?.image || 'https://via.placeholder.com/150'}
+                        src={getOptimizedImageUrl(
+                          item.metadata?.image || 'https://via.placeholder.com/150',
+                          { width: 160 }
+                        )}
                         alt={item.product_name}
                         className="w-full h-full object-cover object-center"
                       />

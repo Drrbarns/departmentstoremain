@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { getOptimizedImageUrl } from '@/lib/imageOptimization';
 
 interface Product {
   id: string;
@@ -59,9 +60,10 @@ export default function CartSuggestions() {
             <Link href={`/product/${product.id}`}>
               <div className="aspect-square bg-gray-100 overflow-hidden">
                 <img
-                  src={product.image}
+                  src={getOptimizedImageUrl(product.image, { width: 480 })}
                   alt={product.name}
                   className="w-full h-full object-cover object-top hover:scale-105 transition-transform duration-300"
+                  loading="lazy"
                 />
               </div>
               <div className="p-3">

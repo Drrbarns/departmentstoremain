@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Image from 'next/image';
+import { getOptimizedImageUrl } from '@/lib/imageOptimization';
 
 interface LazyImageProps {
   src: string;
@@ -12,6 +12,21 @@ interface LazyImageProps {
   priority?: boolean;
   onLoad?: () => void;
   sizes?: string;
+  /** Override the optimization width (default auto-picks based on sizes) */
+  optimizeWidth?: number;
+  quality?: number;
+}
+
+const SRCSET_WIDTHS = [320, 480, 640, 960, 1200];
+
+function buildSrcSet(src: string, quality: number): string {
+  return SRCSET_WIDTHS
+    .map(w => {
+      const url = getOptimizedImageUrl(src, { width: w, quality, format: 'webp' });
+      return url !== src ? `${url} ${w}w` : null;
+    })
+    .filter(Boolean)
+    .join(', ');
 }
 
 export default function LazyImage({
@@ -22,24 +37,21 @@ export default function LazyImage({
   height,
   priority = false,
   onLoad,
-  sizes = '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw'
+  sizes = '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw',
+  optimizeWidth,
+  quality = 70
 }: LazyImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const normalizedSrc = typeof src === 'string' ? src.trim() : '';
-  const isRemoteImage = /^https?:\/\//i.test(normalizedSrc);
-  const safeSrc = (() => {
-    if (!normalizedSrc) return '';
-    if (!isRemoteImage) return normalizedSrc;
-    try {
-      return new URL(normalizedSrc).toString();
-    } catch {
-      return normalizedSrc;
-    }
-  })();
+
+  const optimizedSrc = optimizeWidth
+    ? getOptimizedImageUrl(normalizedSrc, { width: optimizeWidth, quality, format: 'webp' })
+    : getOptimizedImageUrl(normalizedSrc, { width: 800, quality, format: 'webp' });
+
+  const srcSet = buildSrcSet(normalizedSrc, quality);
 
   useEffect(() => {
-    // Reset loading/error state when image source changes.
     setIsLoaded(false);
     setHasError(false);
   }, [src]);
@@ -55,8 +67,7 @@ export default function LazyImage({
     onLoad?.();
   };
 
-  // Fallback for invalid/empty URLs
-  if (!safeSrc || hasError) {
+  if (!normalizedSrc || hasError) {
     return (
       <div
         className={`relative overflow-hidden bg-gray-200 flex items-center justify-center w-full h-full ${className}`}
@@ -75,29 +86,18 @@ export default function LazyImage({
       {!isLoaded && (
         <div className="absolute inset-0 bg-gray-200 animate-pulse z-10"></div>
       )}
-      {isRemoteImage ? (
-        <img
-          src={safeSrc}
-          alt={alt}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
-          onLoad={handleLoad}
-          onError={handleError}
-          loading={priority ? 'eager' : 'lazy'}
-          decoding="async"
-        />
-      ) : (
-        <Image
-          src={safeSrc}
-          alt={alt}
-          fill
-          sizes={sizes}
-          className={`object-cover transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
-          onLoad={handleLoad}
-          onError={handleError}
-          priority={priority}
-          quality={75}
-        />
-      )}
+      <img
+        src={optimizedSrc}
+        srcSet={srcSet || undefined}
+        sizes={srcSet ? sizes : undefined}
+        alt={alt}
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+        onLoad={handleLoad}
+        onError={handleError}
+        loading={priority ? 'eager' : 'lazy'}
+        decoding="async"
+        fetchPriority={priority ? 'high' : 'auto'}
+      />
     </div>
   );
 }

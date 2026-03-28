@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect } from 'react';
 import { useCart } from '@/context/CartContext';
+import { getOptimizedImageUrl } from '@/lib/imageOptimization';
 
 interface MiniCartProps {
   isOpen: boolean;
@@ -69,9 +70,10 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
                   <div key={`${item.id}-${item.variant}`} className="flex space-x-4 bg-gray-50 rounded-lg p-4">
                     <div className="w-20 h-20 bg-white rounded-lg overflow-hidden flex-shrink-0 border border-gray-200">
                       <img
-                        src={item.image}
+                        src={getOptimizedImageUrl(item.image, { width: 160 })}
                         alt={item.name}
                         className="w-full h-full object-cover object-center"
+                        loading="lazy"
                       />
                     </div>
 

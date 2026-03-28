@@ -1,3 +1,5 @@
+import { getOptimizedImageUrl } from '@/lib/imageOptimization';
+
 interface OrderItem {
   id: string;
   name: string;
@@ -26,9 +28,10 @@ export default function OrderSummary({ items, subtotal, shipping, tax, total, de
           <div key={`${item.id}-${item.variant || 'novar'}`} className="flex space-x-4">
             <div className="relative w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
               <img
-                src={item.image}
+                src={getOptimizedImageUrl(item.image, { width: 160 })}
                 alt={item.name}
                 className="w-full h-full object-cover"
+                loading="lazy"
               />
               <div className="absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center bg-blue-700 text-white text-xs font-bold rounded-full">
                 {item.quantity}

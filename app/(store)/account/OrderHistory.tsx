@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { getOptimizedImageUrl } from '@/lib/imageOptimization';
 
 interface Order {
   id: string;
@@ -204,9 +205,10 @@ export default function OrderHistory() {
                   <div key={item.id} className="flex space-x-4">
                     <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 border border-gray-200">
                       <img
-                        src={item.image}
+                        src={getOptimizedImageUrl(item.image, { width: 160 })}
                         alt={item.name}
                         className="w-full h-full object-cover object-center"
+                        loading="lazy"
                       />
                     </div>
                     <div className="flex-1 min-w-0">

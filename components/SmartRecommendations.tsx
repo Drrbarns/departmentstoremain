@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { getOptimizedImageUrl } from '@/lib/imageOptimization';
 
 interface Product {
   id: string;
@@ -107,9 +108,10 @@ export default function SmartRecommendations({ productId, type, title }: SmartRe
             >
               <div className="relative aspect-square overflow-hidden bg-gray-100">
                 <img
-                  src={product.image}
+                  src={getOptimizedImageUrl(product.image, { width: 480 })}
                   alt={product.name}
                   className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300"
+                  loading="lazy"
                 />
                 {product.originalPrice && (
                   <div className="absolute top-3 left-3 bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold">

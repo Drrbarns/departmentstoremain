@@ -7,6 +7,7 @@ import { cachedQuery } from '@/lib/query-cache';
 import ProductCard from '@/components/ProductCard';
 import ProductReviews from '@/components/ProductReviews';
 import LazyImage from '@/components/LazyImage';
+import { getOptimizedImageUrl } from '@/lib/imageOptimization';
 import { StructuredData, generateProductSchema, generateBreadcrumbSchema } from '@/components/SEOHead';
 import { notFound } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
@@ -442,7 +443,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                               className={`relative flex flex-col items-center gap-1.5 cursor-pointer transition-all ${isOutOfStock ? 'opacity-40 cursor-not-allowed' : ''}`}
                             >
                               <div className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${isSelected ? 'border-blue-700 ring-2 ring-blue-400 ring-offset-1' : 'border-gray-200 hover:border-gray-400'}`}>
-                                <img src={variantThumb} alt={label} className="w-full h-full object-cover" />
+                                <img src={getOptimizedImageUrl(variantThumb, { width: 160 })} alt={label} className="w-full h-full object-cover" loading="lazy" />
                               </div>
                               <span className={`text-xs font-medium max-w-[64px] truncate text-center ${isSelected ? 'text-blue-700' : 'text-gray-600'}`}>{label}</span>
                               {isSelected && <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-700 rounded-full flex items-center justify-center"><i className="ri-check-line text-white text-[9px]"></i></span>}

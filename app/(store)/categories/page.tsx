@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { getOptimizedImageUrl } from '@/lib/imageOptimization';
 import PageHero from '@/components/PageHero';
 
 export const revalidate = 0; // Ensure fresh data on every visit
@@ -58,9 +59,10 @@ export default async function CategoriesPage() {
               >
                 <div className="relative h-48 overflow-hidden">
                   <img
-                    src={category.image}
+                    src={getOptimizedImageUrl(category.image, { width: 640 })}
                     alt={category.name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    loading="lazy"
                   />
                   <div className={`absolute inset-0 bg-gradient-to-t ${category.color} opacity-0 group-hover:opacity-20 transition-opacity`}></div>
                 </div>

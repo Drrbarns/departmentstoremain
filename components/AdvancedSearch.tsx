@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { getOptimizedImageUrl } from '@/lib/imageOptimization';
 
 interface SearchSuggestion {
   id: string;
@@ -195,9 +196,10 @@ export default function AdvancedSearch() {
                   className="flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors"
                 >
                   <img
-                    src={product.image}
+                    src={getOptimizedImageUrl(product.image, { width: 160 })}
                     alt={product.name}
                     className="w-12 h-12 object-cover object-top rounded-lg"
+                    loading="lazy"
                   />
                   <div className="flex-1">
                     <p className="font-semibold text-gray-900 text-sm">{product.name}</p>

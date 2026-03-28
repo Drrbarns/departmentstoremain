@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getOptimizedImageUrl } from '@/lib/imageOptimization';
 
 interface ImageZoomProps {
   images: string[];
@@ -76,7 +77,7 @@ export default function ImageZoom({ images, isOpen, onClose, initialIndex = 0 }:
       <div className="flex-1 relative overflow-hidden">
         <div className="absolute inset-0 flex items-center justify-center">
           <img
-            src={images[currentIndex]}
+            src={getOptimizedImageUrl(images[currentIndex], { width: 1200 })}
             alt={`Product ${currentIndex + 1}`}
             className="max-w-full max-h-full object-contain transition-transform duration-200"
             style={{

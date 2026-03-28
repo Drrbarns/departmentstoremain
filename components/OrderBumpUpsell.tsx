@@ -1,5 +1,7 @@
 'use client';
 
+import { getOptimizedImageUrl } from '@/lib/imageOptimization';
+
 interface UpsellProduct {
   id: string;
   name: string;
@@ -51,9 +53,10 @@ export default function OrderBumpUpsell({ products, onToggle }: OrderBumpUpsellP
               
               <div className="w-20 h-20 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
                 <img 
-                  src={product.image} 
+                  src={getOptimizedImageUrl(product.image, { width: 160 })}
                   alt={product.name}
                   className="w-full h-full object-cover object-top"
+                  loading="lazy"
                 />
               </div>
 
