@@ -52,6 +52,13 @@ async function collectImageUrls() {
   if (productImageErr) throw productImageErr;
   for (const row of productImages || []) if (row?.url) urls.add(row.url);
 
+  const { data: variants, error: variantErr } = await supabase
+    .from('product_variants')
+    .select('image_url')
+    .not('image_url', 'is', null);
+  if (variantErr) throw variantErr;
+  for (const row of variants || []) if (row?.image_url) urls.add(row.image_url);
+
   const { data: categories, error: categoryErr } = await supabase
     .from('categories')
     .select('image_url');
@@ -95,13 +102,20 @@ async function optimizeObject(bucket, path) {
   const beforeSize = inputBuffer.length;
   if (!beforeSize) return { skipped: true, reason: 'empty file' };
 
+  const MAX_WIDTH = 1200;
+  let pipeline = sharp(inputBuffer);
+  const meta = await pipeline.metadata();
+  if (meta.width && meta.width > MAX_WIDTH) {
+    pipeline = sharp(inputBuffer).resize({ width: MAX_WIDTH, withoutEnlargement: true });
+  }
+
   let outputBuffer;
   if (ext === 'jpg' || ext === 'jpeg') {
-    outputBuffer = await sharp(inputBuffer).jpeg({ quality: 72, mozjpeg: true }).toBuffer();
+    outputBuffer = await pipeline.jpeg({ quality: 72, mozjpeg: true }).toBuffer();
   } else if (ext === 'png') {
-    outputBuffer = await sharp(inputBuffer).png({ compressionLevel: 9, palette: true, quality: 80 }).toBuffer();
+    outputBuffer = await pipeline.png({ compressionLevel: 9, palette: true, quality: 80 }).toBuffer();
   } else {
-    outputBuffer = await sharp(inputBuffer).webp({ quality: 72, effort: 6 }).toBuffer();
+    outputBuffer = await pipeline.webp({ quality: 72, effort: 6 }).toBuffer();
   }
 
   const afterSize = outputBuffer.length;
