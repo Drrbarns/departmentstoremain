@@ -24,7 +24,6 @@ interface Order {
 export default function OrderHistory() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refundingOrderId, setRefundingOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchOrders() {
@@ -89,36 +88,6 @@ export default function OrderHistory() {
       case 'refund_requested': return 'Refund Requested';
       case 'refunded': return 'Refunded';
       default: return status.replace('_', ' ').replace(/^\w/, (c: string) => c.toUpperCase());
-    }
-  };
-
-  const canRequestRefund = (order: Order) =>
-    order.paymentStatus === 'paid' &&
-    !['cancelled', 'refund_requested', 'refunded'].includes(order.status);
-
-  const handleRequestRefund = async (order: Order) => {
-    const confirmed = window.confirm(
-      `Request a refund for order ${order.orderNumber}?\n\nYour order will be cancelled and our team will process the refund manually. You may be contacted for verification.`
-    );
-    if (!confirmed) return;
-
-    setRefundingOrderId(order.id);
-    try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ status: 'refund_requested' })
-        .eq('id', order.id);
-
-      if (error) throw error;
-
-      setOrders(prev =>
-        prev.map(o => o.id === order.id ? { ...o, status: 'refund_requested' } : o)
-      );
-      alert(`Refund requested for order ${order.orderNumber}. Our team will process it shortly.`);
-    } catch (err: any) {
-      alert('Failed to request refund: ' + err.message);
-    } finally {
-      setRefundingOrderId(null);
     }
   };
 
@@ -266,19 +235,6 @@ export default function OrderHistory() {
                   <i className="ri-customer-service-line mr-2"></i>
                   Get Help
                 </Link>
-                {canRequestRefund(order) && (
-                  <button
-                    onClick={() => handleRequestRefund(order)}
-                    disabled={refundingOrderId === order.id}
-                    className="flex-1 sm:flex-none px-4 py-2 border-2 border-red-300 text-red-600 rounded-lg font-semibold hover:bg-red-50 transition-colors whitespace-nowrap disabled:opacity-50"
-                  >
-                    {refundingOrderId === order.id ? (
-                      <><i className="ri-loader-4-line animate-spin mr-2"></i>Requesting...</>
-                    ) : (
-                      <><i className="ri-refund-2-line mr-2"></i>Request Refund</>
-                    )}
-                  </button>
-                )}
               </div>
             </div>
           </div>

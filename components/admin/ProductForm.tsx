@@ -424,7 +424,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
             }
 
             alert(isEditMode ? 'Product updated successfully!' : 'Product created successfully!');
-            router.push('/admin/products');
+            router.push('/admin/products', { scroll: false });
 
         } catch (err: any) {
             console.error('Error saving product:', err);

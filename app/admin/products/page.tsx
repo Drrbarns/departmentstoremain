@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
 const PRODUCTS_SCROLL_KEY = 'admin_products_scroll_y';
+const PRODUCTS_UI_STATE_KEY = 'admin_products_ui_state';
 
 export default function ProductsPage() {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
@@ -15,6 +16,7 @@ export default function ProductsPage() {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [variantFilter, setVariantFilter] = useState('');
+  const [bulkStatus, setBulkStatus] = useState('draft');
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<any[]>([]);
@@ -43,6 +45,22 @@ export default function ProductsPage() {
     if (!Number.isNaN(parsed) && parsed > 0) {
       pendingScrollRestoreRef.current = parsed;
     }
+
+    const savedState = sessionStorage.getItem(PRODUCTS_UI_STATE_KEY);
+    if (savedState) {
+      try {
+        const parsedState = JSON.parse(savedState);
+        if (typeof parsedState.viewMode === 'string') setViewMode(parsedState.viewMode);
+        if (typeof parsedState.sortBy === 'string') setSortBy(parsedState.sortBy);
+        if (typeof parsedState.searchQuery === 'string') setSearchQuery(parsedState.searchQuery);
+        if (typeof parsedState.categoryFilter === 'string') setCategoryFilter(parsedState.categoryFilter);
+        if (typeof parsedState.statusFilter === 'string') setStatusFilter(parsedState.statusFilter);
+        if (typeof parsedState.variantFilter === 'string') setVariantFilter(parsedState.variantFilter);
+        if (typeof parsedState.showFilters === 'boolean') setShowFilters(parsedState.showFilters);
+      } catch {
+        // Ignore invalid saved UI state
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -52,6 +70,7 @@ export default function ProductsPage() {
     const y = pendingScrollRestoreRef.current;
     pendingScrollRestoreRef.current = null;
     sessionStorage.removeItem(PRODUCTS_SCROLL_KEY);
+    sessionStorage.removeItem(PRODUCTS_UI_STATE_KEY);
 
     // Wait one paint so table rows exist before restoring.
     requestAnimationFrame(() => {
@@ -62,6 +81,15 @@ export default function ProductsPage() {
   const saveScrollForReturn = () => {
     if (typeof window === 'undefined') return;
     sessionStorage.setItem(PRODUCTS_SCROLL_KEY, String(window.scrollY));
+    sessionStorage.setItem(PRODUCTS_UI_STATE_KEY, JSON.stringify({
+      viewMode,
+      sortBy,
+      searchQuery,
+      categoryFilter,
+      statusFilter,
+      variantFilter,
+      showFilters
+    }));
   };
 
   useEffect(() => {
@@ -182,6 +210,27 @@ export default function ProductsPage() {
         console.error('Bulk delete error:', error);
         alert('Error deleting products: ' + error.message);
       }
+    }
+  };
+
+  const handleBulkStatusUpdate = async () => {
+    if (selectedProducts.length === 0) return;
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ status: bulkStatus })
+        .in('id', selectedProducts);
+
+      if (error) throw error;
+
+      setProducts(prev =>
+        prev.map((p) => selectedProducts.includes(p.id) ? { ...p, status: bulkStatus } : p)
+      );
+      setSelectedProducts([]);
+      alert(`Updated ${selectedProducts.length} product${selectedProducts.length > 1 ? 's' : ''} to ${bulkStatus}.`);
+    } catch (err: any) {
+      console.error('Bulk status update error:', err);
+      alert('Error updating status: ' + err.message);
     }
   };
 
@@ -326,6 +375,21 @@ export default function ProductsPage() {
               {selectedProducts.length} product{selectedProducts.length > 1 ? 's' : ''} selected
             </p>
             <div className="flex items-center space-x-2">
+              <select
+                value={bulkStatus}
+                onChange={(e) => setBulkStatus(e.target.value)}
+                className="px-3 py-2 pr-8 border border-blue-200 rounded-lg text-sm bg-white cursor-pointer"
+              >
+                <option value="draft">Draft</option>
+                <option value="active">Active</option>
+                <option value="archived">Archived</option>
+              </select>
+              <button
+                onClick={handleBulkStatusUpdate}
+                className="px-4 py-2 bg-white border border-blue-300 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors whitespace-nowrap cursor-pointer"
+              >
+                Update Status
+              </button>
               <button
                 onClick={handleBulkDelete}
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-pointer"
