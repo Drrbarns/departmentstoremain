@@ -29,6 +29,12 @@ interface VariantGroup {
     sizes: VariantSizeRow[];
 }
 
+function normalizeProductStatus(value?: string): 'active' | 'draft' | 'archived' {
+    const normalized = (value || '').toLowerCase();
+    if (normalized === 'draft' || normalized === 'archived') return normalized;
+    return 'active';
+}
+
 export default function ProductForm({ initialData, isEditMode = false }: ProductFormProps) {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
@@ -45,7 +51,9 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
     const [moq, setMoq] = useState(initialData?.moq || '1');
     const [lowStockThreshold, setLowStockThreshold] = useState(initialData?.metadata?.low_stock_threshold || '5');
     const [description, setDescription] = useState(initialData?.description || '');
-    const [status, setStatus] = useState(initialData?.status || 'Active');
+    const [status, setStatus] = useState<'active' | 'draft' | 'archived'>(
+        normalizeProductStatus(initialData?.status)
+    );
     const [featured, setFeatured] = useState(initialData?.featured || false);
     const [preorderShipping, setPreorderShipping] = useState(initialData?.metadata?.preorder_shipping || '');
     const [activeTab, setActiveTab] = useState('general');
@@ -317,7 +325,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                 barcode: barcode || generateBarcode(),
                 quantity: hasVariants ? variantStockTotal : (parseInt(stock) || 0),
                 moq: parseInt(moq) || 1,
-                status: status.toLowerCase(),
+                status,
                 featured,
                 seo_title: seoTitle,
                 seo_description: metaDescription,
@@ -545,12 +553,12 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                     <label className="block text-sm font-semibold text-gray-900 mb-2">Status</label>
                                     <select
                                         value={status}
-                                        onChange={(e) => setStatus(e.target.value)}
+                                        onChange={(e) => setStatus(normalizeProductStatus(e.target.value))}
                                         className="w-full px-4 py-3 pr-8 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
                                     >
-                                        <option>Active</option>
-                                        <option>Draft</option>
-                                        <option>Archived</option>
+                                        <option value="active">Active</option>
+                                        <option value="draft">Draft</option>
+                                        <option value="archived">Archived</option>
                                     </select>
                                 </div>
                             </div>
