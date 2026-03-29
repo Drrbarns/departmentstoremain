@@ -207,6 +207,7 @@ export default function AdminDashboard() {
     'processing': 'bg-blue-100 text-blue-700',
     'shipped': 'bg-purple-100 text-purple-700',
     'picked_up': 'bg-indigo-100 text-indigo-700',
+    'completed': 'bg-emerald-100 text-emerald-700',
     'delivered': 'bg-blue-100 text-blue-700',
     'cancelled': 'bg-red-100 text-red-700'
   };
@@ -374,6 +375,8 @@ export default function AdminDashboard() {
                               ? 'Packaged'
                               : order.status === 'picked_up'
                                 ? 'Picked Up by Rider'
+                                : order.status === 'completed'
+                                  ? 'Completed'
                                 : order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                           </span>
                         </td>

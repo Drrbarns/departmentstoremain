@@ -50,6 +50,7 @@ export default function AdminOrdersPage() {
     { label: 'Processing', count: 0, status: 'processing' },
     { label: 'Packaged', count: 0, status: 'shipped' },
     { label: 'Picked Up by Rider', count: 0, status: 'picked_up' },
+    { label: 'Completed', count: 0, status: 'completed' },
     { label: 'Delivered', count: 0, status: 'delivered' },
     { label: 'Cancelled', count: 0, status: 'cancelled' }
   ]);
@@ -117,6 +118,7 @@ export default function AdminOrdersPage() {
         { label: 'Processing', count: confirmedOrders.filter(o => o.status === 'processing').length, status: 'processing' },
         { label: 'Packaged', count: confirmedOrders.filter(o => o.status === 'shipped').length, status: 'shipped' },
         { label: 'Picked Up by Rider', count: confirmedOrders.filter(o => o.status === 'picked_up').length, status: 'picked_up' },
+        { label: 'Completed', count: confirmedOrders.filter(o => o.status === 'completed').length, status: 'completed' },
         { label: 'Delivered', count: confirmedOrders.filter(o => o.status === 'delivered').length, status: 'delivered' },
         { label: 'Cancelled', count: confirmedOrders.filter(o => o.status === 'cancelled').length, status: 'cancelled' }
       ];
@@ -134,6 +136,7 @@ export default function AdminOrdersPage() {
     'processing': 'bg-blue-100 text-blue-700 border-blue-200',
     'shipped': 'bg-purple-100 text-purple-700 border-purple-200',
     'picked_up': 'bg-indigo-100 text-indigo-700 border-indigo-200',
+    'completed': 'bg-emerald-100 text-emerald-700 border-emerald-200',
     'delivered': 'bg-blue-100 text-blue-700 border-blue-200',
     'cancelled': 'bg-red-100 text-red-700 border-red-200',
     'awaiting_payment': 'bg-gray-100 text-gray-700 border-gray-200'
@@ -142,6 +145,7 @@ export default function AdminOrdersPage() {
   const formatStatus = (status: string) => {
     if (status === 'shipped') return 'Packaged';
     if (status === 'picked_up') return 'Picked Up by Rider';
+    if (status === 'completed') return 'Completed';
     return status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown';
   };
 

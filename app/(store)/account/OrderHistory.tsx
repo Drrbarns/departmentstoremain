@@ -75,6 +75,7 @@ export default function OrderHistory() {
       case 'delivered': return 'bg-green-100 text-green-700';
       case 'shipped': return 'bg-blue-100 text-blue-700';
       case 'picked_up': return 'bg-indigo-100 text-indigo-700';
+      case 'completed': return 'bg-emerald-100 text-emerald-700';
       case 'processing': return 'bg-yellow-100 text-yellow-700';
       case 'cancelled': return 'bg-red-100 text-red-700';
       case 'refund_requested': return 'bg-orange-100 text-orange-700';
@@ -87,6 +88,7 @@ export default function OrderHistory() {
     switch (status) {
       case 'shipped': return 'Packaged';
       case 'picked_up': return 'Picked Up by Rider';
+      case 'completed': return 'Completed';
       case 'refund_requested': return 'Refund Requested';
       case 'refunded': return 'Refunded';
       default: return status.replace('_', ' ').replace(/^\w/, (c: string) => c.toUpperCase());

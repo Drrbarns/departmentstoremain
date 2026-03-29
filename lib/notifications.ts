@@ -360,6 +360,9 @@ export async function sendOrderStatusUpdate(order: any, newStatus: string) {
     } else if (newStatus === 'delivered') {
         message = `Your order #${order_number || id} has been delivered. Enjoy!`;
         smsMessage = `Hi ${name}, your order #${order_number || id} has been delivered. Enjoy your purchase!`;
+    } else if (newStatus === 'completed') {
+        message = `Your order #${order_number || id} has been completed. Thank you for shopping with us!`;
+        smsMessage = `Hi ${name}, your order #${order_number || id} has been completed. Thank you for shopping with us!`;
     } else if (newStatus === 'processing') {
         smsMessage = trackingNumber
             ? `Hi ${name}, your order #${order_number || id} is being processed. Tracking: ${trackingNumber}. Track: ${trackingUrl}`
@@ -373,6 +376,7 @@ export async function sendOrderStatusUpdate(order: any, newStatus: string) {
         processing: { icon: '&#9881;', color: '#2563eb', bg: '#eff6ff' },
         shipped: { icon: '&#128666;', color: '#2563eb', bg: '#eff6ff' },
         picked_up: { icon: '&#128757;', color: '#4338ca', bg: '#eef2ff' },
+        completed: { icon: '&#9989;', color: '#047857', bg: '#ecfdf5' },
         delivered: { icon: '&#127881;', color: '#16a34a', bg: '#f0fdf4' },
         cancelled: { icon: '&#10060;', color: '#dc2626', bg: '#fef2f2' },
     };

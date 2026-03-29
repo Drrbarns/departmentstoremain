@@ -389,7 +389,7 @@ export default function POSPage() {
                     user_id: null,
                     email: customerEmail,
                     phone: customerPhone,
-                    status: isCashOrCard ? 'processing' : 'pending',
+                    status: isCashOrCard ? 'completed' : 'pending',
                     payment_status: isCashOrCard ? 'paid' : 'pending',
                     currency: 'GHS',
                     subtotal: cartTotal,
