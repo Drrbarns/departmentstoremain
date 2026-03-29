@@ -569,7 +569,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                   <i className="ri-truck-line text-xl text-blue-700 flex-shrink-0 mt-0.5"></i>
                   <div className="text-sm text-blue-900">
                     <p className="font-semibold mb-1">Expected Delivery</p>
-                    <p>Orders are delivered within <strong>24 – 72 hours</strong> after payment is confirmed. For faster or urgent deliveries, <strong>contact our customer care team</strong>.</p>
+                    <p>Orders are delivered within <strong>24 – 72 hours</strong> after payment is confirmed. For faster or urgent deliveries, <a href="https://wa.me/233248615775" target="_blank" rel="noopener noreferrer" className="underline font-semibold hover:text-blue-800">contact our customer care team</a>.</p>
                   </div>
                 </div>
 
