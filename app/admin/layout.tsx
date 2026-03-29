@@ -26,6 +26,24 @@ export default function AdminLayout({
   // Module Filtering State
   const [enabledModules, setEnabledModules] = useState<string[]>([]);
   const [clearingCache, setClearingCache] = useState(false);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [maintenanceUntil, setMaintenanceUntil] = useState('');
+  const [maintenanceSaving, setMaintenanceSaving] = useState(false);
+
+  const parseSettingValue = (raw: string) => {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return raw;
+    }
+  };
+
+  const formatTime24 = (isoString?: string) => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+  };
 
   useEffect(() => {
     async function checkAuth() {
@@ -119,6 +137,33 @@ export default function AdminLayout({
     fetchModules();
   }, []);
 
+  useEffect(() => {
+    async function fetchMaintenanceSettings() {
+      try {
+        const { data, error } = await supabase
+          .from('site_settings')
+          .select('key, value')
+          .in('key', ['maintenance_mode', 'maintenance_until']);
+        if (error) {
+          console.warn('Error fetching maintenance settings:', error);
+          return;
+        }
+        if (!data) return;
+
+        const map: Record<string, any> = {};
+        data.forEach((row: any) => {
+          map[row.key] = parseSettingValue(row.value);
+        });
+
+        setMaintenanceMode(map.maintenance_mode === true || map.maintenance_mode === 'true');
+        setMaintenanceUntil(typeof map.maintenance_until === 'string' ? map.maintenance_until : '');
+      } catch (err) {
+        console.warn('Failed to fetch maintenance settings:', err);
+      }
+    }
+    fetchMaintenanceSettings();
+  }, []);
+
   // Screen size check for initial state
   useEffect(() => {
     const handleResize = () => {
@@ -166,6 +211,65 @@ export default function AdminLayout({
       console.error('Cache clear error:', err);
       alert('Cache partially cleared. The page will now reload.');
       window.location.reload();
+    }
+  };
+
+  const handleToggleMaintenance = async () => {
+    try {
+      setMaintenanceSaving(true);
+
+      let nextMode = !maintenanceMode;
+      let nextUntil = maintenanceUntil;
+
+      if (nextMode) {
+        const now = new Date();
+        const defaultTime = new Date(now.getTime() + (24 * 60 * 60 * 1000))
+          .toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+        const input = window.prompt('Set expected completion time (24-hour format HH:mm)', defaultTime);
+
+        if (input === null) {
+          setMaintenanceSaving(false);
+          return;
+        }
+
+        const match = input.trim().match(/^([01]\d|2[0-3]):([0-5]\d)$/);
+        if (!match) {
+          alert('Invalid time format. Please use 24-hour format, e.g. 23:30.');
+          setMaintenanceSaving(false);
+          return;
+        }
+
+        const hours = Number(match[1]);
+        const minutes = Number(match[2]);
+        const target = new Date();
+        target.setHours(hours, minutes, 0, 0);
+        if (target.getTime() <= Date.now()) {
+          target.setDate(target.getDate() + 1);
+        }
+        nextUntil = target.toISOString();
+      }
+
+      const maintenanceMessage = "We're currently performing scheduled maintenance. Please check back soon.";
+
+      const rows = [
+        { key: 'maintenance_mode', value: JSON.stringify(nextMode) },
+        { key: 'maintenance_until', value: JSON.stringify(nextMode ? nextUntil : '') },
+        { key: 'maintenance_message', value: JSON.stringify(maintenanceMessage) },
+      ];
+
+      const { error } = await supabase
+        .from('site_settings')
+        .upsert(rows, { onConflict: 'key' });
+      if (error) throw error;
+
+      setMaintenanceMode(nextMode);
+      setMaintenanceUntil(nextMode ? nextUntil : '');
+      alert(nextMode ? 'Maintenance mode is now ON.' : 'Maintenance mode is now OFF.');
+    } catch (err) {
+      console.error('Failed to toggle maintenance mode:', err);
+      alert('Failed to update maintenance mode.');
+    } finally {
+      setMaintenanceSaving(false);
     }
   };
 
@@ -337,6 +441,30 @@ export default function AdminLayout({
               );
             })}
           </nav>
+
+          <div className="mt-4 px-2">
+            <button
+              onClick={handleToggleMaintenance}
+              disabled={maintenanceSaving}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors cursor-pointer disabled:opacity-50 ${maintenanceMode
+                ? 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
+                : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                }`}
+            >
+              <div className="flex items-center gap-3">
+                <i className={`${maintenanceSaving ? 'ri-loader-4-line animate-spin' : 'ri-tools-line'} text-xl`}></i>
+                <div className="text-left">
+                  <p className="text-sm font-semibold">Maintenance Mode</p>
+                  {maintenanceMode && maintenanceUntil && (
+                    <p className="text-xs opacity-80">Until {formatTime24(maintenanceUntil)}</p>
+                  )}
+                </div>
+              </div>
+              <span className={`text-xs font-bold px-2 py-1 rounded-full ${maintenanceMode ? 'bg-amber-200 text-amber-900' : 'bg-gray-200 text-gray-700'}`}>
+                {maintenanceMode ? 'ON' : 'OFF'}
+              </span>
+            </button>
+          </div>
 
           <div className="mt-8 pt-8 border-t border-gray-200">
             <button

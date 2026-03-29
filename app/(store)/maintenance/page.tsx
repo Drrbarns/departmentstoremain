@@ -1,4 +1,47 @@
-export default function MaintenancePage() {
+import { supabaseAdmin } from '@/lib/supabase-admin';
+
+const DEFAULT_MESSAGE = "We're currently performing scheduled maintenance to improve your shopping experience. We'll be back online shortly.";
+
+function parseSettingValue(raw: string): any {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
+  }
+}
+
+function to24HourTime(iso?: string) {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+export default async function MaintenancePage() {
+  let message = DEFAULT_MESSAGE;
+  let untilTime = '';
+
+  try {
+    const { data } = await supabaseAdmin
+      .from('site_settings')
+      .select('key, value')
+      .in('key', ['maintenance_message', 'maintenance_until']);
+
+    const map: Record<string, any> = {};
+    (data || []).forEach((row: any) => {
+      map[row.key] = parseSettingValue(row.value);
+    });
+
+    if (typeof map.maintenance_message === 'string' && map.maintenance_message.trim()) {
+      message = map.maintenance_message;
+    }
+    if (typeof map.maintenance_until === 'string') {
+      untilTime = to24HourTime(map.maintenance_until);
+    }
+  } catch {
+    // Keep defaults when settings are unavailable.
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-amber-50 flex items-center justify-center px-4">
       <div className="max-w-2xl mx-auto text-center">
@@ -10,7 +53,7 @@ export default function MaintenancePage() {
             We'll Be Right Back
           </h1>
           <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-            We're currently performing scheduled maintenance to improve your shopping experience. We'll be back online shortly.
+            {message}
           </p>
         </div>
 
@@ -20,7 +63,10 @@ export default function MaintenancePage() {
             <i className="ri-time-line text-3xl"></i>
             <div className="text-left">
               <p className="text-sm text-gray-600">Estimated completion</p>
-              <p className="text-2xl font-bold">30 minutes</p>
+              <p className="text-2xl font-bold">{untilTime || 'In about 24 hours'}</p>
+              {untilTime && (
+                <p className="text-xs text-gray-500 mt-1">24-hour time</p>
+              )}
             </div>
           </div>
         </div>
