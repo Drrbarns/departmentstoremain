@@ -30,7 +30,9 @@ export default function CheckoutPage() {
     phone: '',
     address: '',
     city: '',
-    region: ''
+    region: '',
+    /** ISO date YYYY-MM-DD — optional, shown to staff on order details */
+    preferredDate: ''
   });
 
   // Ghana Regions for dropdown
@@ -144,6 +146,11 @@ export default function CheckoutPage() {
       const trackingNumber = `SLI-${trackingId}`;
 
       // 1. Create Order
+      const preferredDate =
+        typeof shippingData.preferredDate === 'string' && shippingData.preferredDate.trim()
+          ? shippingData.preferredDate.trim()
+          : null;
+
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert([{
@@ -167,7 +174,8 @@ export default function CheckoutPage() {
             guest_checkout: !user,
             first_name: shippingData.firstName,
             last_name: shippingData.lastName,
-            tracking_number: trackingNumber
+            tracking_number: trackingNumber,
+            ...(preferredDate ? { customer_preferred_date: preferredDate } : {})
           }
         }])
         .select()
@@ -507,6 +515,24 @@ export default function CheckoutPage() {
                         </select>
                         {errors.region && <p className="text-sm text-red-600 mt-1">{errors.region}</p>}
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">
+                        Preferred delivery or pickup date <span className="text-gray-500 font-normal">(optional)</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={shippingData.preferredDate}
+                        min={new Date().toISOString().slice(0, 10)}
+                        onChange={(e) =>
+                          setShippingData({ ...shippingData, preferredDate: e.target.value })
+                        }
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        If you need delivery or pickup on a specific day, choose it here. Our team will see it on your order.
+                      </p>
                     </div>
 
                     {checkoutType === 'account' && (

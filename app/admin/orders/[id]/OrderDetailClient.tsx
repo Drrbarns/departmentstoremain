@@ -11,6 +11,17 @@ interface OrderDetailClientProps {
 
 type RiskLevel = 'low' | 'medium' | 'high';
 
+function formatCustomerPreferredDate(iso: string): string {
+  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
 interface FraudAnalysis {
   riskLevel: RiskLevel;
   reasons: string[];
@@ -375,6 +386,11 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
               <p>{shippingAddress.phone || order?.phone}</p>
               <p>{shippingAddress.address || shippingAddress.address_line1}</p>
               <p>{shippingAddress.city}{(shippingAddress.region || shippingAddress.state) && `, ${shippingAddress.region || shippingAddress.state}`}</p>
+              {order?.metadata?.customer_preferred_date && (
+                <p className="mt-2 font-semibold">
+                  Preferred date: {formatCustomerPreferredDate(String(order.metadata.customer_preferred_date))}
+                </p>
+              )}
             </div>
           </div>
 
@@ -643,6 +659,16 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-bold text-gray-900 mb-4">Shipping Address</h2>
+              {order.metadata?.customer_preferred_date && (
+                <div className="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-100">
+                  <p className="text-xs font-semibold text-amber-900 uppercase tracking-wide mb-0.5">
+                    Customer preferred date
+                  </p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {formatCustomerPreferredDate(String(order.metadata.customer_preferred_date))}
+                  </p>
+                </div>
+              )}
               <div className="text-gray-700 space-y-1">
                 {/* Support both old field names (address_line1) and new (address) */}
                 <p>{shippingAddress.address || shippingAddress.address_line1}</p>
