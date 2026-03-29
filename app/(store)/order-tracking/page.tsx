@@ -115,7 +115,7 @@ function OrderTrackingContent() {
     const status = order.status || 'pending';
     const paymentStatus = order.payment_status || 'pending';
 
-    const statusOrder = ['pending', 'processing', 'shipped', 'delivered'];
+    const statusOrder = ['pending', 'processing', 'shipped', 'picked_up', 'delivered'];
     const currentIndex = statusOrder.indexOf(status);
 
     const steps = [
@@ -156,12 +156,20 @@ function OrderTrackingContent() {
         status: currentIndex >= 2 ? 'completed' as const : currentIndex === 1 ? 'active' as const : 'pending' as const
       },
       {
+        key: 'picked_up',
+        title: 'Picked Up by Rider',
+        description: 'Package has been picked up by the rider',
+        date: currentIndex >= 3 ? 'Picked up' : 'Pending',
+        icon: 'ri-e-bike-2-line',
+        status: currentIndex >= 3 ? 'completed' as const : currentIndex === 2 ? 'active' as const : 'pending' as const
+      },
+      {
         key: 'delivered',
         title: 'Delivered',
         description: 'Your order has been delivered',
-        date: currentIndex >= 3 ? 'Delivered' : 'Pending',
+        date: currentIndex >= 4 ? 'Delivered' : 'Pending',
         icon: 'ri-home-smile-line',
-        status: currentIndex >= 3 ? 'completed' as const : currentIndex === 2 ? 'active' as const : 'pending' as const
+        status: currentIndex >= 4 ? 'completed' as const : currentIndex === 3 ? 'active' as const : 'pending' as const
       }
     ];
 
@@ -175,6 +183,7 @@ function OrderTrackingContent() {
       'pending': { label: 'Pending', color: 'bg-amber-100 text-amber-800' },
       'processing': { label: 'Processing', color: 'bg-blue-100 text-blue-800' },
       'shipped': { label: 'Packaged', color: 'bg-purple-100 text-purple-800' },
+      'picked_up': { label: 'Picked Up by Rider', color: 'bg-indigo-100 text-indigo-800' },
       'delivered': { label: 'Delivered', color: 'bg-blue-100 text-blue-800' },
       'cancelled': { label: 'Cancelled', color: 'bg-red-100 text-red-800' }
     };

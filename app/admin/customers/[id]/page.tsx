@@ -55,6 +55,11 @@ export default function CustomerDetailsPage() {
     if (!customer) return <div className="p-8 text-center text-red-500">Customer not found</div>;
 
     const totalSpent = orders.reduce((sum, order) => sum + (order.total || 0), 0);
+    const getOrderStatusLabel = (status: string) => {
+        if (status === 'shipped') return 'Packaged';
+        if (status === 'picked_up') return 'Picked Up by Rider';
+        return status.replace('_', ' ');
+    };
 
     return (
         <div className="max-w-7xl mx-auto">
@@ -137,8 +142,9 @@ export default function CustomerDetailsPage() {
                                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
                                             ${order.status === 'completed' || order.status === 'delivered' ? 'bg-blue-100 text-blue-800' :
                                                 order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                                    order.status === 'picked_up' ? 'bg-indigo-100 text-indigo-800' :
                                                     order.status === 'cancelled' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
-                                            {order.status.replace('_', ' ')}
+                                            {getOrderStatusLabel(order.status)}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-sm font-bold text-gray-900">

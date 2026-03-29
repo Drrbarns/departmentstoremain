@@ -297,10 +297,11 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
     }
   };
 
-  const statusOptions = ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'refund_requested', 'refunded'];
+  const statusOptions = ['pending', 'processing', 'shipped', 'picked_up', 'delivered', 'cancelled', 'refund_requested', 'refunded'];
   const statusLabel = (s: string) => {
     const labels: Record<string, string> = {
       shipped: 'Packaged',
+      picked_up: 'Picked Up by Rider',
       refund_requested: 'Refund Requested',
       refunded: 'Refunded',
       awaiting_payment: 'Awaiting Payment'
@@ -311,6 +312,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
     'pending': 'bg-amber-100 text-amber-700 border-amber-200',
     'processing': 'bg-blue-100 text-blue-700 border-blue-200',
     'shipped': 'bg-purple-100 text-purple-700 border-purple-200',
+    'picked_up': 'bg-indigo-100 text-indigo-700 border-indigo-200',
     'delivered': 'bg-green-100 text-green-700 border-green-200',
     'cancelled': 'bg-red-100 text-red-700 border-red-200',
     'awaiting_payment': 'bg-gray-100 text-gray-700 border-gray-200',
@@ -331,8 +333,9 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
   const timeline = [
     { status: 'Order Placed', date: new Date(order.created_at).toLocaleString(), completed: true },
     { status: 'Payment', date: order.payment_status, completed: order.payment_status === 'paid' },
-    { status: 'Processing', date: '', completed: ['processing', 'shipped', 'delivered'].includes(order.status) },
-    { status: 'Packaged', date: '', completed: ['shipped', 'delivered'].includes(order.status) },
+    { status: 'Processing', date: '', completed: ['processing', 'shipped', 'picked_up', 'delivered'].includes(order.status) },
+    { status: 'Packaged', date: '', completed: ['shipped', 'picked_up', 'delivered'].includes(order.status) },
+    { status: 'Picked Up by Rider', date: '', completed: ['picked_up', 'delivered'].includes(order.status) },
     { status: 'Delivered', date: '', completed: order.status === 'delivered' }
   ];
 

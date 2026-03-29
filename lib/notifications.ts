@@ -257,7 +257,7 @@ export async function sendOrderConfirmation(order: any) {
 
 ${emailShippingNotes(shippingNotes)}
 
-<p style="color:#374151;font-size:14px;line-height:1.6;margin:16px 0;">We're getting your order ready. You'll receive updates as it's processed and packaged.</p>
+<p style="color:#374151;font-size:14px;line-height:1.6;margin:16px 0;">We're getting your order ready. You'll receive updates as it's processed, packaged, and picked up by the rider.</p>
 
 ${emailButton('Track Your Order', trackingUrl)}
 
@@ -343,7 +343,8 @@ export async function sendOrderStatusUpdate(order: any, newStatus: string) {
     console.log(`[Notification] Status update for Order #${order_number} to ${newStatus} | Tracking: ${trackingNumber}`);
 
     const subject = `Order Update #${order_number || id}`;
-    let message = `Your order #${order_number || id} status has been updated to ${newStatus}.`;
+    const statusLabel = newStatus.replace(/_/g, ' ');
+    let message = `Your order #${order_number || id} status has been updated to ${statusLabel}.`;
     let smsMessage = message;
 
     if (newStatus === 'shipped') {
@@ -351,6 +352,11 @@ export async function sendOrderStatusUpdate(order: any, newStatus: string) {
         smsMessage = trackingNumber
             ? `Good news ${name}! Order #${order_number || id} has been packaged. Tracking: ${trackingNumber}. Track: ${trackingUrl}`
             : `Good news ${name}! Order #${order_number || id} has been packaged. Track: ${trackingUrl}`;
+    } else if (newStatus === 'picked_up') {
+        message = `Update: Package has been picked up by the rider for order #${order_number || id}.`;
+        smsMessage = trackingNumber
+            ? `Update ${name}: package for order #${order_number || id} has been picked up by the rider. Tracking: ${trackingNumber}. Track: ${trackingUrl}`
+            : `Update ${name}: package for order #${order_number || id} has been picked up by the rider. Track: ${trackingUrl}`;
     } else if (newStatus === 'delivered') {
         message = `Your order #${order_number || id} has been delivered. Enjoy!`;
         smsMessage = `Hi ${name}, your order #${order_number || id} has been delivered. Enjoy your purchase!`;
@@ -366,6 +372,7 @@ export async function sendOrderStatusUpdate(order: any, newStatus: string) {
     const statusConfig: Record<string, { icon: string; color: string; bg: string }> = {
         processing: { icon: '&#9881;', color: '#2563eb', bg: '#eff6ff' },
         shipped: { icon: '&#128666;', color: '#2563eb', bg: '#eff6ff' },
+        picked_up: { icon: '&#128757;', color: '#4338ca', bg: '#eef2ff' },
         delivered: { icon: '&#127881;', color: '#16a34a', bg: '#f0fdf4' },
         cancelled: { icon: '&#10060;', color: '#dc2626', bg: '#fef2f2' },
     };
@@ -383,14 +390,14 @@ export async function sendOrderStatusUpdate(order: any, newStatus: string) {
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9fafb;border-radius:12px;overflow:hidden;margin:20px 0;">
   ${emailInfoRow('Order Number', `#${order_number || id}`)}
-  ${emailInfoRow('New Status', `<span style="display:inline-block;background-color:${sc.bg};color:${sc.color};padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;text-transform:uppercase;">${newStatus}</span>`)}
+  ${emailInfoRow('New Status', `<span style="display:inline-block;background-color:${sc.bg};color:${sc.color};padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;text-transform:uppercase;">${statusLabel}</span>`)}
   ${trackingNumber ? emailInfoRow('Tracking Number', trackingNumber) : ''}
 </table>
 
 <p style="color:#374151;font-size:14px;line-height:1.6;margin:16px 0;">${message}</p>
 
 ${emailButton('Track Your Order', trackingUrl)}
-`, `Your order #${order_number} is now ${newStatus}`)
+`, `Your order #${order_number} is now ${statusLabel}`)
     });
 
     // SMS

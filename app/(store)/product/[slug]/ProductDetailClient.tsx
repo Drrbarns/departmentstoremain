@@ -7,6 +7,7 @@ import { cachedQuery } from '@/lib/query-cache';
 import ProductCard from '@/components/ProductCard';
 import ProductReviews from '@/components/ProductReviews';
 import LazyImage from '@/components/LazyImage';
+import SocialShareButtons from '@/components/SocialShareButtons';
 import { getOptimizedImageUrl } from '@/lib/imageOptimization';
 import { StructuredData, generateProductSchema, generateBreadcrumbSchema } from '@/components/SEOHead';
 import { notFound } from 'next/navigation';
@@ -41,6 +42,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
   const [activeTab, setActiveTab] = useState('description');
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+  const [shareUrl, setShareUrl] = useState('');
 
   const { addToCart } = useCart();
 
@@ -218,6 +220,12 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
     }
   }, [slug]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const currentSlug = product?.slug || slug;
+    setShareUrl(`${window.location.origin}/product/${currentSlug}`);
+  }, [slug, product?.slug]);
+
   const hasVariants = product?.variants?.length > 0;
   const needsVariantSelection = hasVariants && !selectedVariant;
 
@@ -370,12 +378,22 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                     <p className="text-sm text-blue-700 font-semibold mb-2">{product.category}</p>
                     <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3">{product.name}</h1>
                   </div>
-                  <button
-                    onClick={() => setIsWishlisted(!isWishlisted)}
-                    className="w-12 h-12 flex items-center justify-center border-2 border-gray-200 hover:border-blue-700 rounded-full transition-colors cursor-pointer"
-                  >
-                    <i className={`${isWishlisted ? 'ri-heart-fill text-red-600' : 'ri-heart-line text-gray-700'} text-xl`}></i>
-                  </button>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    {shareUrl && (
+                      <SocialShareButtons
+                        url={shareUrl}
+                        title={product.name}
+                        description={product.description}
+                        image={displayImages[0] || ''}
+                      />
+                    )}
+                    <button
+                      onClick={() => setIsWishlisted(!isWishlisted)}
+                      className="w-12 h-12 flex items-center justify-center border-2 border-gray-200 hover:border-blue-700 rounded-full transition-colors cursor-pointer"
+                    >
+                      <i className={`${isWishlisted ? 'ri-heart-fill text-red-600' : 'ri-heart-line text-gray-700'} text-xl`}></i>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex items-center mb-6">

@@ -49,6 +49,7 @@ export default function AdminOrdersPage() {
     { label: 'Pending', count: 0, status: 'pending' },
     { label: 'Processing', count: 0, status: 'processing' },
     { label: 'Packaged', count: 0, status: 'shipped' },
+    { label: 'Picked Up by Rider', count: 0, status: 'picked_up' },
     { label: 'Delivered', count: 0, status: 'delivered' },
     { label: 'Cancelled', count: 0, status: 'cancelled' }
   ]);
@@ -115,6 +116,7 @@ export default function AdminOrdersPage() {
         { label: 'Pending', count: confirmedOrders.filter(o => o.status === 'pending').length, status: 'pending' },
         { label: 'Processing', count: confirmedOrders.filter(o => o.status === 'processing').length, status: 'processing' },
         { label: 'Packaged', count: confirmedOrders.filter(o => o.status === 'shipped').length, status: 'shipped' },
+        { label: 'Picked Up by Rider', count: confirmedOrders.filter(o => o.status === 'picked_up').length, status: 'picked_up' },
         { label: 'Delivered', count: confirmedOrders.filter(o => o.status === 'delivered').length, status: 'delivered' },
         { label: 'Cancelled', count: confirmedOrders.filter(o => o.status === 'cancelled').length, status: 'cancelled' }
       ];
@@ -131,6 +133,7 @@ export default function AdminOrdersPage() {
     'pending': 'bg-amber-100 text-amber-700 border-amber-200',
     'processing': 'bg-blue-100 text-blue-700 border-blue-200',
     'shipped': 'bg-purple-100 text-purple-700 border-purple-200',
+    'picked_up': 'bg-indigo-100 text-indigo-700 border-indigo-200',
     'delivered': 'bg-blue-100 text-blue-700 border-blue-200',
     'cancelled': 'bg-red-100 text-red-700 border-red-200',
     'awaiting_payment': 'bg-gray-100 text-gray-700 border-gray-200'
@@ -138,6 +141,7 @@ export default function AdminOrdersPage() {
 
   const formatStatus = (status: string) => {
     if (status === 'shipped') return 'Packaged';
+    if (status === 'picked_up') return 'Picked Up by Rider';
     return status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown';
   };
 
@@ -512,6 +516,12 @@ export default function AdminOrdersPage() {
                 className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-pointer"
               >
                 Mark Packaged
+              </button>
+              <button
+                onClick={() => handleBulkAction('Mark as Picked Up by Rider', 'picked_up')}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors whitespace-nowrap cursor-pointer"
+              >
+                Mark Picked Up
               </button>
               <button
                 onClick={() => handleBulkAction('Export')}

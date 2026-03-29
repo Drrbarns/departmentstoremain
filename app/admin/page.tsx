@@ -206,6 +206,7 @@ export default function AdminDashboard() {
     'pending': 'bg-amber-100 text-amber-700',
     'processing': 'bg-blue-100 text-blue-700',
     'shipped': 'bg-purple-100 text-purple-700',
+    'picked_up': 'bg-indigo-100 text-indigo-700',
     'delivered': 'bg-blue-100 text-blue-700',
     'cancelled': 'bg-red-100 text-red-700'
   };
@@ -369,7 +370,11 @@ export default function AdminDashboard() {
                         <td className="py-4 px-4 font-semibold text-gray-900 whitespace-nowrap">GH₵ {order.total.toFixed(2)}</td>
                         <td className="py-4 px-4">
                           <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${statusColors[order.status] || 'bg-gray-100'}`}>
-                            {order.status === 'shipped' ? 'Packaged' : order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                            {order.status === 'shipped'
+                              ? 'Packaged'
+                              : order.status === 'picked_up'
+                                ? 'Picked Up by Rider'
+                                : order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                           </span>
                         </td>
                       </tr>
