@@ -17,7 +17,7 @@ export default function AdminLoginPage() {
   const { getToken, verifying } = useRecaptcha();
   const { getSetting } = useCMS();
   const siteName = getSetting('site_name') || 'Discount Discovery Zone';
-  const siteLogo = '/ddz-logo.png';
+  const siteLogo = getSetting('site_logo');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +60,11 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-block">
-            <img src={siteLogo} alt={siteName} className="h-12 w-auto mx-auto" />
+            {siteLogo ? (
+              <img src={siteLogo} alt={siteName} className="h-12 w-auto mx-auto" />
+            ) : (
+              <span className="text-2xl font-bold text-blue-700 tracking-tight">{siteName}</span>
+            )}
           </Link>
           <h1 className="text-3xl font-bold text-gray-900 mt-6 mb-2">Admin Login</h1>
           <p className="text-gray-600">Sign in to access the admin dashboard</p>

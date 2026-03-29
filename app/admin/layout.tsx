@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useCMS } from '@/context/CMSContext';
 
 export default function AdminLayout({
   children,
@@ -18,7 +19,9 @@ export default function AdminLayout({
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const adminLogo = '/ddz-logo.png';
+  const { getSetting } = useCMS();
+  const siteName = getSetting('site_name') || 'Discount Discovery Zone';
+  const adminLogo = getSetting('site_logo');
 
   // Module Filtering State
   const [enabledModules, setEnabledModules] = useState<string[]>([]);
@@ -298,7 +301,14 @@ export default function AdminLayout({
       >
         <div className="h-full px-4 py-6 overflow-y-auto">
           <Link href="/admin" className="flex items-center mb-8 px-2 cursor-pointer">
-            <img src={adminLogo} alt="Discount Discovery Zone" className="h-10 w-auto object-contain" />
+            {adminLogo ? (
+              <img src={adminLogo} alt={siteName} className="h-10 w-auto object-contain" />
+            ) : (
+              <>
+                <span className="text-xl font-['Pacifico'] text-blue-700">DDZ</span>
+                <span className="ml-3 text-sm font-semibold text-gray-500">ADMIN</span>
+              </>
+            )}
           </Link>
 
           <nav className="space-y-1">

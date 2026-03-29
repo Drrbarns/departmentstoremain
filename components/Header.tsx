@@ -19,7 +19,6 @@ export default function Header() {
   const { getSetting } = useCMS();
 
   const siteName = getSetting('site_name') || 'Discount Discovery Zone';
-  const brandLogo = '/ddz-logo.png';
 
   useEffect(() => {
     // Wishlist logic
@@ -80,7 +79,11 @@ export default function Header() {
                   className="flex items-center select-none"
                   aria-label="Go to homepage"
                 >
-                  <img src={brandLogo} alt={siteName} className="h-9 md:h-11 w-auto object-contain" />
+                  {getSetting('site_logo') ? (
+                    <img src={getSetting('site_logo')} alt={siteName} className="h-9 md:h-11 w-auto object-contain" />
+                  ) : (
+                    <span className="text-xl font-bold text-blue-700 tracking-tight">{siteName}</span>
+                  )}
                 </Link>
               </div>
 
@@ -214,7 +217,11 @@ export default function Header() {
           <div className="absolute top-0 left-0 bottom-0 w-4/5 max-w-xs bg-white shadow-xl flex flex-col animate-in slide-in-from-left duration-300">
             <div className="p-4 border-b border-gray-100 flex items-center justify-between">
               <Link href="/" onClick={() => setIsMobileMenuOpen(false)}>
-                <img src={brandLogo} alt={siteName} className="h-8 w-auto object-contain" />
+                {getSetting('site_logo') ? (
+                    <img src={getSetting('site_logo')} alt={siteName} className="h-8 w-auto object-contain" />
+                  ) : (
+                    <span className="text-lg font-bold text-blue-700 tracking-tight">{siteName}</span>
+                  )}
               </Link>
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
