@@ -18,6 +18,7 @@ export default function AdminLayout({
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const adminLogo = '/ddz-logo.png';
 
   // Module Filtering State
   const [enabledModules, setEnabledModules] = useState<string[]>([]);
@@ -297,8 +298,7 @@ export default function AdminLayout({
       >
         <div className="h-full px-4 py-6 overflow-y-auto">
           <Link href="/admin" className="flex items-center mb-8 px-2 cursor-pointer">
-            <span className="text-xl font-['Pacifico'] text-blue-700">DDZ</span>
-            <span className="ml-3 text-sm font-semibold text-gray-500">ADMIN</span>
+            <img src={adminLogo} alt="Discount Discovery Zone" className="h-10 w-auto object-contain" />
           </Link>
 
           <nav className="space-y-1">
