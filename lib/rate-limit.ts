@@ -129,6 +129,12 @@ export const RATE_LIMITS = {
     maxRequests: 20,
     windowSeconds: 60 // 20 requests per minute
   },
+
+  /** Public welcome emails after signup — stricter than generic notification */
+  welcome: {
+    maxRequests: 5,
+    windowSeconds: 900, // 5 per 15 minutes per IP
+  },
   
   // Callback endpoints - relaxed (webhooks from payment providers)
   callback: {

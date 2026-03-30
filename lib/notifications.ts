@@ -2,6 +2,7 @@ import { Resend } from 'resend';
 import { supabase } from '@/lib/supabase';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { escapeHtml } from '@/lib/sanitize';
+import { getPublicSiteUrl } from '@/lib/site-url';
 
 const resend = new Resend(process.env.RESEND_API_KEY || 'missing_api_key');
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@standardecom.com';
@@ -12,12 +13,12 @@ const BRAND = {
     color: '#2563eb',
     colorLight: '#eff6ff',
     colorDark: '#064e3b',
-    url: (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, ''),
     phone: '+233209597443',
 };
 
 // Reusable branded email layout
 export function emailLayout(body: string, preheader?: string): string {
+    const siteUrl = getPublicSiteUrl();
     return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
@@ -45,7 +46,7 @@ ${body}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
 <tr><td style="text-align:center;">
 <p style="margin:0 0 8px;color:#6b7280;font-size:13px;">Need help? Contact us at <a href="tel:${BRAND.phone}" style="color:${BRAND.color};text-decoration:none;">${BRAND.phone}</a></p>
-<p style="margin:0 0 12px;color:#6b7280;font-size:13px;"><a href="${BRAND.url}" style="color:${BRAND.color};text-decoration:none;">Visit our store</a> &nbsp;·&nbsp; <a href="${BRAND.url}/order-tracking" style="color:${BRAND.color};text-decoration:none;">Track order</a></p>
+<p style="margin:0 0 12px;color:#6b7280;font-size:13px;"><a href="${siteUrl}" style="color:${BRAND.color};text-decoration:none;">Visit our store</a> &nbsp;·&nbsp; <a href="${siteUrl}/order-tracking" style="color:${BRAND.color};text-decoration:none;">Track order</a></p>
 <p style="margin:0;color:#9ca3af;font-size:11px;">&copy; ${new Date().getFullYear()} ${BRAND.name}. All rights reserved.</p>
 </td></tr>
 </table>
@@ -194,17 +195,24 @@ export function isPosSaleOrder(metadata: any): boolean {
 /**
  * Short paid receipt SMS for in-store (POS) orders. Same rules as /api/notifications pos_receipt_sms.
  */
+const UUID_ORDER_REF = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export async function sendPosReceiptSmsByOrderRef(
     orderRef: string
 ): Promise<{ ok: boolean; error?: string }> {
-    const { data: order, error: orderError } = await supabaseAdmin
+    const ref = orderRef.trim();
+    const byNumber = !UUID_ORDER_REF.test(ref);
+
+    const orderQuery = supabaseAdmin
         .from('orders')
-        .select('id, order_number, created_at, total, phone, shipping_address, metadata')
-        .or(`order_number.eq.${orderRef},id.eq.${orderRef}`)
-        .single();
+        .select('id, order_number, created_at, total, phone, shipping_address, metadata');
+
+    const { data: order, error: orderError } = byNumber
+        ? await orderQuery.eq('order_number', ref).maybeSingle()
+        : await orderQuery.eq('id', ref).maybeSingle();
 
     if (orderError || !order) {
-        console.error('[POS receipt SMS] Order not found:', orderRef, orderError);
+        console.error('[POS receipt SMS] Order not found:', ref, orderError);
         return { ok: false, error: 'Order not found' };
     }
 
@@ -247,14 +255,26 @@ export async function sendPosReceiptSmsByOrderRef(
         (addr?.firstName as string) || (meta?.first_name as string) || 'Customer';
     const smsMessage = `Hi ${customerName}, receipt #${order.order_number || order.id}: GH₵${Number(order.total || 0).toFixed(2)} paid.${itemsText ? ` Items: ${itemsText}.` : ''} Thank you.`;
 
-    await sendSMS({ to: phone, message: smsMessage });
+    const smsResult = await sendSMS({ to: phone, message: smsMessage });
+    if (smsResult === null) {
+        console.error('[POS receipt SMS] sendSMS returned null (missing MOOLRE_SMS_API_KEY / MOOLRE_API_KEY?)');
+        return { ok: false, error: 'SMS is not configured on the server' };
+    }
+    if (
+        typeof smsResult === 'object' &&
+        'status' in smsResult &&
+        (smsResult as { status: number }).status !== 1
+    ) {
+        console.error('[POS receipt SMS] Provider error:', JSON.stringify(smsResult));
+        return { ok: false, error: 'SMS provider rejected the message' };
+    }
     return { ok: true };
 }
 
 export async function sendOrderConfirmation(order: any) {
     const { id, email, phone: orderPhone, shipping_address, total, created_at, order_number, metadata } = order;
 
-    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
+    const baseUrl = getPublicSiteUrl();
 
     // Build customer name from available sources
     const getName = () => {
@@ -385,7 +405,7 @@ ${emailButton('View Order in Admin', `${baseUrl}/admin/orders/${id}`)}
 export async function sendOrderStatusUpdate(order: any, newStatus: string) {
     const { id, email, phone: orderPhone, shipping_address, order_number, metadata } = order;
 
-    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
+    const baseUrl = getPublicSiteUrl();
 
     // Build customer name from available sources
     const getName = () => {
@@ -518,7 +538,7 @@ export async function sendWelcomeMessage(user: { email: string, firstName: strin
   </table>
 </div>
 
-${emailButton('Start Shopping', `${BRAND.url}/shop`)}
+${emailButton('Start Shopping', `${getPublicSiteUrl()}/shop`)}
 `, `Welcome to ${BRAND.name}, ${firstName}!`)
     });
 
@@ -534,7 +554,7 @@ ${emailButton('Start Shopping', `${BRAND.url}/shop`)}
 export async function sendPaymentLink(order: any) {
     const { id, email, phone: orderPhone, shipping_address, total, order_number, metadata } = order;
 
-    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/+$/, '');
+    const baseUrl = getPublicSiteUrl();
     const paymentUrl = `${baseUrl}/pay/${id}`;
 
     // Build customer name from available sources

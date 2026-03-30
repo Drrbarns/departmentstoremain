@@ -37,7 +37,7 @@ export async function POST(request: Request) {
         // 'order_created' requires a valid order to exist (verified below)
         // 'contact' is public but rate-limited
         // ============================================================
-        const adminOnlyTypes = ['campaign', 'order_updated', 'order_status', 'payment_link', 'welcome'];
+        const adminOnlyTypes = ['campaign', 'order_updated', 'order_status', 'payment_link'];
         const requiresAdminAuth = adminOnlyTypes.includes(type);
 
         if (requiresAdminAuth) {
@@ -118,10 +118,53 @@ export async function POST(request: Request) {
         }
 
         if (type === 'welcome') {
-            if (!payload.email) {
-                return NextResponse.json({ error: 'Missing email' }, { status: 400 });
+            const welcomeRl = checkRateLimit(`welcome:${clientId}`, RATE_LIMITS.welcome);
+            if (!welcomeRl.success) {
+                return NextResponse.json(
+                    { error: 'Too many welcome requests. Please try again later.' },
+                    {
+                        status: 429,
+                        headers: {
+                            'X-RateLimit-Remaining': '0',
+                            'X-RateLimit-Reset': welcomeRl.resetIn.toString(),
+                        },
+                    }
+                );
             }
-            await sendWelcomeMessage(payload);
+
+            if (!payload.email || typeof payload.firstName !== 'string') {
+                return NextResponse.json({ error: 'Missing email or firstName' }, { status: 400 });
+            }
+
+            const emailRaw = String(payload.email).trim();
+            const firstName = String(payload.firstName).trim();
+            if (!emailRaw || !firstName || firstName.length > 80) {
+                return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+            }
+
+            const { data: profile, error: profileError } = await supabaseAdmin
+                .from('profiles')
+                .select('created_at')
+                .ilike('email', emailRaw)
+                .maybeSingle();
+
+            if (profileError || !profile?.created_at) {
+                return NextResponse.json({ error: 'Invalid signup request' }, { status: 400 });
+            }
+
+            const profileAge = Date.now() - new Date(profile.created_at).getTime();
+            if (profileAge > 15 * 60 * 1000) {
+                return NextResponse.json(
+                    { error: 'Welcome can only be sent for recent signups' },
+                    { status: 400 }
+                );
+            }
+
+            await sendWelcomeMessage({
+                email: emailRaw,
+                firstName,
+                phone: typeof payload.phone === 'string' ? payload.phone.trim() : undefined,
+            });
             return NextResponse.json({ success: true, message: 'Welcome message sent' });
         }
 

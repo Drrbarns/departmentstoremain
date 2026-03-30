@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import { getPublicSiteUrl } from '@/lib/site-url';
 import { useRecaptcha } from '@/hooks/useRecaptcha';
 
 export default function ForgotPasswordPage() {
@@ -35,10 +37,21 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${getPublicSiteUrl()}/auth/update-password`,
+      });
+      if (resetError) {
+        setError(resetError.message || 'Could not send reset email. Try again later.');
+        setIsLoading(false);
+        return;
+      }
       setIsSubmitted(true);
-    }, 1500);
+    } catch {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (isSubmitted) {

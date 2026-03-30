@@ -307,9 +307,11 @@ export default function POSPage() {
         return guestDetails.email || 'pos-walkin@store.local';
     };
 
+    /** Typed phone wins (guest field is shown for SMS even when a saved customer is selected). */
     const getOrderPhone = () => {
-        if (selectedCustomer) return selectedCustomer.phone || '';
-        return guestDetails.phone || '';
+        const typed = guestDetails.phone?.trim() || '';
+        if (typed) return typed;
+        return (selectedCustomer?.phone?.trim() || '');
     };
 
     const getCustomerFullName = () => {
@@ -365,7 +367,7 @@ export default function POSPage() {
                 firstName: selectedCustomer.full_name?.split(' ')[0] || '',
                 lastName: selectedCustomer.full_name?.split(' ').slice(1).join(' ') || '',
                 email: selectedCustomer.email,
-                phone: selectedCustomer.phone || '',
+                phone: customerPhone,
                 address: guestDetails.address,
                 city: guestDetails.city,
                 region: guestDetails.region,
@@ -477,21 +479,40 @@ export default function POSPage() {
                     console.error('Stock reduction error (non-fatal):', stockErr);
                 }
 
-                // Success — show completed
-                setCompletedOrder({ id: order.id, orderNumber, total: grandTotal, items: cart });
                 setCart([]);
 
                 // Receipt SMS for every POS sale when a customer phone is present
+                let receiptSmsNote: string | null = null;
                 if (customerPhone?.trim()) {
-                    fetch('/api/notifications', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            type: 'pos_receipt_sms',
-                            payload: { order_number: orderNumber }
-                        })
-                    }).catch(err => console.error('POS receipt SMS error:', err));
+                    try {
+                        const smsRes = await fetch('/api/notifications', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                type: 'pos_receipt_sms',
+                                payload: { order_number: orderNumber }
+                            })
+                        });
+                        const smsJson = await smsRes.json().catch(() => ({}));
+                        if (!smsRes.ok) {
+                            console.error('[POS] Receipt SMS failed:', smsRes.status, smsJson);
+                            receiptSmsNote =
+                                (smsJson as { error?: string }).error ||
+                                `Receipt SMS failed (${smsRes.status}). Check SMS settings or resend from Admin → Orders.`;
+                        }
+                    } catch (err) {
+                        console.error('[POS] Receipt SMS error:', err);
+                        receiptSmsNote = 'Could not send receipt SMS (network error).';
+                    }
                 }
+
+                setCompletedOrder({
+                    id: order.id,
+                    orderNumber,
+                    total: grandTotal,
+                    items: cart,
+                    receiptSmsWarning: receiptSmsNote || undefined
+                });
 
                 // Send notification
                 if (customerEmail && customerEmail !== 'pos-walkin@store.local') {
@@ -944,6 +965,16 @@ export default function POSPage() {
                                         </div>
                                     )}
 
+                                    {completedOrder.receiptSmsWarning && (
+                                        <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3 text-left text-sm text-amber-900">
+                                            <p className="font-semibold flex items-center gap-2">
+                                                <i className="ri-error-warning-line" />
+                                                Receipt SMS not sent
+                                            </p>
+                                            <p className="mt-1">{completedOrder.receiptSmsWarning}</p>
+                                        </div>
+                                    )}
+
                                     {completedOrder.paymentPending && completedOrder.paymentUrl && (
                                         <div className="mt-4 space-y-3">
                                             <p className="text-sm text-gray-600">
@@ -1055,6 +1086,31 @@ export default function POSPage() {
                                             </div>
                                         )}
 
+                                        <div className="mt-2">
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1">
+                                                Phone for SMS receipt
+                                                {paymentMethod === 'momo' && !getOrderPhone() && (
+                                                    <span className="text-amber-600 ml-1">(required for MoMo)</span>
+                                                )}
+                                            </label>
+                                            <input
+                                                type="tel"
+                                                placeholder={selectedCustomer ? 'Override or add number for this sale…' : '+233…'}
+                                                value={guestDetails.phone}
+                                                onChange={e => setGuestDetails({ ...guestDetails, phone: e.target.value })}
+                                                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm ${
+                                                    paymentMethod === 'momo' && !getOrderPhone()
+                                                        ? 'border-amber-400 bg-amber-50'
+                                                        : 'border-gray-300'
+                                                }`}
+                                            />
+                                            {selectedCustomer && (
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    If the profile has no phone, enter it here. What you type is used for this order and the receipt text.
+                                                </p>
+                                            )}
+                                        </div>
+
                                         {!selectedCustomer && (
                                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mt-2 space-y-3">
                                                 <h4 className="text-sm font-bold text-gray-900 border-b border-gray-200 pb-2 mb-2">
@@ -1077,23 +1133,13 @@ export default function POSPage() {
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
                                                     />
                                                 </div>
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <input
-                                                        type="email"
-                                                        placeholder="Email"
-                                                        value={guestDetails.email}
-                                                        onChange={e => setGuestDetails({ ...guestDetails, email: e.target.value })}
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
-                                                    />
-                                                    <input
-                                                        type="tel"
-                                                        placeholder={paymentMethod === 'momo' ? 'Phone (Required) *' : 'Phone'}
-                                                        value={guestDetails.phone}
-                                                        onChange={e => setGuestDetails({ ...guestDetails, phone: e.target.value })}
-                                                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm ${paymentMethod === 'momo' && !guestDetails.phone ? 'border-amber-400 bg-amber-50' : 'border-gray-300'
-                                                            }`}
-                                                    />
-                                                </div>
+                                                <input
+                                                    type="email"
+                                                    placeholder="Email"
+                                                    value={guestDetails.email}
+                                                    onChange={e => setGuestDetails({ ...guestDetails, email: e.target.value })}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                                                />
                                             </div>
                                         )}
                                     </div>

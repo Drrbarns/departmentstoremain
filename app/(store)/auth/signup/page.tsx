@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import PasswordStrengthMeter from '@/components/PasswordStrengthMeter';
 import { supabase } from '@/lib/supabase';
+import { getPublicSiteUrl } from '@/lib/site-url';
 import { useRecaptcha } from '@/hooks/useRecaptcha';
 
 function getFriendlyError(message: string): string {
@@ -103,6 +104,7 @@ export default function SignupPage() {
         email: formData.email,
         password: formData.password,
         options: {
+          emailRedirectTo: `${getPublicSiteUrl()}/auth/callback`,
           data: {
             first_name: formData.firstName,
             last_name: formData.lastName,
@@ -123,7 +125,8 @@ export default function SignupPage() {
             type: 'welcome',
             payload: {
               email: formData.email,
-              firstName: formData.firstName
+              firstName: formData.firstName,
+              phone: formData.phone
             }
           })
         }).catch(err => console.error('Welcome notification error:', err));
