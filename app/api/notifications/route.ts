@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { verifyAuth } from '@/lib/auth';
 import { escapeHtml } from '@/lib/sanitize';
-import { sendOrderConfirmation, sendOrderStatusUpdate, sendWelcomeMessage, sendContactMessage, sendPaymentLink, sendEmail, sendSMS, emailLayout } from '@/lib/notifications';
+import { sendOrderConfirmation, sendOrderStatusUpdate, sendWelcomeMessage, sendContactMessage, sendPaymentLink, sendEmail, sendSMS, emailLayout, sendPosReceiptSmsByOrderRef } from '@/lib/notifications';
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
@@ -153,60 +153,32 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: true, message: 'Payment link sent' });
         }
 
-        // POS walk-in receipt SMS (order must exist and be recent)
+        // POS receipt SMS (order must exist, recent, with phone)
         if (type === 'pos_receipt_sms') {
             if (!payload.order_number && !payload.id) {
                 return NextResponse.json({ error: 'Missing order identifier' }, { status: 400 });
             }
 
-            const orderRef = payload.order_number || payload.id;
-            const { data: order, error: orderError } = await supabaseAdmin
-                .from('orders')
-                .select('id, order_number, created_at, total, phone, shipping_address, metadata')
-                .or(`order_number.eq.${orderRef},id.eq.${orderRef}`)
-                .single();
-
-            if (orderError || !order) {
-                return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+            const orderRef = String(payload.order_number || payload.id);
+            const result = await sendPosReceiptSmsByOrderRef(orderRef);
+            if (!result.ok) {
+                if (result.error === 'Order not found') {
+                    return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+                }
+                if (result.error === 'Order too old') {
+                    return NextResponse.json(
+                        { error: 'Receipt SMS can only be sent for recent orders' },
+                        { status: 400 }
+                    );
+                }
+                if (result.error === 'No phone number') {
+                    return NextResponse.json(
+                        { error: 'No phone number found for this order' },
+                        { status: 400 }
+                    );
+                }
+                return NextResponse.json({ error: result.error || 'Failed to send SMS' }, { status: 400 });
             }
-
-            const orderAge = Date.now() - new Date(order.created_at).getTime();
-            if (orderAge > 30 * 60 * 1000) {
-                return NextResponse.json({ error: 'Receipt SMS can only be sent for recent orders' }, { status: 400 });
-            }
-
-            const phone = order.phone || order.shipping_address?.phone;
-            if (!phone) {
-                return NextResponse.json({ error: 'No phone number found for this order' }, { status: 400 });
-            }
-
-            const { data: orderItems } = await supabaseAdmin
-                .from('order_items')
-                .select('product_name, variant_name, quantity')
-                .eq('order_id', order.id)
-                .limit(3);
-
-            const itemSummary = (orderItems || [])
-                .slice(0, 2)
-                .map((item: any) => {
-                    const label = item.variant_name
-                        ? `${item.product_name} (${item.variant_name})`
-                        : item.product_name;
-                    return `${item.quantity}x ${label}`;
-                })
-                .join(', ');
-            const extraCount = Math.max(0, (orderItems || []).length - 2);
-            const itemsText = itemSummary
-                ? `${itemSummary}${extraCount > 0 ? ` +${extraCount} more` : ''}`
-                : '';
-
-            const customerName = order.shipping_address?.firstName || order.metadata?.first_name || 'Customer';
-            const smsMessage = `Hi ${customerName}, receipt #${order.order_number || order.id}: GH₵${Number(order.total || 0).toFixed(2)} paid.${itemsText ? ` Items: ${itemsText}.` : ''} Thank you.`;
-
-            await sendSMS({
-                to: phone,
-                message: smsMessage
-            });
 
             return NextResponse.json({ success: true, message: 'POS receipt SMS sent' });
         }

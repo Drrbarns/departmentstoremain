@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { sendOrderConfirmation } from '@/lib/notifications';
+import { sendOrderConfirmation, sendPosReceiptSmsByOrderRef, isPosSaleOrder } from '@/lib/notifications';
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-limit';
 
 /**
@@ -209,10 +209,16 @@ export async function POST(req: Request) {
                 console.error('[Callback] Customer stats failed:', statsError.message);
             }
 
-            // Send SMS + Email notifications
+            // Email (and web-order SMS); POS gets receipt SMS after payment here
             try {
                 console.log('[Callback] Sending notifications for:', orderJson.order_number);
                 await sendOrderConfirmation(orderJson);
+                if (isPosSaleOrder(orderJson.metadata) && orderJson.order_number) {
+                    const receipt = await sendPosReceiptSmsByOrderRef(orderJson.order_number);
+                    if (!receipt.ok) {
+                        console.warn('[Callback] POS receipt SMS:', receipt.error);
+                    }
+                }
                 console.log('[Callback] Notifications sent!');
             } catch (notifyError: any) {
                 console.error('[Callback] Notification failed:', notifyError.message);

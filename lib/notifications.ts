@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { escapeHtml } from '@/lib/sanitize';
 
 const resend = new Resend(process.env.RESEND_API_KEY || 'missing_api_key');
@@ -184,6 +185,72 @@ export async function sendSMS({ to, message }: { to: string; message: string }) 
     }
 }
 
+/** POS orders use a dedicated receipt SMS; avoid doubling with sendOrderConfirmation. */
+export function isPosSaleOrder(metadata: any): boolean {
+    if (!metadata || typeof metadata !== 'object') return false;
+    return metadata.pos_sale === true || metadata.pos_sale === 'true';
+}
+
+/**
+ * Short paid receipt SMS for in-store (POS) orders. Same rules as /api/notifications pos_receipt_sms.
+ */
+export async function sendPosReceiptSmsByOrderRef(
+    orderRef: string
+): Promise<{ ok: boolean; error?: string }> {
+    const { data: order, error: orderError } = await supabaseAdmin
+        .from('orders')
+        .select('id, order_number, created_at, total, phone, shipping_address, metadata')
+        .or(`order_number.eq.${orderRef},id.eq.${orderRef}`)
+        .single();
+
+    if (orderError || !order) {
+        console.error('[POS receipt SMS] Order not found:', orderRef, orderError);
+        return { ok: false, error: 'Order not found' };
+    }
+
+    const orderAge = Date.now() - new Date(order.created_at).getTime();
+    if (orderAge > 30 * 60 * 1000) {
+        return { ok: false, error: 'Order too old' };
+    }
+
+    const addr = order.shipping_address as Record<string, unknown> | null;
+    const phone =
+        (order.phone && String(order.phone).trim()) ||
+        (addr?.phone && String(addr.phone).trim()) ||
+        '';
+    if (!phone) {
+        return { ok: false, error: 'No phone number' };
+    }
+
+    const { data: orderItems } = await supabaseAdmin
+        .from('order_items')
+        .select('product_name, variant_name, quantity')
+        .eq('order_id', order.id)
+        .limit(3);
+
+    const itemSummary = (orderItems || [])
+        .slice(0, 2)
+        .map((item: { product_name: string; variant_name: string | null; quantity: number }) => {
+            const label = item.variant_name
+                ? `${item.product_name} (${item.variant_name})`
+                : item.product_name;
+            return `${item.quantity}x ${label}`;
+        })
+        .join(', ');
+    const extraCount = Math.max(0, (orderItems || []).length - 2);
+    const itemsText = itemSummary
+        ? `${itemSummary}${extraCount > 0 ? ` +${extraCount} more` : ''}`
+        : '';
+
+    const meta = order.metadata as Record<string, unknown> | null;
+    const customerName =
+        (addr?.firstName as string) || (meta?.first_name as string) || 'Customer';
+    const smsMessage = `Hi ${customerName}, receipt #${order.order_number || order.id}: GH₵${Number(order.total || 0).toFixed(2)} paid.${itemsText ? ` Items: ${itemsText}.` : ''} Thank you.`;
+
+    await sendSMS({ to: phone, message: smsMessage });
+    return { ok: true };
+}
+
 export async function sendOrderConfirmation(order: any) {
     const { id, email, phone: orderPhone, shipping_address, total, created_at, order_number, metadata } = order;
 
@@ -293,8 +360,8 @@ ${emailButton('View Order in Admin', `${baseUrl}/admin/orders/${id}`)}
         html: adminEmailHtml
     });
 
-    // 3. SMS to Customer (if phone exists)
-    if (phone) {
+    // 3. SMS to Customer (POS uses sendPosReceiptSmsByOrderRef after payment — skip duplicate)
+    if (phone && !isPosSaleOrder(metadata)) {
         const smsMessage = trackingNumber
             ? `Hi ${name}, your order #${order_number || id} is confirmed! Tracking: ${trackingNumber}. Track here: ${trackingUrl}${shippingNotesSms}`
             : `Hi ${name}, your order #${order_number || id} at Discount Discovery Zone is confirmed! Track here: ${trackingUrl}${shippingNotesSms}`;

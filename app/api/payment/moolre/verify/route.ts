@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { sendOrderConfirmation } from '@/lib/notifications';
+import { sendOrderConfirmation, sendPosReceiptSmsByOrderRef, isPosSaleOrder } from '@/lib/notifications';
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-limit';
 
 /**
@@ -122,6 +122,12 @@ export async function POST(req: Request) {
         if (orderJson) {
             try {
                 await sendOrderConfirmation(orderJson);
+                if (isPosSaleOrder(orderJson.metadata) && orderJson.order_number) {
+                    const receipt = await sendPosReceiptSmsByOrderRef(orderJson.order_number);
+                    if (!receipt.ok) {
+                        console.warn('[Verify] POS receipt SMS:', receipt.error);
+                    }
+                }
                 console.log('[Verify] Notifications sent for:', orderNumber);
             } catch (notifyError: any) {
                 console.error('[Verify] Notification failed:', notifyError.message);

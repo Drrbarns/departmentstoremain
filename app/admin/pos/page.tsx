@@ -481,8 +481,8 @@ export default function POSPage() {
                 setCompletedOrder({ id: order.id, orderNumber, total: grandTotal, items: cart });
                 setCart([]);
 
-                // Send POS receipt SMS for walk-in customers when phone is provided
-                if (!selectedCustomer && customerPhone) {
+                // Receipt SMS for every POS sale when a customer phone is present
+                if (customerPhone?.trim()) {
                     fetch('/api/notifications', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
