@@ -352,6 +352,11 @@ export default function AdminLayout({
       icon: 'ri-message-2-line',
       path: '/admin/test-sms'
     },
+    {
+      title: 'Payment reconciliation',
+      icon: 'ri-exchange-dollar-line',
+      path: '/admin/reconcile-payments'
+    },
 
     {
       title: 'Blog',

@@ -10,7 +10,7 @@ import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-lim
  *   "code": "P01",
  *   "message": "Transaction Successful",
  *   "data": {
- *     "txtstatus": 1,
+ *     "txstatus": 1,
  *     "payer": "233535998837",
  *     "terminalid": "",
  *     "accountnumber": "10789906062911",
@@ -71,12 +71,18 @@ export async function POST(req: Request) {
         console.log('[Callback] Data keys:', body.data ? Object.keys(body.data).join(', ') : 'no data object');
 
         // ============================================================
+        // EXTRACT body.data early — Moolre sometimes puts `secret` only inside data
+        // ============================================================
+        const data = body.data || {};
+
+        // ============================================================
         // SECURITY: Verify callback secret FIRST (mandatory)
         // ============================================================
         const expectedSecret = process.env.MOOLRE_CALLBACK_SECRET;
+        const providedSecret = body.secret ?? data.secret;
         if (expectedSecret) {
-            if (!body.secret || body.secret !== expectedSecret) {
-                console.error('[Callback] Secret mismatch! Expected:', expectedSecret.substring(0, 8) + '...', 'Got:', String(body.secret || '').substring(0, 8) + '...');
+            if (!providedSecret || providedSecret !== expectedSecret) {
+                console.error('[Callback] Secret mismatch! Expected:', expectedSecret.substring(0, 8) + '...', 'Got:', String(providedSecret || '').substring(0, 8) + '...');
                 console.error('[Callback] Full body for debugging:', JSON.stringify(body).substring(0, 1000));
                 return NextResponse.json({ success: false, message: 'Invalid callback signature' }, { status: 403 });
             }
@@ -88,7 +94,6 @@ export async function POST(req: Request) {
         // ============================================================
         // EXTRACT FIELDS - Moolre nests payment data inside body.data
         // ============================================================
-        const data = body.data || {};
 
         // Order reference: check body.data.externalref first, then top-level fallbacks
         const rawExternalRef =
@@ -112,9 +117,9 @@ export async function POST(req: Request) {
             'callback';
 
         // Payment status: body.status === 1 means API call succeeded,
-        // body.data.txtstatus === 1 means transaction was successful
+        // body.data.txstatus or txtstatus === 1 means transaction was successful (field name varies)
         const apiStatus = body.status;
-        const txStatus = data.txtstatus;
+        const txStatus = data.txstatus ?? data.txtstatus;
         const messageStr = String(body.message || '').toLowerCase();
 
         console.log('[Callback] Order ref:', merchantOrderRef,
