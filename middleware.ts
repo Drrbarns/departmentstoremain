@@ -144,7 +144,8 @@ export async function middleware(request: NextRequest) {
         if (maintenance.enabled) {
             const token = extractAuthToken(request);
             const auth = token ? await getRoleFromToken(token) : null;
-            const isAdminViewer = auth?.role === 'admin' || auth?.role === 'staff';
+            const isAdminViewer =
+                auth?.role === 'admin' || auth?.role === 'staff' || auth?.role === 'staff_pos';
 
             if (!isAdminViewer) {
                 const maintenanceUrl = new URL('/maintenance', request.url);
@@ -182,7 +183,7 @@ export async function middleware(request: NextRequest) {
             loginUrl.searchParams.set('error', 'session_expired');
             return NextResponse.redirect(loginUrl);
         }
-        if (auth.role !== 'admin' && auth.role !== 'staff') {
+        if (auth.role !== 'admin' && auth.role !== 'staff' && auth.role !== 'staff_pos') {
             const loginUrl = new URL('/admin/login', request.url);
             loginUrl.searchParams.set('error', 'unauthorized');
             return NextResponse.redirect(loginUrl);
