@@ -4,7 +4,7 @@ import { verifyAdminToken } from '@/lib/auth';
 
 export async function testSmsAction(phone: string, message: string, authToken: string) {
     // SECURITY: Verify admin authentication before allowing SMS sending
-    const auth = await verifyAdminToken(authToken);
+    const auth = await verifyAdminToken(authToken, { requireFullStaff: true });
     if (!auth.authenticated) {
         return {
             success: false,

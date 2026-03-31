@@ -37,11 +37,19 @@ export async function POST(request: Request) {
         // 'order_created' requires a valid order to exist (verified below)
         // 'contact' is public but rate-limited
         // ============================================================
-        const adminOnlyTypes = ['campaign', 'order_updated', 'order_status', 'payment_link'];
-        const requiresAdminAuth = adminOnlyTypes.includes(type);
+        // campaign = marketing HTML — admin + full staff only
+        const fullStaffOnlyTypes = ['campaign'];
+        // Order workflows — POS / orders staff need these
+        const adminPanelTypes = ['order_updated', 'order_status', 'payment_link'];
+        const requiresFullStaffAuth = fullStaffOnlyTypes.includes(type);
+        const requiresAdminPanelAuth =
+            requiresFullStaffAuth || adminPanelTypes.includes(type);
 
-        if (requiresAdminAuth) {
-            const auth = await verifyAuth(request, { requireAdmin: true });
+        if (requiresAdminPanelAuth) {
+            const auth = await verifyAuth(request, {
+                requireAdmin: true,
+                requireFullStaff: requiresFullStaffAuth,
+            });
             if (!auth.authenticated) {
                 return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: 401 });
             }

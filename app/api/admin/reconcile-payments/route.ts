@@ -19,7 +19,7 @@ type ReconcileRow = {
  * redirect/verify failures. Does not read Supabase "webhook logs" — we don't store them.
  */
 export async function GET(request: Request) {
-    const auth = await verifyAuth(request, { requireAdmin: true });
+    const auth = await verifyAuth(request, { requireAdmin: true, requireFullStaff: true });
     if (!auth.authenticated) {
         return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: 401 });
     }

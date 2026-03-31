@@ -65,7 +65,7 @@ export default function AdminLayout({
       // Check user role from profiles table
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, full_name')
         .eq('id', session.user.id)
         .single();
 
@@ -75,8 +75,8 @@ export default function AdminLayout({
         return;
       }
 
-      // Only allow admin and staff roles
-      if (profile.role !== 'admin' && profile.role !== 'staff') {
+      // Admin, full staff, or POS-only staff
+      if (profile.role !== 'admin' && profile.role !== 'staff' && profile.role !== 'staff_pos') {
         console.warn('User does not have admin/staff role');
         document.cookie = 'sb-access-token=; path=/; max-age=0; SameSite=Lax; Secure';
         await supabase.auth.signOut();
@@ -105,6 +105,17 @@ export default function AdminLayout({
 
     return () => subscription.unsubscribe();
   }, [pathname, router]);
+
+  // Restrict staff_pos to Orders + POS only
+  useEffect(() => {
+    if (!userRole || pathname === '/admin/login') return;
+    if (userRole !== 'staff_pos') return;
+    const allowed =
+      pathname === '/admin/pos' || pathname.startsWith('/admin/orders');
+    if (!allowed) {
+      router.replace('/admin/pos');
+    }
+  }, [userRole, pathname, router]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -377,6 +388,9 @@ export default function AdminLayout({
   ];
 
   const visibleMenuItems = menuItems.filter(item => {
+    if (userRole === 'staff_pos') {
+      return item.path === '/admin/orders' || item.path === '/admin/pos';
+    }
     // @ts-ignore
     if (!item.moduleId) return true;
     // @ts-ignore
@@ -409,7 +423,7 @@ export default function AdminLayout({
         `}
       >
         <div className="h-full px-4 py-6 overflow-y-auto">
-          <Link href="/admin" className="flex items-center mb-8 px-2 cursor-pointer">
+          <Link href={userRole === 'staff_pos' ? '/admin/pos' : '/admin'} className="flex items-center mb-8 px-2 cursor-pointer">
             {adminLogo ? (
               <img src={adminLogo} alt={siteName} className="h-10 w-auto object-contain" />
             ) : (
@@ -447,6 +461,7 @@ export default function AdminLayout({
             })}
           </nav>
 
+          {userRole !== 'staff_pos' && (
           <div className="mt-4 px-2">
             <button
               onClick={handleToggleMaintenance}
@@ -470,8 +485,10 @@ export default function AdminLayout({
               </span>
             </button>
           </div>
+          )}
 
-          <div className="mt-8 pt-8 border-t border-gray-200">
+          <div className={`mt-8 pt-8 border-t border-gray-200 ${userRole === 'staff_pos' ? 'mt-4 pt-4 border-0' : ''}`}>
+            {userRole !== 'staff_pos' && (
             <button
               onClick={handleClearCache}
               disabled={clearingCache}
@@ -480,6 +497,7 @@ export default function AdminLayout({
               <i className={`${clearingCache ? 'ri-loader-4-line animate-spin' : 'ri-delete-bin-2-line'} text-xl w-5 h-5 flex items-center justify-center`}></i>
               <span>{clearingCache ? 'Clearing...' : 'Clear Cache'}</span>
             </button>
+            )}
             <Link
               href="/"
               target="_blank"

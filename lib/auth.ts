@@ -15,10 +15,13 @@ export interface AuthResult {
 /**
  * Verify that the request has a valid Supabase session
  * and optionally check for admin/staff role.
+ *
+ * - requireAdmin: true → admin, staff, or staff_pos (anyone who can use the admin app)
+ * - requireFullStaff: true (with requireAdmin) → admin or staff only (excludes staff_pos)
  */
 export async function verifyAuth(
     request: Request,
-    options: { requireAdmin?: boolean } = {}
+    options: { requireAdmin?: boolean; requireFullStaff?: boolean } = {}
 ): Promise<AuthResult> {
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.replace('Bearer ', '');
@@ -45,7 +48,11 @@ export async function verifyAuth(
                 return { authenticated: false, error: 'Could not verify user role' };
             }
 
-            if (profile.role !== 'admin' && profile.role !== 'staff') {
+            const allowed = options.requireFullStaff
+                ? profile.role === 'admin' || profile.role === 'staff'
+                : profile.role === 'admin' || profile.role === 'staff' || profile.role === 'staff_pos';
+
+            if (!allowed) {
                 return { authenticated: false, error: 'Admin access required' };
             }
 
@@ -62,7 +69,10 @@ export async function verifyAuth(
  * Verify admin auth for server actions.
  * Requires passing the auth token from the client.
  */
-export async function verifyAdminToken(token: string): Promise<AuthResult> {
+export async function verifyAdminToken(
+    token: string,
+    options: { requireFullStaff?: boolean } = {}
+): Promise<AuthResult> {
     if (!token) {
         return { authenticated: false, error: 'Missing token' };
     }
@@ -84,7 +94,11 @@ export async function verifyAdminToken(token: string): Promise<AuthResult> {
             return { authenticated: false, error: 'Could not verify role' };
         }
 
-        if (profile.role !== 'admin' && profile.role !== 'staff') {
+        const allowed = options.requireFullStaff
+            ? profile.role === 'admin' || profile.role === 'staff'
+            : profile.role === 'admin' || profile.role === 'staff' || profile.role === 'staff_pos';
+
+        if (!allowed) {
             return { authenticated: false, error: 'Admin access required' };
         }
 
