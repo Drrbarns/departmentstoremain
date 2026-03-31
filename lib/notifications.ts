@@ -272,13 +272,13 @@ export async function sendPosReceiptSmsByOrderRef(
 }
 
 export type SendOrderConfirmationOptions = {
-    /** Backfill / bulk: customer email + SMS only (skip admin email & admin SMS) */
-    customerOnly?: boolean;
+    /** When true (e.g. bulk resend), do not email/SMS store admin — customer still gets email + SMS. */
+    skipAdminNotifications?: boolean;
 };
 
 export async function sendOrderConfirmation(order: any, options?: SendOrderConfirmationOptions) {
+    const skipAdmin = options?.skipAdminNotifications === true;
     const { id, email, phone: orderPhone, shipping_address, total, created_at, order_number, metadata } = order;
-    const customerOnly = options?.customerOnly === true;
 
     const baseUrl = getPublicSiteUrl();
 
@@ -313,7 +313,7 @@ export async function sendOrderConfirmation(order: any, options?: SendOrderConfi
     // Fetch order items to get preorder_shipping info
     let shippingNotes: string[] = [];
     try {
-        const { data: items } = await supabaseAdmin
+        const { data: items } = await supabase
             .from('order_items')
             .select('product_name, metadata')
             .eq('order_id', id);
@@ -357,25 +357,23 @@ ${emailButton('Track Your Order', trackingUrl)}
 <p style="color:#9ca3af;font-size:12px;text-align:center;margin:0;">Or copy this link: <a href="${trackingUrl}" style="color:${BRAND.color};">${trackingUrl}</a></p>
 `, `Your order #${order_number || id} is confirmed!`);
 
-    if (email && String(email).includes('@')) {
-        await sendEmail({
-            to: String(email).trim(),
-            subject: `Order Confirmed! #${order_number || id}`,
-            html: customerEmailHtml
-        });
-    } else {
-        console.warn('[Notification] No customer email for order confirmation:', order_number || id);
-    }
+    await sendEmail({
+        to: email,
+        subject: `Order Confirmed! #${order_number || id}`,
+        html: customerEmailHtml
+    });
 
     // 2. Email to Admin
-    if (!customerOnly) {
-        const adminEmailHtml = emailLayout(`
+    if (skipAdmin) {
+        // Customer notifications already sent above; skip duplicate admin alerts on bulk resend
+    } else {
+    const adminEmailHtml = emailLayout(`
 <h2 style="margin:0 0 16px;color:#111827;font-size:20px;">&#128230; New Order Received</h2>
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9fafb;border-radius:12px;overflow:hidden;margin:16px 0;">
   ${emailInfoRow('Order', `#${order_number || id}`)}
   ${emailInfoRow('Customer', `${name}`)}
-  ${emailInfoRow('Email', email || '—')}
+  ${emailInfoRow('Email', email)}
   ${emailInfoRow('Total', `GH₵${Number(total).toFixed(2)}`)}
   ${trackingNumber ? emailInfoRow('Tracking', trackingNumber) : ''}
 </table>
@@ -385,11 +383,11 @@ ${emailShippingNotes(shippingNotes)}
 ${emailButton('View Order in Admin', `${baseUrl}/admin/orders/${id}`)}
 `, `New order #${order_number} from ${name}`);
 
-        await sendEmail({
-            to: ADMIN_EMAIL,
-            subject: `New Order #${order_number || id}`,
-            html: adminEmailHtml
-        });
+    await sendEmail({
+        to: ADMIN_EMAIL,
+        subject: `New Order #${order_number || id}`,
+        html: adminEmailHtml
+    });
     }
 
     // 3. SMS to Customer (POS uses sendPosReceiptSmsByOrderRef after payment — skip duplicate)
@@ -405,7 +403,7 @@ ${emailButton('View Order in Admin', `${baseUrl}/admin/orders/${id}`)}
     }
 
     // 4. SMS to Admin (if ADMIN_PHONE is configured)
-    if (!customerOnly && ADMIN_PHONE) {
+    if (!skipAdmin && ADMIN_PHONE) {
         const adminSms = `New order #${order_number || id} from ${name} — GH₵${Number(total).toFixed(2)}. View: ${baseUrl}/admin/orders/${id}`;
         await sendSMS({
             to: ADMIN_PHONE,

@@ -1,92 +1,84 @@
 import { NextResponse } from 'next/server';
-import { verifyAuth } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { verifyAuth } from '@/lib/auth';
 import { sendOrderConfirmation } from '@/lib/notifications';
-import MOOLRE_BACKFILL_ORDER_NUMBERS from '@/lib/data/moolre-reconciled-order-numbers.json';
 
-const PRESET_KEY = 'moolre_mar2026_reconcile';
-
-function sleep(ms: number) {
-    return new Promise((r) => setTimeout(r, ms));
-}
+const MAX_ORDERS = 80;
+const DELAY_MS = 400;
 
 /**
- * POST — resend order confirmation email + customer SMS (same copy as payment callback).
- * Admin/staff only. Use `preset` for the known Moolre backfill list, or pass `orderNumbers`.
+ * Bulk resend order confirmation email + customer SMS (same copy as checkout confirmation).
+ * Skips duplicate admin email/SMS (skipAdminNotifications) to avoid spamming staff.
  *
- * Body: { preset?: "moolre_mar2026_reconcile", orderNumbers?: string[] }
- * - `customerOnly` is always true (no duplicate admin email/SMS per order).
+ * Auth: admin or staff JWT, OR Authorization: Bearer <CRON_SECRET> (for trusted server-side runs).
  */
 export async function POST(request: Request) {
-    const auth = await verifyAuth(request, { requireAdmin: true, requireFullStaff: true });
-    if (!auth.authenticated) {
-        return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: 401 });
+    const cronSecret = process.env.CRON_SECRET;
+    const authHeader = request.headers.get('authorization') || '';
+    const isCron = cronSecret && authHeader === `Bearer ${cronSecret}`;
+
+    if (!isCron) {
+        const auth = await verifyAuth(request, { requireAdmin: true, requireFullStaff: true });
+        if (!auth.authenticated) {
+            return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: 401 });
+        }
     }
 
-    let body: { preset?: string; orderNumbers?: string[] } = {};
+    let body: { order_numbers?: string[] };
     try {
         body = await request.json();
     } catch {
-        return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+        return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
     }
 
-    let orderNumbers: string[] = [];
-    if (body.preset === PRESET_KEY) {
-        orderNumbers = [...(MOOLRE_BACKFILL_ORDER_NUMBERS as string[])];
-    } else if (Array.isArray(body.orderNumbers)) {
-        orderNumbers = body.orderNumbers.map((s) => String(s).trim()).filter(Boolean);
+    const refs = body.order_numbers;
+    if (!Array.isArray(refs) || refs.length === 0) {
+        return NextResponse.json({ error: 'order_numbers array required' }, { status: 400 });
+    }
+    if (refs.length > MAX_ORDERS) {
+        return NextResponse.json({ error: `Maximum ${MAX_ORDERS} orders per request` }, { status: 400 });
     }
 
-    if (orderNumbers.length === 0) {
-        return NextResponse.json(
-            {
-                error: `Provide orderNumbers (non-empty array) or preset: "${PRESET_KEY}"`
-            },
-            { status: 400 }
-        );
-    }
+    const results: { order_number: string; ok: boolean; error?: string }[] = [];
 
-    if (orderNumbers.length > 150) {
-        return NextResponse.json({ error: 'Maximum 150 orders per request' }, { status: 400 });
-    }
+    for (const order_number of refs) {
+        const ref = String(order_number).trim();
+        if (!ref) continue;
 
-    const results: { order_number: string; ok: boolean; detail?: string }[] = [];
-
-    for (const ref of orderNumbers) {
-        const { data: order, error } = await supabaseAdmin
+        const { data: order, error: fetchErr } = await supabaseAdmin
             .from('orders')
             .select('*')
             .eq('order_number', ref)
             .maybeSingle();
 
-        if (error || !order) {
-            results.push({ order_number: ref, ok: false, detail: 'not_found' });
-            await sleep(80);
+        if (fetchErr || !order) {
+            results.push({ order_number: ref, ok: false, error: fetchErr?.message || 'Order not found' });
             continue;
         }
 
         if (order.payment_status !== 'paid') {
-            results.push({ order_number: ref, ok: false, detail: 'not_paid' });
-            await sleep(80);
+            results.push({ order_number: ref, ok: false, error: 'Order is not paid; confirmation not sent' });
             continue;
         }
 
         try {
-            await sendOrderConfirmation(order, { customerOnly: true });
+            await sendOrderConfirmation(order, { skipAdminNotifications: true });
             results.push({ order_number: ref, ok: true });
         } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : 'send_failed';
-            results.push({ order_number: ref, ok: false, detail: msg });
+            const msg = e instanceof Error ? e.message : 'Send failed';
+            results.push({ order_number: ref, ok: false, error: msg });
         }
 
-        await sleep(400);
+        await new Promise((r) => setTimeout(r, DELAY_MS));
     }
 
-    const okCount = results.filter((r) => r.ok).length;
+    const ok = results.filter((r) => r.ok).length;
+    const failed = results.filter((r) => !r.ok);
+
     return NextResponse.json({
-        message: `Processed ${results.length} orders; ${okCount} confirmation sends attempted.`,
-        ok: okCount,
-        failed: results.length - okCount,
-        results
+        success: failed.length === 0,
+        sent: ok,
+        failed_count: failed.length,
+        results,
     });
 }
