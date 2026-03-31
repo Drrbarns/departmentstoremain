@@ -20,6 +20,8 @@ export default function ReconcilePaymentsPage() {
     const [note, setNote] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [resendBusy, setResendBusy] = useState(false);
+    const [resendResult, setResendResult] = useState<{ ok: boolean; text: string } | null>(null);
 
     const load = useCallback(async () => {
         setError(null);
@@ -55,6 +57,47 @@ export default function ReconcilePaymentsPage() {
         load();
     }, [load]);
 
+    const resendMoolreBackfillConfirmations = async () => {
+        setResendResult(null);
+        if (
+            !confirm(
+                'Send order confirmation email and customer SMS for the saved Moolre backfill list (~49 paid orders)? Admin email/SMS is skipped per order to avoid spam.'
+            )
+        ) {
+            return;
+        }
+        setResendBusy(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            if (!token) {
+                setResendResult({ ok: false, text: 'Not signed in' });
+                return;
+            }
+            const res = await fetch('/api/admin/resend-order-confirmations', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ preset: 'moolre_mar2026_reconcile' })
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                setResendResult({ ok: false, text: json.error || 'Request failed' });
+                return;
+            }
+            setResendResult({
+                ok: true,
+                text: `${json.message || 'Done'} (ok: ${json.ok}, failed: ${json.failed})`
+            });
+        } catch (e) {
+            setResendResult({ ok: false, text: e instanceof Error ? e.message : 'Failed' });
+        } finally {
+            setResendBusy(false);
+        }
+    };
+
     return (
         <div className="p-6 max-w-6xl">
             <h1 className="text-2xl font-bold mb-2">Payment reconciliation (Moolre)</h1>
@@ -67,7 +110,7 @@ export default function ReconcilePaymentsPage() {
             </p>
             {note && <p className="text-sm text-gray-700 mb-4 border-l-4 border-amber-400 pl-3">{note}</p>}
 
-            <div className="flex gap-3 mb-6">
+            <div className="flex flex-wrap gap-3 mb-6">
                 <button
                     type="button"
                     onClick={() => load()}
@@ -76,6 +119,14 @@ export default function ReconcilePaymentsPage() {
                 >
                     {loading ? 'Loading…' : 'Refresh list'}
                 </button>
+                <button
+                    type="button"
+                    onClick={() => resendMoolreBackfillConfirmations()}
+                    disabled={resendBusy}
+                    className="px-4 py-2 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 disabled:opacity-50"
+                >
+                    {resendBusy ? 'Sending confirmations…' : 'Resend confirmations (Moolre backfill list)'}
+                </button>
                 <Link
                     href="/admin/orders"
                     className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 inline-flex items-center"
@@ -83,6 +134,17 @@ export default function ReconcilePaymentsPage() {
                     All orders
                 </Link>
             </div>
+            {resendResult && (
+                <div
+                    className={`mb-4 p-3 rounded border text-sm ${
+                        resendResult.ok
+                            ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
+                            : 'bg-red-50 text-red-800 border-red-200'
+                    }`}
+                >
+                    {resendResult.text}
+                </div>
+            )}
 
             {error && (
                 <div className="mb-4 p-3 bg-red-50 text-red-800 rounded border border-red-200">{error}</div>

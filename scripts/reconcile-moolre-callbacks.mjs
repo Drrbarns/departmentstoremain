@@ -8,6 +8,10 @@
  *
  * --dry-run: only list parsed rows (no SQL)
  * default: prints a DO block for Supabase SQL editor / MCP execute_sql
+ *
+ * Customer confirmations after backfill: Admin → Payment reconciliation →
+ * "Resend confirmations (Moolre backfill list)", or POST /api/admin/resend-order-confirmations
+ * with {"preset":"moolre_mar2026_reconcile"} and admin Bearer token.
  */
 
 import fs from 'fs';
