@@ -1,18 +1,4 @@
--- ============================================================
--- staff_pos role: POS + Orders only (no catalog/CMS/settings access)
--- ============================================================
-
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_enum e
-    JOIN pg_type t ON e.enumtypid = t.oid
-    WHERE t.typname = 'user_role' AND e.enumlabel = 'staff_pos'
-  ) THEN
-    ALTER TYPE user_role ADD VALUE 'staff_pos';
-  END IF;
-END
-$$;
+-- Depends on 20260331120000_staff_pos_enum_only.sql
 
 CREATE OR REPLACE FUNCTION public.is_staff_pos()
 RETURNS boolean
@@ -40,7 +26,6 @@ AS $$
   );
 $$;
 
--- Orders & POS-related tables: allow staff_pos
 DROP POLICY IF EXISTS "Staff manage all orders" ON public.orders;
 CREATE POLICY "Staff manage all orders" ON public.orders
   FOR ALL USING (public.is_admin_staff_or_pos()) WITH CHECK (public.is_admin_staff_or_pos());
