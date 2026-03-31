@@ -75,9 +75,9 @@ export async function POST(req: Request) {
             });
         }
 
-        // Time guard: only accept verification within 30 minutes of order creation
+        // Time guard: accept verification within 2 hours of order creation
         const orderAge = Date.now() - new Date(order.created_at).getTime();
-        const MAX_VERIFY_WINDOW = 30 * 60 * 1000;
+        const MAX_VERIFY_WINDOW = 2 * 60 * 60 * 1000;
         if (orderAge > MAX_VERIFY_WINDOW) {
             console.warn('[Verify] Order too old for redirect verification:', orderNumber, 'Age:', Math.round(orderAge / 60000), 'min');
             return NextResponse.json({

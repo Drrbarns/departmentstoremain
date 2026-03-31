@@ -145,15 +145,15 @@ export async function POST(req: Request) {
         if (isSuccess) {
             console.log(`[Callback] Payment SUCCESS for Order ${merchantOrderRef}`);
 
-            // Check if order exists
+            // Check if order exists (maybeSingle to avoid throw on zero rows)
             const { data: existingOrder, error: fetchError } = await supabaseAdmin
                 .from('orders')
                 .select('id, order_number, payment_status, total')
                 .eq('order_number', merchantOrderRef)
-                .single();
+                .maybeSingle();
 
             if (fetchError || !existingOrder) {
-                console.error('[Callback] Order not found:', merchantOrderRef);
+                console.error('[Callback] Order not found:', merchantOrderRef, fetchError?.message);
                 return NextResponse.json({ success: false, message: 'Order not found' }, { status: 404 });
             }
 
@@ -230,13 +230,22 @@ export async function POST(req: Request) {
             // Payment failed
             console.log(`[Callback] Payment FAILED for ${merchantOrderRef} | Status: ${apiStatus} | TX: ${txStatus}`);
 
+            // Merge into existing metadata instead of overwriting
+            const { data: failedOrder } = await supabaseAdmin
+                .from('orders')
+                .select('metadata')
+                .eq('order_number', merchantOrderRef)
+                .maybeSingle();
+
             await supabaseAdmin
                 .from('orders')
                 .update({
                     payment_status: 'failed',
                     metadata: {
+                        ...(failedOrder?.metadata || {}),
                         moolre_reference: moolreReference,
-                        failure_reason: body.message || 'Payment failed'
+                        failure_reason: body.message || 'Payment failed',
+                        failure_at: new Date().toISOString(),
                     }
                 })
                 .eq('order_number', merchantOrderRef);

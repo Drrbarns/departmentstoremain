@@ -67,8 +67,8 @@ export async function POST(req: Request) {
 
         const orderRef = order.order_number || orderId;
 
-        const requestUrl = new URL(req.url);
-        const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || requestUrl.origin).replace(/\/+$/, '');
+        const { getPublicSiteUrl } = await import('@/lib/site-url');
+        const baseUrl = getPublicSiteUrl();
 
         // Generate a unique external reference for Moolre
         const uniqueRef = `${orderRef}-R${Date.now()}`;

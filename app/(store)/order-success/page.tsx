@@ -52,24 +52,25 @@ function OrderSuccessContent() {
   const verifyPayment = async (orderNum: string, initialOrder: any) => {
     setVerifying(true);
     
-    // Wait 3 seconds to give the callback a chance to process first
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    // Re-fetch order to check if callback already updated it
-    const { data: refreshed } = await supabase
-      .from('orders')
-      .select('*, order_items (*)')
-      .eq('order_number', orderNum)
-      .single();
-    
-    if (refreshed?.payment_status === 'paid') {
-      setOrder(refreshed);
-      setVerifying(false);
-      return;
+    // Poll: give callback up to ~12 seconds to fire before falling back to verify
+    const pollIntervals = [3000, 4000, 5000];
+    for (const delay of pollIntervals) {
+      await new Promise(resolve => setTimeout(resolve, delay));
+
+      const { data: refreshed } = await supabase
+        .from('orders')
+        .select('*, order_items (*)')
+        .eq('order_number', orderNum)
+        .single();
+
+      if (refreshed?.payment_status === 'paid') {
+        setOrder(refreshed);
+        setVerifying(false);
+        return;
+      }
     }
 
-    // Callback hasn't fired - verify via our endpoint
-    // Verify payment via Moolre API — we no longer trust the redirect alone
+    // Callback hasn't fired after polling — verify via our endpoint
     try {
       const res = await fetch('/api/payment/moolre/verify', {
         method: 'POST',
@@ -81,7 +82,6 @@ function OrderSuccessContent() {
       console.log('Payment verification result:', result);
       
       if (result.success && result.payment_status === 'paid') {
-        // Re-fetch full order data
         const { data: updated } = await supabase
           .from('orders')
           .select('*, order_items (*)')
