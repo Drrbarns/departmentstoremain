@@ -271,13 +271,7 @@ export async function sendPosReceiptSmsByOrderRef(
     return { ok: true };
 }
 
-export type SendOrderConfirmationOptions = {
-    /** When true (e.g. bulk resend), do not email/SMS store admin — customer still gets email + SMS. */
-    skipAdminNotifications?: boolean;
-};
-
-export async function sendOrderConfirmation(order: any, options?: SendOrderConfirmationOptions) {
-    const skipAdmin = options?.skipAdminNotifications === true;
+export async function sendOrderConfirmation(order: any) {
     const { id, email, phone: orderPhone, shipping_address, total, created_at, order_number, metadata } = order;
 
     const baseUrl = getPublicSiteUrl();
@@ -364,9 +358,6 @@ ${emailButton('Track Your Order', trackingUrl)}
     });
 
     // 2. Email to Admin
-    if (skipAdmin) {
-        // Customer notifications already sent above; skip duplicate admin alerts on bulk resend
-    } else {
     const adminEmailHtml = emailLayout(`
 <h2 style="margin:0 0 16px;color:#111827;font-size:20px;">&#128230; New Order Received</h2>
 
@@ -388,7 +379,6 @@ ${emailButton('View Order in Admin', `${baseUrl}/admin/orders/${id}`)}
         subject: `New Order #${order_number || id}`,
         html: adminEmailHtml
     });
-    }
 
     // 3. SMS to Customer (POS uses sendPosReceiptSmsByOrderRef after payment — skip duplicate)
     if (phone && !isPosSaleOrder(metadata)) {
@@ -403,7 +393,7 @@ ${emailButton('View Order in Admin', `${baseUrl}/admin/orders/${id}`)}
     }
 
     // 4. SMS to Admin (if ADMIN_PHONE is configured)
-    if (!skipAdmin && ADMIN_PHONE) {
+    if (ADMIN_PHONE) {
         const adminSms = `New order #${order_number || id} from ${name} — GH₵${Number(total).toFixed(2)}. View: ${baseUrl}/admin/orders/${id}`;
         await sendSMS({
             to: ADMIN_PHONE,

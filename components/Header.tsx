@@ -188,7 +188,7 @@ export default function Header() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search by name or product code..."
+                    placeholder="Search name, SKU, barcode, or store code (e.g. 042)..."
                     className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
                     autoFocus
                   />

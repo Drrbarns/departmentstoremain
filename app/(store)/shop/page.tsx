@@ -80,9 +80,13 @@ function ShopContent() {
               .eq('status', 'active')
               .order('position', { foreignTable: 'product_images', ascending: true });
 
-            // Search by name or product code (SKU)
-            if (search) {
-              query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%`);
+            // Search: name, SKU, barcode, and POS store code (metadata.pos_code — same as shelf/POS labels)
+            if (search?.trim()) {
+              // Commas break PostgREST `.or()` argument parsing; strip them from the fragment.
+              const frag = search.trim().replace(/,/g, ' ');
+              query = query.or(
+                `name.ilike.%${frag}%,sku.ilike.%${frag}%,barcode.ilike.%${frag}%,metadata->>pos_code.ilike.%${frag}%`
+              );
             }
 
             // Category Filter with Subcategories
