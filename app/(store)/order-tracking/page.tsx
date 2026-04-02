@@ -1,16 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import { getOptimizedImageUrl } from '@/lib/imageOptimization';
 import { orderLineItemImageUrl } from '@/lib/orderLineItemImage';
 
 function OrderTrackingContent() {
   const searchParams = useSearchParams();
+  // Pre-fill order number from URL if present — but never auto-submit without email
   const urlOrderNumber = searchParams.get('order') || '';
-  
+
   const [orderNumber, setOrderNumber] = useState(urlOrderNumber);
   const [email, setEmail] = useState('');
   const [isTracking, setIsTracking] = useState(false);
@@ -18,20 +18,13 @@ function OrderTrackingContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Auto-track if order number AND email are in the URL
-  const urlEmail = searchParams.get('email') || '';
-  
-  useEffect(() => {
-    if (urlOrderNumber && urlEmail) {
-      setEmail(urlEmail);
-      fetchOrder(urlOrderNumber, urlEmail);
-    }
-  }, [urlOrderNumber, urlEmail]);
+  // SECURITY: Email is always required and must be typed by the user.
+  // We intentionally do NOT auto-submit from URL params — exposing a customer's
+  // email in the URL leaks it to browser history, analytics, and referrer headers.
 
   const fetchOrder = async (orderNum: string, verifyEmail?: string) => {
     const emailToVerify = verifyEmail || email;
-    
-    // SECURITY: Email is required for order tracking to prevent unauthorized access
+
     if (!emailToVerify) {
       setError('Please enter your email address to verify your identity.');
       return;
@@ -41,48 +34,34 @@ function OrderTrackingContent() {
     setError('');
 
     try {
-      // Only select the fields we need — avoid exposing unnecessary data
-      const { data, error: fetchError } = await supabase
-        .from('orders')
-        .select(`
-          id,
-          order_number,
-          status,
-          payment_status,
-          total,
-          email,
-          created_at,
-          shipping_address,
-          metadata,
-          order_items (
-            id,
-            product_name,
-            variant_name,
-            quantity,
-            unit_price,
-            metadata,
-            product_variants ( image_url ),
-            products (
-              product_images (url)
-            )
-          )
-        `)
-        .eq('order_number', orderNum)
-        .single();
+      // SECURITY: All verification is performed server-side — the API route checks
+      // email against the DB and never returns data on mismatch.
+      const res = await fetch('/api/storefront/orders/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderNumber: orderNum, email: emailToVerify }),
+      });
 
-      if (fetchError || !data) {
-        setError('Order not found. Please check your order number and try again.');
+      if (res.status === 429) {
+        setError('Too many requests. Please try again in a moment.');
         setIsTracking(false);
         return;
       }
 
-      // SECURITY: Always verify email matches — this is mandatory
-      if (data.email?.toLowerCase() !== emailToVerify.toLowerCase()) {
-        setError('The email address does not match this order. Please use the email you placed the order with.');
+      if (res.status === 404) {
+        setError('Order not found. Please check your order number and email address.');
         setIsTracking(false);
         return;
       }
 
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error || 'Something went wrong. Please try again.');
+        setIsTracking(false);
+        return;
+      }
+
+      const { order: data } = await res.json();
       setOrder(data);
       setIsTracking(true);
     } catch (err) {

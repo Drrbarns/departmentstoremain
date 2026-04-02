@@ -37,7 +37,7 @@ function OrderSuccessContent() {
 
         // If redirected from payment and order is still pending, try to verify
         if (paymentSuccess === 'true' && orderData && orderData.payment_status !== 'paid') {
-          verifyPayment(orderNumber, orderData);
+          verifyPayment(orderNumber, orderData.email, orderData);
         }
       } catch (err) {
         console.error('Error fetching order:', err);
@@ -49,9 +49,9 @@ function OrderSuccessContent() {
   }, [orderNumber]);
 
   // Payment verification - called when user is redirected from Moolre with payment_success=true
-  const verifyPayment = async (orderNum: string, initialOrder: any) => {
+  const verifyPayment = async (orderNum: string, orderEmail: string, initialOrder: any) => {
     setVerifying(true);
-    
+
     // Poll: give callback up to ~12 seconds to fire before falling back to verify
     const pollIntervals = [3000, 4000, 5000];
     for (const delay of pollIntervals) {
@@ -75,7 +75,8 @@ function OrderSuccessContent() {
       const res = await fetch('/api/payment/moolre/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderNumber: orderNum })
+        // SECURITY: Email is required by the verify endpoint to confirm ownership
+        body: JSON.stringify({ orderNumber: orderNum, email: orderEmail })
       });
       
       const result = await res.json();

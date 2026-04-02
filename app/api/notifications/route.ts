@@ -64,12 +64,28 @@ export async function POST(request: Request) {
                 return NextResponse.json({ error: 'Missing order identifier' }, { status: 400 });
             }
 
-            const orderRef = payload.order_number || payload.id;
-            const { data: order, error: orderError } = await supabaseAdmin
+            const rawOrderRef = String(payload.order_number || payload.id).trim();
+
+            // SECURITY: Validate orderRef format before using in query to prevent injection
+            const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawOrderRef);
+            const isOrderNumber = /^[A-Za-z0-9\-]{1,64}$/.test(rawOrderRef);
+            if (!isUUID && !isOrderNumber) {
+                return NextResponse.json({ error: 'Invalid order identifier format' }, { status: 400 });
+            }
+
+            // SECURITY: Fetch full order from DB — NEVER use client-supplied contact details.
+            // Using DB data prevents email spoofing / SMS redirection.
+            let orderQuery = supabaseAdmin
                 .from('orders')
-                .select('id, order_number, created_at')
-                .or(`order_number.eq.${orderRef},id.eq.${orderRef}`)
-                .single();
+                .select('id, order_number, email, phone, shipping_address, metadata, items, total, created_at, status, payment_status');
+
+            if (isUUID) {
+                orderQuery = orderQuery.or(`order_number.eq.${rawOrderRef},id.eq.${rawOrderRef}`);
+            } else {
+                orderQuery = orderQuery.eq('order_number', rawOrderRef);
+            }
+
+            const { data: order, error: orderError } = await orderQuery.single();
 
             if (orderError || !order) {
                 return NextResponse.json({ error: 'Order not found' }, { status: 404 });
@@ -81,7 +97,8 @@ export async function POST(request: Request) {
                 return NextResponse.json({ error: 'Order confirmation can only be sent for recent orders' }, { status: 400 });
             }
 
-            await sendOrderConfirmation(payload);
+            // SECURITY: Send using only DB order data — ignore any client-provided payload fields
+            await sendOrderConfirmation(order);
             return NextResponse.json({ success: true, message: 'Order confirmation sent' });
         }
 
@@ -102,26 +119,20 @@ export async function POST(request: Request) {
                 return NextResponse.json({ error: 'Missing orderNumber or status' }, { status: 400 });
             }
 
-            // Fetch full order data
-            const { data: fullOrder } = await supabaseAdmin
+            // SECURITY: Fetch order from DB — never fall back to client-supplied contact
+        // details. A rogue staff account could otherwise redirect status notifications
+        // to attacker-controlled email/phone addresses.
+            const { data: fullOrder, error: orderLookupError } = await supabaseAdmin
                 .from('orders')
                 .select('id, order_number, email, phone, shipping_address, metadata')
                 .eq('order_number', orderNumber)
                 .single();
 
-            const orderData = fullOrder || {
-                order_number: orderNumber,
-                email: email,
-                phone: phone,
-                shipping_address: { firstName: name, phone: phone },
-                metadata: { tracking_number: trackingNumber }
-            };
-
-            if (!orderData.phone && phone) {
-                orderData.phone = phone;
+            if (orderLookupError || !fullOrder) {
+                return NextResponse.json({ error: 'Order not found' }, { status: 404 });
             }
 
-            await sendOrderStatusUpdate(orderData, status);
+            await sendOrderStatusUpdate(fullOrder, status);
             return NextResponse.json({ success: true, message: 'Status update sent' });
         }
 

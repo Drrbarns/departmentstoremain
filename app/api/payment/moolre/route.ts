@@ -37,17 +37,39 @@ export async function POST(req: Request) {
         // SECURITY: Fetch the order from the database and use its total.
         // NEVER trust the amount from the client.
         const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(orderId);
-        let query = supabaseAdmin
-            .from('orders')
-            .select('id, order_number, total, email, payment_status, metadata');
+
+        // SECURITY: Use parameterized .eq() calls instead of string interpolation in .or()
+        // to avoid any risk of PostgREST filter injection.
+        let order: any = null;
+        let orderError: any = null;
 
         if (isUUID) {
-            query = query.or(`id.eq.${orderId},order_number.eq.${orderId}`);
+            // Try by UUID first, then by order_number (order_number could also look like a UUID)
+            const byId = await supabaseAdmin
+                .from('orders')
+                .select('id, order_number, total, email, payment_status, metadata')
+                .eq('id', orderId)
+                .maybeSingle();
+            if (!byId.error && byId.data) {
+                order = byId.data;
+            } else {
+                const byRef = await supabaseAdmin
+                    .from('orders')
+                    .select('id, order_number, total, email, payment_status, metadata')
+                    .eq('order_number', orderId)
+                    .maybeSingle();
+                order = byRef.data;
+                orderError = byRef.error;
+            }
         } else {
-            query = query.eq('order_number', orderId);
+            const result = await supabaseAdmin
+                .from('orders')
+                .select('id, order_number, total, email, payment_status, metadata')
+                .eq('order_number', orderId)
+                .single();
+            order = result.data;
+            orderError = result.error;
         }
-
-        const { data: order, error: orderError } = await query.single();
 
         if (orderError || !order) {
             console.error('[Payment] Order not found:', orderId);

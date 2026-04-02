@@ -1,7 +1,16 @@
 /**
- * Simple in-memory rate limiter for API routes
- * For production with multiple instances, use Redis-based rate limiting
+ * Simple in-memory rate limiter for API routes.
+ *
+ * WARNING: This store is per-process. On multi-instance deployments (e.g. Vercel)
+ * each instance has its own counter, so an attacker distributing requests across
+ * instances can exceed the per-IP limit. For production, replace with a shared
+ * Redis store (e.g. Upstash Redis + @upstash/ratelimit).
  */
+if (process.env.NODE_ENV === 'production' && !process.env.REDIS_URL && !process.env.UPSTASH_REDIS_REST_URL) {
+    console.warn('[rate-limit] WARNING: Using in-memory rate limiting in production. ' +
+        'Set REDIS_URL or UPSTASH_REDIS_REST_URL and switch to a Redis-backed store ' +
+        'to prevent per-instance bypass on multi-instance deployments.');
+}
 
 interface RateLimitEntry {
   count: number;

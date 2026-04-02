@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'crypto';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendPaymentLink } from '@/lib/notifications';
@@ -9,11 +10,31 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 // for orders that haven't been paid within 15 minutes
 export async function GET(request: Request) {
   try {
-    // Verify cron secret to prevent unauthorized access
-    const authHeader = request.headers.get('authorization');
+    // SECURITY: CRON_SECRET is mandatory. Fail hard if not configured.
     const cronSecret = process.env.CRON_SECRET;
-    
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    if (!cronSecret || cronSecret.length < 16) {
+      console.error('[Payment Reminders] CRON_SECRET is not configured or too short. Endpoint is disabled.');
+      return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
+    }
+
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.toLowerCase().startsWith('bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const token = authHeader.slice(7).trim();
+
+    // SECURITY: Use timing-safe comparison to prevent timing attacks
+    let authorized = false;
+    try {
+      const a = Buffer.from(token, 'utf8');
+      const b = Buffer.from(cronSecret, 'utf8');
+      authorized = a.length === b.length && timingSafeEqual(a, b);
+    } catch {
+      authorized = false;
+    }
+
+    if (!authorized) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

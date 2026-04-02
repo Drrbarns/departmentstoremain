@@ -29,10 +29,17 @@ export async function POST(req: Request) {
             );
         }
 
-        const { orderNumber } = await req.json();
+        const body = await req.json();
+        const { orderNumber, email } = body;
 
         if (!orderNumber || typeof orderNumber !== 'string') {
             return NextResponse.json({ success: false, message: 'Missing or invalid orderNumber' }, { status: 400 });
+        }
+
+        // SECURITY: Email is required — without it anyone who knows an order number
+        // could trigger a paid verification for someone else's order.
+        if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+            return NextResponse.json({ success: false, message: 'Valid email is required' }, { status: 400 });
         }
 
         if (!/^ORD-\d+-\d+$/.test(orderNumber)) {
@@ -49,6 +56,14 @@ export async function POST(req: Request) {
 
         if (fetchError || !order) {
             console.error('[Verify] Order not found:', orderNumber);
+            return NextResponse.json({ success: false, message: 'Order not found' }, { status: 404 });
+        }
+
+        // SECURITY: Verify the caller knows the order's email — prevents IDOR where
+        // any person who guesses an order number can mark it as paid for free.
+        if (order.email?.toLowerCase() !== email.trim().toLowerCase()) {
+            console.warn('[Verify] Email mismatch for order:', orderNumber);
+            // Return 404 (not 403) to avoid confirming the order exists
             return NextResponse.json({ success: false, message: 'Order not found' }, { status: 404 });
         }
 

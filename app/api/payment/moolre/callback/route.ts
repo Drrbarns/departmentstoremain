@@ -81,9 +81,18 @@ export async function POST(req: Request) {
         const expectedSecret = process.env.MOOLRE_CALLBACK_SECRET;
         const providedSecret = body.secret ?? data.secret;
         if (expectedSecret) {
-            if (!providedSecret || providedSecret !== expectedSecret) {
-                console.error('[Callback] Secret mismatch! Expected:', expectedSecret.substring(0, 8) + '...', 'Got:', String(providedSecret || '').substring(0, 8) + '...');
-                console.error('[Callback] Full body for debugging:', JSON.stringify(body).substring(0, 1000));
+            // SECURITY: Use timing-safe comparison to prevent timing attacks
+            let secretMatch = false;
+            try {
+                const a = Buffer.from(String(providedSecret || ''), 'utf8');
+                const b = Buffer.from(expectedSecret, 'utf8');
+                secretMatch = a.length === b.length && require('crypto').timingSafeEqual(a, b);
+            } catch {
+                secretMatch = false;
+            }
+            if (!providedSecret || !secretMatch) {
+                // SECURITY: Never log any part of the secret — even partial values can aid brute-force
+                console.error('[Callback] Secret mismatch — rejecting callback');
                 return NextResponse.json({ success: false, message: 'Invalid callback signature' }, { status: 403 });
             }
             console.log('[Callback] Secret verified OK');
@@ -141,8 +150,6 @@ export async function POST(req: Request) {
         // ============================================================
         const apiOk = (apiStatus === 1 || apiStatus === '1');
         const txOk = (txStatus === 1 || txStatus === '1');
-        const messageOk = messageStr.includes('successful') || messageStr.includes('success');
-
         // Require at least api status OR tx status to be explicitly successful
         // AND the message must not indicate failure
         const isSuccess = (apiOk || txOk) && !messageStr.includes('fail') && !messageStr.includes('error');
@@ -264,6 +271,6 @@ export async function POST(req: Request) {
     }
 }
 
-export async function GET(req: Request) {
+export async function GET(_req: Request) {
     return NextResponse.json({ message: 'Moolre callback endpoint ready', timestamp: new Date().toISOString() });
 }
