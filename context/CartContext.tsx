@@ -9,6 +9,8 @@ export type CartItem = {
     image: string;
     quantity: number;
     variant?: string;
+    /** product_variants.id when a variant was chosen — stored on order_items for fulfillment */
+    variantId?: string;
     slug: string;
     maxStock: number;
     moq?: number; // Minimum Order Quantity

@@ -5,6 +5,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getOptimizedImageUrl } from '@/lib/imageOptimization';
+import { orderLineItemImageUrl } from '@/lib/orderLineItemImage';
 
 function OrderTrackingContent() {
   const searchParams = useSearchParams();
@@ -60,6 +61,7 @@ function OrderTrackingContent() {
             quantity,
             unit_price,
             metadata,
+            product_variants ( image_url ),
             products (
               product_images (url)
             )
@@ -280,8 +282,14 @@ function OrderTrackingContent() {
   const statusBadge = getStatusBadge();
   const trackingNumber = order.metadata?.tracking_number || '';
   const shippingAddress = order.shipping_address || {};
-  const estimatedDelivery = new Date(new Date(order.created_at).getTime() + 7 * 24 * 60 * 60 * 1000)
-    .toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const createdAt = new Date(order.created_at);
+  const addDays = (n: number) => {
+    const d = new Date(createdAt.getTime());
+    d.setDate(d.getDate() + n);
+    return d;
+  };
+  const fmt = (d: Date) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const estimatedDeliveryText = `1–3 days from order date (${fmt(addDays(1))} – ${fmt(addDays(3))})`;
 
   return (
     <main className="min-h-screen bg-gray-50 py-12 px-4">
@@ -306,7 +314,7 @@ function OrderTrackingContent() {
                   <span className="font-mono bg-gray-100 px-2 py-0.5 rounded text-sm">{trackingNumber}</span>
                 </p>
               )}
-              <p className="text-gray-500 text-sm mt-1">Estimated delivery: {estimatedDelivery}</p>
+              <p className="text-gray-500 text-sm mt-1">Estimated delivery: {estimatedDeliveryText}</p>
             </div>
             <div className={`px-4 py-2 rounded-full font-semibold whitespace-nowrap ${statusBadge.color}`}>
               {statusBadge.label}
@@ -401,15 +409,14 @@ function OrderTrackingContent() {
         <div className="bg-white rounded-xl shadow-sm p-8">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Order Items</h2>
           <div className="space-y-4">
-            {order.order_items?.map((item: any) => (
+            {order.order_items?.map((item: any) => {
+              const lineImg = orderLineItemImageUrl(item);
+              return (
               <div key={item.id} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
                 <div className="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0 border border-gray-200">
-                  {item.products?.product_images?.[0]?.url || item.metadata?.image ? (
+                  {lineImg ? (
                     <img
-                      src={getOptimizedImageUrl(
-                        (item.products?.product_images?.[0]?.url || item.metadata?.image) as string,
-                        { width: 160 }
-                      )}
+                      src={getOptimizedImageUrl(lineImg, { width: 160 })}
                       alt={item.product_name}
                       className="w-full h-full object-cover"
                     />
@@ -428,7 +435,8 @@ function OrderTrackingContent() {
                 </div>
                 <p className="font-bold text-blue-700">GH₵ {Number(item.unit_price).toFixed(2)}</p>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

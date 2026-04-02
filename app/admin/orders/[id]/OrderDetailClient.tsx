@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { orderLineItemImageUrl } from '@/lib/orderLineItemImage';
 import FraudDetectionAlert from '@/components/FraudDetectionAlert';
 
 interface OrderDetailClientProps {
@@ -70,6 +71,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
           order_items (
             id,
             product_id,
+            variant_id,
             product_name,
             variant_name,
             sku,
@@ -77,6 +79,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
             unit_price,
             total_price,
             metadata,
+            product_variants ( image_url ),
             products (
               product_images (url)
             )
@@ -95,6 +98,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
             order_items (
               id,
               product_id,
+              variant_id,
               product_name,
               variant_name,
               sku,
@@ -102,6 +106,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
               unit_price,
               total_price,
               metadata,
+              product_variants ( image_url ),
               products (
                 product_images (url)
               )
@@ -400,6 +405,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-400">
+                  <th className="text-left py-2 px-2 w-16"> </th>
                   <th className="text-left py-2 px-2">Product</th>
                   <th className="text-left py-2 px-2">Variant</th>
                   <th className="text-center py-2 px-2">Qty</th>
@@ -407,14 +413,24 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                 </tr>
               </thead>
               <tbody>
-                {order?.order_items?.map((item: any) => (
+                {order?.order_items?.map((item: any) => {
+                  const lineImg = orderLineItemImageUrl(item);
+                  return (
                   <tr key={item.id} className="border-b border-gray-200">
+                    <td className="py-2 px-2 align-middle w-16">
+                      {lineImg ? (
+                        <img src={lineImg} alt="" className="w-12 h-12 object-cover rounded border border-gray-300" />
+                      ) : (
+                        <span className="text-gray-300 text-xs">—</span>
+                      )}
+                    </td>
                     <td className="py-2 px-2 font-medium">{item.product_name}</td>
                     <td className="py-2 px-2 text-sm">{item.variant_name || '-'}</td>
                     <td className="py-2 px-2 text-center font-bold">{item.quantity}</td>
                     <td className="py-2 px-2 text-right">GH₵ {item.unit_price?.toFixed(2)}</td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -514,12 +530,14 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
               </div>
 
               <div className="space-y-4">
-                {order.order_items?.map((item: any) => (
+                {order.order_items?.map((item: any) => {
+                  const lineImg = orderLineItemImageUrl(item);
+                  return (
                   <div key={item.id} className="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg">
-                    <div className="w-20 h-20 bg-white rounded-lg overflow-hidden border border-gray-200 flex items-center justify-center relative">
-                      {item.products?.product_images?.[0]?.url ? (
+                    <div className="w-20 h-20 bg-white rounded-lg overflow-hidden border border-gray-200 flex items-center justify-center relative shrink-0">
+                      {lineImg ? (
                         <img
-                          src={item.products.product_images[0].url}
+                          src={lineImg}
                           alt={item.product_name}
                           className="w-full h-full object-cover"
                         />
@@ -537,7 +555,8 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                       <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="mt-6 pt-6 border-t border-gray-200 space-y-3">

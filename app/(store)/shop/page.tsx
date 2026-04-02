@@ -1,18 +1,21 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useEffect, useMemo, Suspense, useCallback } from 'react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import ProductCard, { type ColorVariant } from '@/components/ProductCard';
 import ProductCardSkeleton from '@/components/skeletons/ProductCardSkeleton';
 import { getColorHex } from '@/components/ProductCard';
 import { supabase } from '@/lib/supabase';
 import { cachedQuery } from '@/lib/query-cache';
+import { rememberShopListingPath } from '@/lib/shopListingReturn';
 import PageHero from '@/components/PageHero';
 
 function ShopContent() {
   usePageTitle('Shop All Products');
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
   // State
   const [products, setProducts] = useState<any[]>([]);
@@ -26,8 +29,34 @@ function ShopContent() {
   const [selectedRating, setSelectedRating] = useState(0);
   const [sortBy, setSortBy] = useState('popular');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [page, setPage] = useState(1);
   const productsPerPage = 9;
+
+  const page = useMemo(() => {
+    const p = parseInt(searchParams.get('page') || '1', 10);
+    return Number.isFinite(p) && p >= 1 ? p : 1;
+  }, [searchParams]);
+
+  /** Keep page in the URL so browser back from a product returns to the same listing page. */
+  const goToPage = useCallback(
+    (next: number, scroll = true) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (next <= 1) params.delete('page');
+      else params.set('page', String(next));
+      const qs = params.toString();
+      const url = qs ? `${pathname}?${qs}` : pathname;
+      router.replace(url, { scroll });
+    },
+    [pathname, router, searchParams]
+  );
+
+  const resetPageInUrl = useCallback(() => {
+    goToPage(1, false);
+  }, [goToPage]);
+
+  useEffect(() => {
+    const qs = searchParams.toString();
+    rememberShopListingPath(qs ? `${pathname}?${qs}` : pathname);
+  }, [pathname, searchParams]);
 
   // Initialize from URL params
   useEffect(() => {
@@ -202,6 +231,16 @@ function ShopContent() {
 
   const totalPages = Math.ceil(totalProducts / productsPerPage);
 
+  // If ?page= is past the last page (e.g. after filters shrink results), clamp the URL
+  useEffect(() => {
+    if (loading || totalPages < 1 || page <= totalPages) return;
+    const params = new URLSearchParams(searchParams.toString());
+    if (totalPages <= 1) params.delete('page');
+    else params.set('page', String(totalPages));
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [loading, totalPages, page, pathname, router, searchParams]);
+
   return (
     <main className="min-h-screen bg-white">
       <PageHero
@@ -247,7 +286,7 @@ function ShopContent() {
                         <button
                           onClick={() => {
                             setSelectedCategory('all');
-                            setPage(1);
+                            resetPageInUrl();
                             setIsFilterOpen(false);
                           }}
                           className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${selectedCategory === 'all'
@@ -270,7 +309,7 @@ function ShopContent() {
                               <button
                                 onClick={() => {
                                   setSelectedCategory(parent.slug);
-                                  setPage(1);
+                                  resetPageInUrl();
                                   // Don't close filter immediately if exploring hierarchy
                                 }}
                                 className={`w-full text-left px-4 py-2 rounded-lg transition-colors flex justify-between items-center ${isSelected
@@ -289,7 +328,7 @@ function ShopContent() {
                                       key={child.id}
                                       onClick={() => {
                                         setSelectedCategory(child.slug);
-                                        setPage(1);
+                                        resetPageInUrl();
                                         setIsFilterOpen(false);
                                       }}
                                       className={`w-full text-left px-4 py-1.5 rounded-lg text-sm transition-colors ${selectedCategory === child.slug
@@ -320,7 +359,7 @@ function ShopContent() {
                           value={priceRange[1]}
                           onChange={(e) => {
                             setPriceRange([0, parseInt(e.target.value)]);
-                            setPage(1);
+                            resetPageInUrl();
                           }}
                           className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-700"
                         />
@@ -340,7 +379,7 @@ function ShopContent() {
                             key={rating}
                             onClick={() => {
                               setSelectedRating(rating === selectedRating ? 0 : rating);
-                              setPage(1);
+                              resetPageInUrl();
                             }}
                             className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${selectedRating === rating
                               ? 'bg-blue-100 text-blue-700'
@@ -387,7 +426,7 @@ function ShopContent() {
                     value={sortBy}
                     onChange={(e) => {
                       setSortBy(e.target.value);
-                      setPage(1);
+                      resetPageInUrl();
                     }}
                     className="px-4 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white cursor-pointer"
                   >
@@ -426,7 +465,7 @@ function ShopContent() {
                           setSelectedCategory('all');
                           setPriceRange([0, 5000]);
                           setSelectedRating(0);
-                          setPage(1);
+                          resetPageInUrl();
                         }}
                         className="inline-flex items-center bg-gray-900 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors whitespace-nowrap"
                       >
@@ -442,7 +481,7 @@ function ShopContent() {
                 <div className="mt-16 flex justify-center">
                   <div className="flex items-center space-x-2">
                     <button
-                      onClick={() => setPage(p => Math.max(1, p - 1))}
+                      onClick={() => goToPage(page - 1)}
                       disabled={page === 1}
                       className="w-10 h-10 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -455,7 +494,7 @@ function ShopContent() {
                     </span>
 
                     <button
-                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                      onClick={() => goToPage(page + 1)}
                       disabled={page === totalPages}
                       className="w-10 h-10 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >

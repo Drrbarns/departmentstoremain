@@ -123,8 +123,19 @@ function OrderSuccessContent() {
     );
   }
 
-  const orderDate = new Date(order.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-  const estimatedDelivery = new Date(new Date(order.created_at).getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const orderCreatedAt = new Date(order.created_at);
+  const orderDate = orderCreatedAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  const addCalendarDays = (base: Date, days: number) => {
+    const d = new Date(base.getTime());
+    d.setDate(d.getDate() + days);
+    return d;
+  };
+  const deliveryEarliest = addCalendarDays(orderCreatedAt, 1);
+  const deliveryLatest = addCalendarDays(orderCreatedAt, 3);
+  const formatDeliveryDate = (d: Date) =>
+    d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const estimatedDeliveryRange = `${formatDeliveryDate(deliveryEarliest)} – ${formatDeliveryDate(deliveryLatest)}`;
   const pointsEarned = Math.floor(order.total / 10); // Example logic: 1 point per 10 currency units
 
   return (
@@ -172,7 +183,9 @@ function OrderSuccessContent() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Estimated Delivery</p>
-                  <p className="text-lg font-bold text-blue-700">{estimatedDelivery}</p>
+                  <p className="text-lg font-bold text-blue-700">1–3 days</p>
+                  <p className="text-xs text-gray-600 mt-1 leading-snug">from your order date</p>
+                  <p className="text-xs text-gray-500 mt-1 leading-snug">{estimatedDeliveryRange}</p>
                 </div>
               </div>
             </div>

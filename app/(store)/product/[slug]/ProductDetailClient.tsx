@@ -13,6 +13,7 @@ import { StructuredData, generateProductSchema, generateBreadcrumbSchema } from 
 import { notFound } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { getShopListingReturnHref } from '@/lib/shopListingReturn';
 
 // Map common color names to hex values for the swatch preview
 function colorNameToHex(name: string): string {
@@ -43,8 +44,13 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const [shareUrl, setShareUrl] = useState('');
+  const [shopReturnHref, setShopReturnHref] = useState('/shop');
 
   const { addToCart } = useCart();
+
+  useEffect(() => {
+    setShopReturnHref(getShopListingReturnHref());
+  }, []);
 
   // Swap gallery images when a variant is selected
   useEffect(() => {
@@ -256,6 +262,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
       image: displayImages[0] || product.images[0],
       quantity: quantity,
       variant: variantLabel,
+      variantId: selectedVariant?.id,
       slug: product.slug,
       maxStock: activeStock,
       moq: product.moq || 1
@@ -283,7 +290,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
       <div className="min-h-screen bg-white py-20 flex justify-center items-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Product Not Found</h2>
-          <Link href="/shop" className="text-blue-700 hover:underline">Return to Shop</Link>
+          <Link href={shopReturnHref} className="text-blue-700 hover:underline">Return to Shop</Link>
         </div>
       </div>
     );
@@ -323,7 +330,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
             <nav className="flex items-center space-x-2 text-sm flex-wrap gap-y-2">
               <Link href="/" className="text-gray-600 hover:text-blue-700 transition-colors">Home</Link>
               <i className="ri-arrow-right-s-line text-gray-400"></i>
-              <Link href="/shop" className="text-gray-600 hover:text-blue-700 transition-colors">Shop</Link>
+              <Link href={shopReturnHref} className="text-gray-600 hover:text-blue-700 transition-colors">Shop</Link>
               <i className="ri-arrow-right-s-line text-gray-400"></i>
               <Link href="#" className="text-gray-600 hover:text-blue-700 transition-colors">{product.category}</Link>
               <i className="ri-arrow-right-s-line text-gray-400"></i>

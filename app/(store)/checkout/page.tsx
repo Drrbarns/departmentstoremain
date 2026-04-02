@@ -218,9 +218,13 @@ export default function CheckoutPage() {
         
         const prodMeta = productMetaMap.get(productId);
         
+        const variantId =
+          item.variantId && isValidUUID(item.variantId) ? item.variantId : null;
+
         orderItems.push({
           order_id: order.id,
           product_id: productId,
+          variant_id: variantId,
           product_name: item.name,
           variant_name: item.variant,
           quantity: item.quantity,
