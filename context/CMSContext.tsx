@@ -2,7 +2,12 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
-import { PUBLIC_CONTACT_EMAIL, PUBLIC_CONTACT_PHONE } from '@/lib/brand-contact';
+import {
+  PUBLIC_CONTACT_EMAIL,
+  PUBLIC_CONTACT_PHONE,
+  effectiveContactEmail,
+  effectiveContactPhone,
+} from '@/lib/brand-contact';
 
 interface SiteSettings {
     site_name: string;
@@ -159,7 +164,17 @@ export function CMSProvider({ children }: { children: ReactNode }) {
     };
 
     const getSetting = (key: string): string => {
-        return settings[key] || defaultSettings[key] || '';
+        const fallback = defaultSettings[key as keyof SiteSettings];
+        const raw = settings[key];
+        const val =
+            raw !== undefined && raw !== null && String(raw).trim() !== ''
+                ? String(raw)
+                : fallback !== undefined && fallback !== null
+                  ? String(fallback)
+                  : '';
+        if (key === 'contact_email') return effectiveContactEmail(val);
+        if (key === 'contact_phone') return effectiveContactPhone(val);
+        return val;
     };
 
     const getActiveBanners = (position?: string): Banner[] => {
