@@ -106,34 +106,48 @@ export default function POSPage() {
                 .select(`
           id, name, price, quantity, sku, barcode, metadata,
           categories(name),
-          product_images(url),
+          product_images(url, position, variant_id),
           product_variants(id, name, option1, option2, sku, barcode, price, quantity, image_url)
         `)
                 .order('name');
 
             if (prodData) {
-                const formatted: Product[] = prodData.map((p: any) => ({
-                    id: p.id,
-                    name: p.name,
-                    price: p.price,
-                    quantity: p.quantity,
-                    category: p.categories?.name || 'Uncategorized',
-                    image: p.product_images?.[0]?.url || 'https://via.placeholder.com/150',
-                    sku: p.sku,
-                    barcode: p.barcode || null,
-                    posCode: getPosCodeFromMetadata(p.metadata),
-                    variants: (p.product_variants || []).map((v: any) => ({
-                        id: v.id,
-                        name: v.name || '',
-                        option1: v.option1 || null,
-                        option2: v.option2 || null,
-                        sku: v.sku || null,
-                        barcode: v.barcode || null,
-                        price: Number(v.price ?? p.price ?? 0),
-                        quantity: Number(v.quantity ?? 0),
-                        image_url: v.image_url || null
-                    }))
-                }));
+                const formatted: Product[] = prodData.map((p: any) => {
+                    const imgs = ((p.product_images || []) as { url: string; position?: number; variant_id?: string | null }[])
+                        .slice()
+                        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+                    const firstVariantImageById = new Map<string, string>();
+                    for (const img of imgs) {
+                        if (img.variant_id && !firstVariantImageById.has(img.variant_id)) {
+                            firstVariantImageById.set(img.variant_id, img.url);
+                        }
+                    }
+                    const productLevelUrl =
+                        imgs.find((i) => !i.variant_id)?.url || imgs[0]?.url || 'https://via.placeholder.com/150';
+
+                    return {
+                        id: p.id,
+                        name: p.name,
+                        price: p.price,
+                        quantity: p.quantity,
+                        category: p.categories?.name || 'Uncategorized',
+                        image: productLevelUrl,
+                        sku: p.sku,
+                        barcode: p.barcode || null,
+                        posCode: getPosCodeFromMetadata(p.metadata),
+                        variants: (p.product_variants || []).map((v: any) => ({
+                            id: v.id,
+                            name: v.name || '',
+                            option1: v.option1 || null,
+                            option2: v.option2 || null,
+                            sku: v.sku || null,
+                            barcode: v.barcode || null,
+                            price: Number(v.price ?? p.price ?? 0),
+                            quantity: Number(v.quantity ?? 0),
+                            image_url: firstVariantImageById.get(v.id) || v.image_url || null
+                        }))
+                    };
+                });
                 setProducts(formatted);
 
                 // Extract Categories
@@ -920,19 +934,30 @@ export default function POSPage() {
                                                 setVariantPickerProduct(null);
                                             }}
                                             disabled={disabled}
-                                            className={`w-full flex items-center justify-between p-3 rounded-lg border text-left transition-colors ${
+                                            className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
                                                 disabled
                                                     ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
                                                     : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
                                             }`}
                                         >
-                                            <div className="min-w-0">
+                                            <div className="w-16 h-16 shrink-0 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center">
+                                                {(variant.image_url || variantPickerProduct.image) ? (
+                                                    <img
+                                                        src={variant.image_url || variantPickerProduct.image}
+                                                        alt=""
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <i className="ri-image-line text-2xl text-gray-300" aria-hidden />
+                                                )}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
                                                 <p className="text-sm font-semibold text-gray-900">{getVariantLabel(variant)}</p>
                                                 <p className="text-xs text-gray-500">
                                                     {variant.sku ? `SKU: ${variant.sku} • ` : ''}Stock: {stock}
                                                 </p>
                                             </div>
-                                            <span className="text-sm font-bold text-blue-700">GH₵{variant.price.toFixed(2)}</span>
+                                            <span className="text-sm font-bold text-blue-700 shrink-0">GH₵{variant.price.toFixed(2)}</span>
                                         </button>
                                     );
                                 })

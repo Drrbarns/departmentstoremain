@@ -5,6 +5,16 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import ProductSalesStats from './ProductSalesStats';
 
+const ADMIN_ORDERS_LIST_SCROLL_KEY = 'ddz_admin_orders_list_scroll_y';
+
+function saveAdminOrdersListScroll() {
+  try {
+    sessionStorage.setItem(ADMIN_ORDERS_LIST_SCROLL_KEY, String(window.scrollY));
+  } catch {
+    /* private mode / quota */
+  }
+}
+
 interface Order {
   id: string;
   order_number: string;
@@ -63,6 +73,28 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  useEffect(() => {
+    if (loading) return;
+    const raw = sessionStorage.getItem(ADMIN_ORDERS_LIST_SCROLL_KEY);
+    if (raw == null) return;
+    const y = parseInt(raw, 10);
+    if (Number.isNaN(y) || y < 0) {
+      sessionStorage.removeItem(ADMIN_ORDERS_LIST_SCROLL_KEY);
+      return;
+    }
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        window.scrollTo({ top: y, left: 0, behavior: 'auto' });
+        sessionStorage.removeItem(ADMIN_ORDERS_LIST_SCROLL_KEY);
+      });
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      if (raf2) cancelAnimationFrame(raf2);
+    };
+  }, [loading]);
 
   const fetchOrders = async () => {
     try {
@@ -593,7 +625,11 @@ export default function AdminOrdersPage() {
                       />
                     </td>
                     <td className="py-4 px-4">
-                      <Link href={`/admin/orders/${order.id}`} className="text-blue-700 hover:text-blue-800 font-semibold whitespace-nowrap cursor-pointer">
+                      <Link
+                        href={`/admin/orders/${order.id}`}
+                        onClick={saveAdminOrdersListScroll}
+                        className="text-blue-700 hover:text-blue-800 font-semibold whitespace-nowrap cursor-pointer"
+                      >
                         {order.order_number || order.id.substring(0, 8)}
                       </Link>
                     </td>
@@ -630,6 +666,7 @@ export default function AdminOrdersPage() {
                       <div className="flex items-center space-x-2">
                         <Link
                           href={`/admin/orders/${order.id}`}
+                          onClick={saveAdminOrdersListScroll}
                           className="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                           title="View Order"
                         >

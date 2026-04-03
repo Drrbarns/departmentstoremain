@@ -13,6 +13,7 @@ import { notFound } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { getShopListingReturnHref } from '@/lib/shopListingReturn';
+import ProductShareControls from '@/components/ProductShareControls';
 
 // Map common color names to hex values for the swatch preview
 function colorNameToHex(name: string): string {
@@ -43,12 +44,19 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const [shopReturnHref, setShopReturnHref] = useState('/shop');
+  const [productShareUrl, setProductShareUrl] = useState('');
 
   const { addToCart } = useCart();
 
   useEffect(() => {
     setShopReturnHref(getShopListingReturnHref());
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !product) return;
+    const pathSlug = product.slug || slug;
+    setProductShareUrl(`${window.location.origin}/product/${pathSlug}`);
+  }, [product, slug]);
 
   // Swap gallery images when a variant is selected
   useEffect(() => {
@@ -378,9 +386,13 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                     <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3">{product.name}</h1>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
+                    {productShareUrl ? (
+                      <ProductShareControls url={productShareUrl} title={product.name} />
+                    ) : null}
                     <button
                       onClick={() => setIsWishlisted(!isWishlisted)}
                       className="w-12 h-12 flex items-center justify-center border-2 border-gray-200 hover:border-blue-700 rounded-full transition-colors cursor-pointer"
+                      aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
                     >
                       <i className={`${isWishlisted ? 'ri-heart-fill text-red-600' : 'ri-heart-line text-gray-700'} text-xl`}></i>
                     </button>
