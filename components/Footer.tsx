@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useCMS } from '@/context/CMSContext';
+import { PUBLIC_CONTACT_PHONE } from '@/lib/brand-contact';
 
 function FooterSection({ title, children }: { title: string, children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -29,7 +30,7 @@ export default function Footer() {
   const siteName = getSetting('site_name') || 'Discount Discovery Zone';
   const siteTagline = getSetting('site_tagline') || 'Dresses, Electronics, Bags, Shoes & More.';
   const contactEmail = getSetting('contact_email') || '';
-  const contactPhone = getSetting('contact_phone') || '+233209597443';
+  const contactPhone = getSetting('contact_phone') || PUBLIC_CONTACT_PHONE;
   const socialFacebook = getSetting('social_facebook') || '';
   const socialInstagram = getSetting('social_instagram') || 'https://www.instagram.com/mey_phua';
   const socialTwitter = getSetting('social_twitter') || 'https://x.com/mey_phua';

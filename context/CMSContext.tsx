@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
+import { PUBLIC_CONTACT_EMAIL, PUBLIC_CONTACT_PHONE } from '@/lib/brand-contact';
 
 interface SiteSettings {
     site_name: string;
@@ -72,8 +73,8 @@ const defaultSettings: SiteSettings = {
     site_tagline: 'Dresses, Electronics, Bags, Shoes & More',
     site_logo: '',
     site_logo_white: '',
-    contact_email: 'support@discount-discovery-zone.vercel.app',
-    contact_phone: '+233209597443',
+    contact_email: PUBLIC_CONTACT_EMAIL,
+    contact_phone: PUBLIC_CONTACT_PHONE,
     contact_address: 'Accra, Ghana',
     social_facebook: '',
     social_instagram: 'https://www.instagram.com/mey_phua',
@@ -105,8 +106,8 @@ export function CMSProvider({ children }: { children: ReactNode }) {
         site_tagline: 'Dresses, Electronics, Bags, Shoes & More',
         site_logo: '',
         site_logo_white: '',
-        contact_email: 'info@discount-discovery-zone.vercel.app',
-        contact_phone: '+233209597443',
+        contact_email: PUBLIC_CONTACT_EMAIL,
+        contact_phone: PUBLIC_CONTACT_PHONE,
         contact_address: 'Accra, Ghana',
         social_facebook: '',
         social_instagram: 'https://www.instagram.com/mey_phua',

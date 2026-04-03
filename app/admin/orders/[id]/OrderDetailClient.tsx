@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { orderLineItemImageUrl } from '@/lib/orderLineItemImage';
+import { PUBLIC_CONTACT_EMAIL } from '@/lib/brand-contact';
 import FraudDetectionAlert from '@/components/FraudDetectionAlert';
 
 interface OrderDetailClientProps {
@@ -452,7 +453,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
           {/* Footer */}
           <div className="border-t-2 border-gray-800 pt-4 text-center text-sm text-gray-600">
             <p>Thank you for shopping with Discount Discovery Zone!</p>
-            <p>Questions? Contact us at support@discount-discovery-zone.vercel.app</p>
+            <p>Questions? Contact us at {PUBLIC_CONTACT_EMAIL}</p>
           </div>
         </div>
       </div>

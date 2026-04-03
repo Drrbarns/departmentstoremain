@@ -24,7 +24,7 @@ export async function GET() {
     // ignore
   }
 
-  const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://discount-discovery-zone.vercel.app').replace(/\/$/, '');
+  const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.discountdiscoveryzone.com').replace(/\/$/, '');
   const iconBase = siteLogo || `${baseUrl}/icons/icon-192x192.png`;
 
   const icons = [

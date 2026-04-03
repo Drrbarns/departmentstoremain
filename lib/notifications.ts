@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { escapeHtml } from '@/lib/sanitize';
 import { getPublicSiteUrl } from '@/lib/site-url';
+import { PUBLIC_CONTACT_PHONE } from '@/lib/brand-contact';
 
 const resend = new Resend(process.env.RESEND_API_KEY || 'missing_api_key');
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@standardecom.com';
@@ -13,7 +14,7 @@ const BRAND = {
     color: '#2563eb',
     colorLight: '#eff6ff',
     colorDark: '#064e3b',
-    phone: '+233209597443',
+    phone: PUBLIC_CONTACT_PHONE,
 };
 
 // Reusable branded email layout

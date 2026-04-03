@@ -1,4 +1,9 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import {
+  PUBLIC_CONTACT_EMAIL,
+  PUBLIC_CONTACT_PHONE,
+  PUBLIC_CONTACT_PHONE_WHATSAPP,
+} from '@/lib/brand-contact';
 
 const DEFAULT_MESSAGE = "We're currently performing scheduled maintenance to improve your shopping experience. We'll be back online shortly.";
 
@@ -104,14 +109,14 @@ export default async function MaintenancePage() {
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <a
-              href="mailto:support@discount-discovery-zone.vercel.app"
+              href={`mailto:${PUBLIC_CONTACT_EMAIL}`}
               className="inline-flex items-center gap-2 bg-white text-gray-900 px-6 py-3 rounded-full font-medium hover:bg-gray-50 transition-colors border border-gray-200 whitespace-nowrap"
             >
               <i className="ri-mail-line"></i>
               Email Us
             </a>
             <a
-              href="https://wa.me/233209597443"
+              href={`https://wa.me/${PUBLIC_CONTACT_PHONE_WHATSAPP}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 bg-blue-700 text-white px-6 py-3 rounded-full font-medium hover:bg-blue-800 transition-colors whitespace-nowrap"
@@ -120,7 +125,7 @@ export default async function MaintenancePage() {
               WhatsApp
             </a>
             <a
-              href="tel:+233209597443"
+              href={`tel:${PUBLIC_CONTACT_PHONE}`}
               className="inline-flex items-center gap-2 bg-white text-gray-900 px-6 py-3 rounded-full font-medium hover:bg-gray-50 transition-colors border border-gray-200 whitespace-nowrap"
             >
               <i className="ri-phone-line"></i>

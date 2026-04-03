@@ -1,3 +1,9 @@
+import {
+  PUBLIC_CONTACT_EMAIL,
+  PUBLIC_CONTACT_PHONE,
+  PUBLIC_CONTACT_PHONE_DISPLAY,
+} from '@/lib/brand-contact';
+
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-white">
@@ -281,7 +287,7 @@ export default function PrivacyPage() {
             </div>
 
             <p className="text-gray-600 leading-relaxed">
-              To exercise any of these rights, please contact us at <a href="mailto:support@discount-discovery-zone.vercel.app" className="text-blue-700 font-medium hover:underline">support@discount-discovery-zone.vercel.app</a> or through your account settings. We will respond within 30 days.
+              To exercise any of these rights, please contact us at <a href={`mailto:${PUBLIC_CONTACT_EMAIL}`} className="text-blue-700 font-medium hover:underline">{PUBLIC_CONTACT_EMAIL}</a> or through your account settings. We will respond within 30 days.
             </p>
           </section>
 
@@ -384,7 +390,7 @@ export default function PrivacyPage() {
                   <i className="ri-mail-line text-blue-700 text-xl mt-1"></i>
                   <div>
                     <p className="font-medium text-gray-900">Email</p>
-                    <a href="mailto:support@discount-discovery-zone.vercel.app" className="text-blue-700 hover:underline">support@discount-discovery-zone.vercel.app</a>
+                    <a href={`mailto:${PUBLIC_CONTACT_EMAIL}`} className="text-blue-700 hover:underline">{PUBLIC_CONTACT_EMAIL}</a>
                   </div>
                 </div>
 
@@ -392,7 +398,7 @@ export default function PrivacyPage() {
                   <i className="ri-phone-line text-blue-700 text-xl mt-1"></i>
                   <div>
                     <p className="font-medium text-gray-900">Phone</p>
-                    <a href="tel:+233209597443" className="text-blue-700 hover:underline">+233 20 959 7443</a>
+                    <a href={`tel:${PUBLIC_CONTACT_PHONE}`} className="text-blue-700 hover:underline">{PUBLIC_CONTACT_PHONE_DISPLAY}</a>
                   </div>
                 </div>
 

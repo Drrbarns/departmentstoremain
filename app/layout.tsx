@@ -4,6 +4,7 @@ import { CartProvider } from "@/context/CartContext";
 import { WishlistProvider } from "@/context/WishlistContext";
 import { CMSProvider } from "@/context/CMSContext";
 import "./globals.css";
+import { PUBLIC_CONTACT_EMAIL, PUBLIC_CONTACT_PHONE } from "@/lib/brand-contact";
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -168,6 +169,8 @@ export default function RootLayout({
               "contactPoint": {
                 "@type": "ContactPoint",
                 "contactType": "customer service",
+                "telephone": PUBLIC_CONTACT_PHONE,
+                "email": PUBLIC_CONTACT_EMAIL,
                 "availableLanguage": "English"
               }
             })

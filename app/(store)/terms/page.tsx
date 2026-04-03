@@ -1,3 +1,10 @@
+import {
+  PUBLIC_CONTACT_EMAIL,
+  PUBLIC_CONTACT_PHONE,
+  PUBLIC_CONTACT_PHONE_DISPLAY,
+  PUBLIC_SITE_DOMAIN,
+} from '@/lib/brand-contact';
+
 export default function TermsPage() {
   return (
     <div className="min-h-screen bg-white">
@@ -18,7 +25,7 @@ export default function TermsPage() {
           <section className="mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-6">1. Agreement to Terms</h2>
             <p className="text-gray-600 leading-relaxed mb-4">
-              By accessing and using this website (discount-discovery-zone.vercel.app), you accept and agree to be bound by these Terms and Conditions. If you do not agree with any part of these terms, you must not use our website or services.
+              By accessing and using this website ({PUBLIC_SITE_DOMAIN}), you accept and agree to be bound by these Terms and Conditions. If you do not agree with any part of these terms, you must not use our website or services.
             </p>
             <p className="text-gray-600 leading-relaxed">
               These terms apply to all visitors, users, and customers who access or use our service. We reserve the right to update or modify these terms at any time without prior notice. Your continued use of the website following any changes indicates your acceptance of the new terms.
@@ -292,7 +299,7 @@ export default function TermsPage() {
                   <i className="ri-mail-line text-blue-700 text-xl mt-1"></i>
                   <div>
                     <p className="font-medium text-gray-900">Email</p>
-                    <a href="mailto:support@discount-discovery-zone.vercel.app" className="text-blue-700 hover:underline">support@discount-discovery-zone.vercel.app</a>
+                    <a href={`mailto:${PUBLIC_CONTACT_EMAIL}`} className="text-blue-700 hover:underline">{PUBLIC_CONTACT_EMAIL}</a>
                   </div>
                 </div>
 
@@ -300,7 +307,7 @@ export default function TermsPage() {
                   <i className="ri-phone-line text-blue-700 text-xl mt-1"></i>
                   <div>
                     <p className="font-medium text-gray-900">Phone</p>
-                    <a href="tel:+233209597443" className="text-blue-700 hover:underline">+233 20 959 7443</a>
+                    <a href={`tel:${PUBLIC_CONTACT_PHONE}`} className="text-blue-700 hover:underline">{PUBLIC_CONTACT_PHONE_DISPLAY}</a>
                   </div>
                 </div>
 

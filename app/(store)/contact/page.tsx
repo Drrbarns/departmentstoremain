@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import PageHero from '@/components/PageHero';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRecaptcha } from '@/hooks/useRecaptcha';
+import { PUBLIC_CONTACT_EMAIL, PUBLIC_CONTACT_PHONE } from '@/lib/brand-contact';
 
 export default function ContactPage() {
   usePageTitle('Contact Us');
@@ -88,8 +89,8 @@ export default function ContactPage() {
   };
 
   // Get contact details from CMS settings
-  const contactEmail = getSetting('contact_email') || 'support@discount-discovery-zone.vercel.app';
-  const contactPhone = getSetting('contact_phone') || '+233209597443';
+  const contactEmail = getSetting('contact_email') || PUBLIC_CONTACT_EMAIL;
+  const contactPhone = getSetting('contact_phone') || PUBLIC_CONTACT_PHONE;
   const contactAddress = getSetting('contact_address') || 'Accra, Ghana';
 
   const heroTitle = pageContent?.title || 'Get In Touch';
