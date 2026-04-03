@@ -325,34 +325,15 @@ export default async function BlogPostPage({ params }: { params: Promise<{ id: s
         </article>
 
         <div className="mt-12 pt-12 border-t border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 mb-2">Written by</p>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                  <i className="ri-user-line text-blue-700 text-xl"></i>
-                </div>
-                <div>
-                  <p className="font-bold text-gray-900">{post.author}</p>
-                  <p className="text-sm text-gray-500">Content Writer</p>
-                </div>
+          <div>
+            <p className="text-sm text-gray-500 mb-2">Written by</p>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <i className="ri-user-line text-blue-700 text-xl"></i>
               </div>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500 mb-3">Share this article</p>
-              <div className="flex gap-3">
-                <button className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center hover:bg-blue-100 transition-colors cursor-pointer">
-                  <i className="ri-facebook-fill text-gray-600"></i>
-                </button>
-                <button className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center hover:bg-blue-100 transition-colors cursor-pointer">
-                  <i className="ri-twitter-fill text-gray-600"></i>
-                </button>
-                <button className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center hover:bg-blue-100 transition-colors cursor-pointer">
-                  <i className="ri-linkedin-fill text-gray-600"></i>
-                </button>
-                <button className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center hover:bg-blue-100 transition-colors cursor-pointer">
-                  <i className="ri-whatsapp-line text-gray-600"></i>
-                </button>
+              <div>
+                <p className="font-bold text-gray-900">{post.author}</p>
+                <p className="text-sm text-gray-500">Content Writer</p>
               </div>
             </div>
           </div>

@@ -134,20 +134,8 @@ export default async function MaintenancePage() {
           </div>
         </div>
 
-        <div className="text-gray-500 text-sm">
+        <div className="text-gray-500 text-sm text-center">
           <p className="mb-2">Thank you for your patience</p>
-          <p>Follow us on social media for real-time updates</p>
-          <div className="flex gap-4 justify-center mt-4">
-            <a href="https://www.instagram.com/mey_phua" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors">
-              <i className="ri-instagram-line text-gray-600"></i>
-            </a>
-            <a href="https://x.com/mey_phua" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors">
-              <i className="ri-twitter-fill text-gray-600"></i>
-            </a>
-            <a href="https://www.tiktok.com/@mey_phua" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors">
-              <i className="ri-tiktok-fill text-gray-600"></i>
-            </a>
-          </div>
         </div>
       </div>
     </div>

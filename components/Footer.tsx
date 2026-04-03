@@ -31,12 +31,6 @@ export default function Footer() {
   const siteTagline = getSetting('site_tagline') || 'Dresses, Electronics, Bags, Shoes & More.';
   const contactEmail = getSetting('contact_email') || '';
   const contactPhone = getSetting('contact_phone') || PUBLIC_CONTACT_PHONE;
-  const socialFacebook = getSetting('social_facebook') || '';
-  const socialInstagram = getSetting('social_instagram') || 'https://www.instagram.com/mey_phua';
-  const socialTwitter = getSetting('social_twitter') || 'https://x.com/mey_phua';
-  const socialTiktok = getSetting('social_tiktok') || 'https://www.tiktok.com/@mey_phua';
-  const socialSnapchat = getSetting('social_snapchat') || 'https://snapchat.com/t/eL9wfuQa';
-  const socialYoutube = getSetting('social_youtube') || 'https://youtube.com/@mey_phua';
 
   return (
     <footer className="relative mt-12 z-0">
@@ -63,27 +57,6 @@ export default function Footer() {
               <p className="text-blue-200/60 leading-relaxed text-sm">
                 Your one-stop shop for dresses, electronics, bags, shoes and more. Locally sourced and imported quality products from Accra, Ghana.
               </p>
-
-              <div className="flex gap-3 pt-2">
-                {[
-                  { link: socialInstagram, icon: 'ri-instagram-line' },
-                  { link: socialTiktok, icon: 'ri-tiktok-fill' },
-                  { link: socialSnapchat, icon: 'ri-snapchat-fill' },
-                  { link: socialYoutube, icon: 'ri-youtube-fill' },
-                  { link: socialTwitter, icon: 'ri-twitter-x-fill' },
-                  { link: socialFacebook, icon: 'ri-facebook-fill' }
-                ].map((social, i) => social.link && (
-                  <a
-                    key={i}
-                    href={social.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 bg-blue-900/40 border border-blue-800 rounded-full flex items-center justify-center text-blue-300 hover:bg-blue-500 hover:text-blue-950 hover:border-blue-500 transition-all hover:-translate-y-1"
-                  >
-                    <i className={social.icon}></i>
-                  </a>
-                ))}
-              </div>
             </div>
 
             {/* Links Sections */}

@@ -172,11 +172,7 @@ export function generateOrganizationSchema() {
       areaServed: 'GH',
       availableLanguage: ['English']
     },
-    sameAs: [
-      'https://facebook.com/premiumshop',
-      'https://instagram.com/premiumshop',
-      'https://twitter.com/premiumshop'
-    ]
+    sameAs: [] as string[]
   };
 }
 
