@@ -354,8 +354,17 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
 
             if (productId) {
                 if (isEditMode) {
-                    await supabase.from('product_images').delete().eq('product_id', productId);
-                    await supabase.from('product_variants').delete().eq('product_id', productId);
+                    const { error: deleteImagesError } = await supabase
+                        .from('product_images')
+                        .delete()
+                        .eq('product_id', productId);
+                    if (deleteImagesError) throw deleteImagesError;
+
+                    const { error: deleteVariantsError } = await supabase
+                        .from('product_variants')
+                        .delete()
+                        .eq('product_id', productId);
+                    if (deleteVariantsError) throw deleteVariantsError;
                 }
 
                 // 1. Insert variant rows
