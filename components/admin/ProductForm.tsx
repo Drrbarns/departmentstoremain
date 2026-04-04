@@ -354,6 +354,24 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
 
             if (productId) {
                 if (isEditMode) {
+                    // Historical order_items rows may still reference old product_variants IDs.
+                    // Clear those FK links before replacing variant rows, while preserving
+                    // textual variant_name/sku already stored on order_items.
+                    const { data: existingVariants, error: existingVariantsError } = await supabase
+                        .from('product_variants')
+                        .select('id')
+                        .eq('product_id', productId);
+                    if (existingVariantsError) throw existingVariantsError;
+
+                    const existingVariantIds = (existingVariants || []).map((v: any) => v.id).filter(Boolean);
+                    if (existingVariantIds.length > 0) {
+                        const { error: clearOrderItemVariantRefsError } = await supabase
+                            .from('order_items')
+                            .update({ variant_id: null })
+                            .in('variant_id', existingVariantIds);
+                        if (clearOrderItemVariantRefsError) throw clearOrderItemVariantRefsError;
+                    }
+
                     const { error: deleteImagesError } = await supabase
                         .from('product_images')
                         .delete()
