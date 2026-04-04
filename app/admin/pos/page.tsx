@@ -449,6 +449,18 @@ export default function POSPage() {
 
             if (itemsError) throw itemsError;
 
+            // For paid POS checkouts (cash/card), reduce inventory immediately.
+            // mark_order_paid is idempotent and sets metadata.stock_reduced.
+            if (isCashOrCard) {
+                const { error: stockError } = await supabase.rpc('mark_order_paid', {
+                    order_ref: orderNumber,
+                    moolre_ref: `pos-${paymentMethod}-${Date.now()}`
+                });
+                if (stockError) {
+                    throw new Error(`Stock update failed: ${stockError.message}`);
+                }
+            }
+
             // 3. Upsert Customer Record (email is required in customers table)
             const hasRealEmail = customerEmail && customerEmail !== 'pos-walkin@store.local';
             const guestHasIdentityDetails = !selectedCustomer && (

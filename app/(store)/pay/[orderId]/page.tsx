@@ -16,6 +16,7 @@ export default function PaymentPage() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [stockIssues, setStockIssues] = useState<{ name: string; variant?: string }[]>([]);
 
   useEffect(() => {
     async function fetchOrder() {
@@ -41,6 +42,15 @@ export default function PaymentPage() {
         if (data.payment_status === 'paid') {
           router.push(`/order-success?order=${data.order_number}`);
           return;
+        }
+
+        // Validate that all items are still in stock
+        const stockRes = await fetch(`/api/orders/${data.id}/validate-stock`);
+        if (stockRes.ok) {
+          const stockData = await stockRes.json();
+          if (!stockData.valid) {
+            setStockIssues(stockData.outOfStock ?? []);
+          }
         }
 
       } catch (err) {
@@ -195,6 +205,28 @@ export default function PaymentPage() {
           </div>
         )}
 
+        {stockIssues.length > 0 && (
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start space-x-3">
+              <i className="ri-error-warning-line text-xl text-orange-600 mt-0.5 flex-shrink-0"></i>
+              <div>
+                <p className="text-sm font-semibold text-orange-800 mb-1">Some items are no longer available</p>
+                <p className="text-sm text-orange-700 mb-2">
+                  The following item(s) have gone out of stock since your order was placed. Please contact our support team to resolve this before payment.
+                </p>
+                <ul className="text-sm text-orange-800 space-y-1">
+                  {stockIssues.map((issue, i) => (
+                    <li key={i} className="flex items-center space-x-1">
+                      <i className="ri-close-circle-line text-orange-500"></i>
+                      <span>{issue.name}{issue.variant ? ` — ${issue.variant}` : ''}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
             <p className="text-sm text-red-700">{error}</p>
@@ -204,8 +236,8 @@ export default function PaymentPage() {
         {/* Pay Button */}
         <button
           onClick={handlePayNow}
-          disabled={processing}
-          className="w-full bg-blue-700 hover:bg-blue-800 text-white py-4 rounded-xl font-semibold text-lg transition-colors disabled:opacity-70 flex items-center justify-center cursor-pointer"
+          disabled={processing || stockIssues.length > 0}
+          className={`w-full py-4 rounded-xl font-semibold text-lg transition-colors disabled:opacity-70 flex items-center justify-center cursor-pointer ${stockIssues.length > 0 ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-blue-700 hover:bg-blue-800 text-white'}`}
         >
           {processing ? (
             <>
