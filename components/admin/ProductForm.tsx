@@ -353,92 +353,132 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
             if (error) throw error;
 
             if (productId) {
+                const isUuid = (value: string) =>
+                    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
+                // 1. Sync variant rows (update existing, insert new, delete removed)
+                const imageInserts: any[] = [];
+                let existingVariantIds: string[] = [];
+
                 if (isEditMode) {
-                    // Historical order_items rows may still reference old product_variants IDs.
-                    // Clear those FK links before replacing variant rows, while preserving
-                    // textual variant_name/sku already stored on order_items.
                     const { data: existingVariants, error: existingVariantsError } = await supabase
                         .from('product_variants')
                         .select('id')
                         .eq('product_id', productId);
                     if (existingVariantsError) throw existingVariantsError;
-
-                    const existingVariantIds = (existingVariants || []).map((v: any) => v.id).filter(Boolean);
-                    if (existingVariantIds.length > 0) {
-                        const { error: clearOrderItemVariantRefsError } = await supabase
-                            .from('order_items')
-                            .update({ variant_id: null })
-                            .in('variant_id', existingVariantIds);
-                        if (clearOrderItemVariantRefsError) throw clearOrderItemVariantRefsError;
-                    }
-
-                    const { error: deleteImagesError } = await supabase
-                        .from('product_images')
-                        .delete()
-                        .eq('product_id', productId);
-                    if (deleteImagesError) throw deleteImagesError;
-
-                    const { error: deleteVariantsError } = await supabase
-                        .from('product_variants')
-                        .delete()
-                        .eq('product_id', productId);
-                    if (deleteVariantsError) throw deleteVariantsError;
+                    existingVariantIds = (existingVariants || []).map((v: any) => v.id).filter(Boolean);
                 }
 
-                // 1. Insert variant rows
-                const imageInserts: any[] = [];
-
                 if (hasVariants) {
-                    const expandedRows: Array<{
-                        imageUrl: string;
-                        label: string;
-                    }> = [];
-
-                    const variantInserts = variantGroups.flatMap(group => {
+                    const desiredRows = variantGroups.flatMap(group => {
                         const groupName = group.name.trim();
                         const colorName = group.colorName.trim();
                         const option2Value = colorName || groupName || null;
 
                         return group.sizes.map(sizeRow => {
                             const sizeLabel = sizeRow.size.trim() || 'Default';
-                            expandedRows.push({
-                                imageUrl: group.imageUrl,
-                                label: `${option2Value || 'Variant'} / ${sizeLabel}`
-                            });
-
+                            const existingId = isUuid(sizeRow.tempId) ? sizeRow.tempId : null;
                             return {
-                                product_id: productId,
-                                name: sizeLabel,
-                                sku: sizeRow.sku || null,
-                                price: parseFloat(sizeRow.price) || parseFloat(price) || 0,
-                                quantity: parseInt(sizeRow.stock) || 0,
-                                option1: sizeLabel,
-                                option2: option2Value,
-                                image_url: group.imageUrl || null,
-                                metadata: group.colorHex && group.appearanceType === 'color'
-                                    ? { color_hex: group.colorHex }
-                                    : {}
+                                existingId,
+                                imageUrl: group.imageUrl,
+                                label: `${option2Value || 'Variant'} / ${sizeLabel}`,
+                                payload: {
+                                    ...(existingId ? { id: existingId } : {}),
+                                    product_id: productId,
+                                    name: sizeLabel,
+                                    sku: sizeRow.sku || null,
+                                    price: parseFloat(sizeRow.price) || parseFloat(price) || 0,
+                                    quantity: parseInt(sizeRow.stock) || 0,
+                                    option1: sizeLabel,
+                                    option2: option2Value,
+                                    image_url: group.imageUrl || null,
+                                    metadata: group.colorHex && group.appearanceType === 'color'
+                                        ? { color_hex: group.colorHex }
+                                        : {}
+                                }
                             };
                         });
                     });
 
-                    const { data: insertedVariants, error: varError } = await supabase
-                        .from('product_variants').insert(variantInserts).select();
-                    if (varError) throw varError;
+                    // Delete only variants that were removed from the form
+                    if (isEditMode && existingVariantIds.length > 0) {
+                        const keepIds = new Set(
+                            desiredRows.map(r => r.existingId).filter((id): id is string => !!id)
+                        );
+                        const removedIds = existingVariantIds.filter(id => !keepIds.has(id));
+                        if (removedIds.length > 0) {
+                            const { error: clearOrderItemVariantRefsError } = await supabase
+                                .from('order_items')
+                                .update({ variant_id: null })
+                                .in('variant_id', removedIds);
+                            if (clearOrderItemVariantRefsError) throw clearOrderItemVariantRefsError;
 
-                    // Link each size variant row to the group image (if provided)
-                    (insertedVariants || []).forEach((iv: any, idx: number) => {
-                        const row = expandedRows[idx];
-                        if (row?.imageUrl) {
+                            const { error: deleteRemovedVariantsError } = await supabase
+                                .from('product_variants')
+                                .delete()
+                                .in('id', removedIds);
+                            if (deleteRemovedVariantsError) throw deleteRemovedVariantsError;
+                        }
+                    }
+
+                    const updateRows = desiredRows.filter(r => !!r.existingId);
+                    const insertRows = desiredRows.filter(r => !r.existingId);
+
+                    if (updateRows.length > 0) {
+                        const { error: upsertVariantsError } = await supabase
+                            .from('product_variants')
+                            .upsert(updateRows.map(r => r.payload), { onConflict: 'id' });
+                        if (upsertVariantsError) throw upsertVariantsError;
+                    }
+
+                    let insertedIds: string[] = [];
+                    if (insertRows.length > 0) {
+                        const { data: insertedVariants, error: insertVariantsError } = await supabase
+                            .from('product_variants')
+                            .insert(insertRows.map(r => r.payload))
+                            .select('id');
+                        if (insertVariantsError) throw insertVariantsError;
+                        insertedIds = (insertedVariants || []).map((v: any) => v.id);
+                    }
+
+                    // Link each variant row to its image (if provided)
+                    const imageRows = [
+                        ...updateRows.map(r => ({ id: r.existingId as string, imageUrl: r.imageUrl, label: r.label })),
+                        ...insertRows.map((r, idx) => ({ id: insertedIds[idx], imageUrl: r.imageUrl, label: r.label }))
+                    ];
+                    imageRows.forEach((row) => {
+                        if (row?.id && row?.imageUrl) {
                             imageInserts.push({
                                 product_id: productId,
                                 url: row.imageUrl,
                                 position: 0,
                                 alt_text: `${productName} - ${row.label}`,
-                                variant_id: iv.id
+                                variant_id: row.id
                             });
                         }
                     });
+                } else if (isEditMode && existingVariantIds.length > 0) {
+                    // Variants removed completely from product
+                    const { error: clearOrderItemVariantRefsError } = await supabase
+                        .from('order_items')
+                        .update({ variant_id: null })
+                        .in('variant_id', existingVariantIds);
+                    if (clearOrderItemVariantRefsError) throw clearOrderItemVariantRefsError;
+
+                    const { error: deleteAllVariantsError } = await supabase
+                        .from('product_variants')
+                        .delete()
+                        .eq('product_id', productId);
+                    if (deleteAllVariantsError) throw deleteAllVariantsError;
+                }
+
+                // Always rebuild product_images for consistency (variant + product-level)
+                if (isEditMode) {
+                    const { error: deleteImagesError } = await supabase
+                        .from('product_images')
+                        .delete()
+                        .eq('product_id', productId);
+                    if (deleteImagesError) throw deleteImagesError;
                 }
 
                 // 2. Product-level images
