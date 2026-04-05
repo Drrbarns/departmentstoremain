@@ -35,7 +35,7 @@ export default function Home() {
       primaryButtonLink: '/shop',
       secondaryButtonText: 'Our Story',
       secondaryButtonLink: '/about',
-      // backgroundImage: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop' // Optional override
+      backgroundImage: '/home-hero-mall.png'
     },
     banners: [
       { text: '🚚 Free delivery on orders over GH₵ 500 within Accra!', active: false },
