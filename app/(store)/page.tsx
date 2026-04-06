@@ -112,7 +112,7 @@ export default function Home() {
       {/* Hero Section */}
       <section className="relative w-full h-[70vh] md:h-[90vh] overflow-hidden bg-black">
 
-        {/* Hero (single banner — electronics) */}
+        {/* Hero */}
         <div className="absolute inset-0 z-10">
           <Image
             src={getHeroImage()}
@@ -122,26 +122,27 @@ export default function Home() {
             priority
             quality={90}
           />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/45 to-black/60" />
           <div className="absolute inset-0 bg-black/20" />
 
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 max-w-5xl mx-auto mt-[-50px]">
             <p className="text-white/90 text-sm md:text-base tracking-[0.2em] uppercase font-medium mb-6 animate-fade-in-up">
-              Electronics &amp; Appliances
+              Discount Discovery Zone Department Store
             </p>
 
             <h1
               className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-serif text-white mb-6 leading-tight drop-shadow-lg animate-fade-in-up"
               style={{ animationDelay: '0.1s' }}
             >
-              Top-Quality <br />
-              <span className="italic font-light">Electronics &amp; Gadgets</span>
+              Everything You Need, <br />
+              <span className="italic font-light">All in One Store</span>
             </h1>
 
             <p
               className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto mb-10 font-light tracking-wide animate-fade-in-up"
               style={{ animationDelay: '0.2s' }}
             >
-              From smart kitchen appliances to everyday electronics — imported directly and priced to move.
+              Shop fashion, bags, shoes, electronics, home essentials, beauty, and more - all at unbeatable prices.
             </p>
 
             <div
@@ -149,16 +150,16 @@ export default function Home() {
               style={{ animationDelay: '0.3s' }}
             >
               <Link
-                href="/shop?category=electronics"
+                href="/shop"
                 className="bg-white text-gray-900 px-8 py-3 sm:px-10 sm:py-4 rounded-full font-medium text-base sm:text-lg hover:bg-gray-100 transition-colors shadow-lg hover:shadow-xl hover:-translate-y-1 duration-300"
               >
-                Shop Electronics
+                Shop Now
               </Link>
               <Link
                 href="/shop"
                 className="px-8 py-3 sm:px-10 sm:py-4 rounded-full font-medium text-base sm:text-lg text-white border border-white/40 hover:bg-white/10 transition-colors backdrop-blur-sm"
               >
-                View All
+                Browse Categories
               </Link>
             </div>
           </div>
