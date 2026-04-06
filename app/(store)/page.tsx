@@ -115,8 +115,8 @@ export default function Home() {
         {/* Hero (single banner — electronics) */}
         <div className="absolute inset-0 z-10">
           <Image
-            src="/hero-1.png"
-            alt="Hero — electronics and appliances"
+            src={getHeroImage()}
+            alt="Hero — Discount Discovery Zone"
             fill
             className="object-cover"
             priority
