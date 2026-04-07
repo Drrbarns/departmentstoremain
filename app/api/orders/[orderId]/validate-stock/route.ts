@@ -82,9 +82,10 @@ export async function GET(
     const outOfStock: StockIssue[] = [];
 
     for (const item of items) {
+        const needed = Number(item.quantity ?? 0);
         if (item.variant_id) {
             const qty = variantStockMap[item.variant_id] ?? -1;
-            if (qty < 1) {
+            if (qty < needed) {
                 outOfStock.push({
                     name: item.product_name,
                     variant: item.variant_name ?? undefined,
@@ -93,7 +94,7 @@ export async function GET(
         } else if (item.product_id) {
             const p = productStockMap[item.product_id];
             const inStock = p
-                && (p.continue_selling || p.track_quantity === false || (p.quantity ?? 0) > 0);
+                && (p.continue_selling || p.track_quantity === false || (p.quantity ?? 0) >= needed);
             if (!inStock) {
                 outOfStock.push({ name: item.product_name });
             }

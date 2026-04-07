@@ -76,6 +76,67 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: false, message: 'Order not found' }, { status: 404 });
         }
 
+        // Validate current stock before opening payment for this order.
+        // This blocks payment attempts for stale pending orders when inventory is gone.
+        const { data: orderItems, error: orderItemsError } = await supabaseAdmin
+            .from('order_items')
+            .select('product_id, variant_id, product_name, variant_name, quantity')
+            .eq('order_id', order.id);
+
+        if (orderItemsError || !orderItems) {
+            return NextResponse.json({ success: false, message: 'Could not validate stock' }, { status: 500 });
+        }
+
+        const variantIds = orderItems.filter(i => i.variant_id).map(i => i.variant_id as string);
+        const productIds = orderItems.filter(i => !i.variant_id && i.product_id).map(i => i.product_id as string);
+
+        const variantStockMap: Record<string, number> = {};
+        if (variantIds.length > 0) {
+            const { data: variants } = await supabaseAdmin
+                .from('product_variants')
+                .select('id, quantity')
+                .in('id', variantIds);
+            for (const v of variants ?? []) variantStockMap[v.id] = Number(v.quantity ?? 0);
+        }
+
+        const productStockMap: Record<string, { quantity: number | null; track_quantity: boolean | null; continue_selling: boolean | null; }> = {};
+        if (productIds.length > 0) {
+            const { data: products } = await supabaseAdmin
+                .from('products')
+                .select('id, quantity, track_quantity, continue_selling')
+                .in('id', productIds);
+            for (const p of products ?? []) productStockMap[p.id] = p;
+        }
+
+        const outOfStock: Array<{ name: string; variant?: string }> = [];
+        for (const item of orderItems) {
+            const needed = Number(item.quantity ?? 0);
+            if (item.variant_id) {
+                const available = variantStockMap[item.variant_id] ?? -1;
+                if (available < needed) {
+                    outOfStock.push({ name: item.product_name, variant: item.variant_name ?? undefined });
+                }
+            } else if (item.product_id) {
+                const p = productStockMap[item.product_id];
+                const available = Number(p?.quantity ?? 0);
+                const bypass = Boolean(p?.continue_selling) || p?.track_quantity === false;
+                if (!bypass && available < needed) {
+                    outOfStock.push({ name: item.product_name });
+                }
+            }
+        }
+
+        if (outOfStock.length > 0) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: 'Some items are out of stock and cannot be paid for',
+                    outOfStock
+                },
+                { status: 409 }
+            );
+        }
+
         // Don't allow payment for already-paid orders
         if (order.payment_status === 'paid') {
             return NextResponse.json({ success: false, message: 'Order is already paid' }, { status: 400 });
