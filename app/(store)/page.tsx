@@ -136,7 +136,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-black/10" />
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 h-full flex items-center">
-          <div className="w-full max-w-2xl bg-white/88 backdrop-blur-sm border border-white/60 shadow-2xl p-8 md:p-12">
+          <div className="w-full max-w-2xl bg-white/[0.90] backdrop-blur-md border border-white/70 shadow-2xl p-8 md:p-12">
             <p className="text-xs md:text-sm tracking-[0.24em] uppercase text-gray-600 font-medium mb-5">
               Discount Discovery Zone
             </p>
