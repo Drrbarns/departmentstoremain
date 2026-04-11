@@ -20,7 +20,7 @@ export default function CartPage() {
     const item = cartItems.find(item => item.id === id);
     if (item) {
       setSavedItems([...savedItems, item]);
-      removeFromCart(item.id, item.variant); // Use context's removeFromCart
+      removeFromCart(item.id, item.variant, item.variantId); // Use context's removeFromCart
     }
   };
 
@@ -93,7 +93,7 @@ export default function CartPage() {
 
                     <div className="space-y-6">
                       {cartItems.map((item) => (
-                        <div key={`${item.id}-${item.variant || ''}`} className="flex flex-col sm:flex-row gap-4 sm:gap-6 pb-6 border-b border-gray-200 last:border-0 last:pb-0">
+                        <div key={`${item.id}-${item.variantId || item.variant || ''}`} className="flex flex-col sm:flex-row gap-4 sm:gap-6 pb-6 border-b border-gray-200 last:border-0 last:pb-0">
                           <Link href={`/product/${item.slug || item.id}`} className="relative w-full sm:w-32 h-48 sm:h-32 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
                             <Image src={item.image} alt={item.name} fill className="object-cover object-top" sizes="(max-width: 640px) 100vw, 128px" quality={70} />
                           </Link>
@@ -104,7 +104,7 @@ export default function CartPage() {
                                 {item.name}
                               </Link>
                               <button
-                                onClick={() => removeFromCart(item.id, item.variant)}
+                                onClick={() => removeFromCart(item.id, item.variant, item.variantId)}
                                 className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-600 transition-colors"
                               >
                                 <i className="ri-close-line text-xl"></i>
@@ -126,7 +126,7 @@ export default function CartPage() {
                                 <div className="flex flex-col">
                                   <div className="flex items-center border-2 border-gray-300 rounded-lg">
                                     <button
-                                      onClick={() => updateQuantity(item.id, item.quantity - 1, item.variant)}
+                                      onClick={() => updateQuantity(item.id, item.quantity - 1, item.variant, item.variantId)}
                                       className="w-10 h-10 flex items-center justify-center text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
                                       title={item.quantity <= (item.moq || 1) ? 'Remove item' : 'Decrease quantity'}
                                     >
@@ -139,13 +139,13 @@ export default function CartPage() {
                                     <input
                                       type="number"
                                       value={item.quantity}
-                                      onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || (item.moq || 1), item.variant)}
+                                      onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || (item.moq || 1), item.variant, item.variantId)}
                                       className="w-12 h-10 text-center border-x-2 border-gray-300 focus:outline-none font-semibold"
                                       min={item.moq || 1}
                                       max={item.maxStock}
                                     />
                                     <button
-                                      onClick={() => updateQuantity(item.id, item.quantity + 1, item.variant)}
+                                      onClick={() => updateQuantity(item.id, item.quantity + 1, item.variant, item.variantId)}
                                       className="w-10 h-10 flex items-center justify-center text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
                                     >
                                       <i className="ri-add-line"></i>

@@ -67,7 +67,7 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
             <div className="flex-1 overflow-y-auto p-6">
               <div className="space-y-4">
                 {cart.map((item) => (
-                  <div key={`${item.id}-${item.variant}`} className="flex space-x-4 bg-gray-50 rounded-lg p-4">
+                  <div key={`${item.id}-${item.variantId || item.variant || ''}`} className="flex space-x-4 bg-gray-50 rounded-lg p-4">
                     <div className="w-20 h-20 bg-white rounded-lg overflow-hidden flex-shrink-0 border border-gray-200">
                       <img
                         src={getOptimizedImageUrl(item.image, { width: 160 })}
@@ -92,7 +92,7 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
 
                         <div className="flex items-center border border-gray-300 rounded bg-white">
                           <button
-                            onClick={() => updateQuantity(item.id, item.quantity - 1, item.variant)}
+                            onClick={() => updateQuantity(item.id, item.quantity - 1, item.variant, item.variantId)}
                             className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 transition-colors cursor-pointer"
                           >
                             {item.quantity <= (item.moq || 1) ? (
@@ -103,7 +103,7 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
                           </button>
                           <span className="w-10 text-center font-semibold text-gray-900">{item.quantity}</span>
                           <button
-                            onClick={() => updateQuantity(item.id, item.quantity + 1, item.variant)}
+                            onClick={() => updateQuantity(item.id, item.quantity + 1, item.variant, item.variantId)}
                             className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 transition-colors cursor-pointer"
                             disabled={item.quantity >= item.maxStock}
                           >
@@ -117,7 +117,7 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
                     </div>
 
                     <button
-                      onClick={() => removeFromCart(item.id, item.variant)}
+                      onClick={() => removeFromCart(item.id, item.variant, item.variantId)}
                       className="w-8 h-8 flex items-center justify-center hover:bg-red-50 rounded-full transition-colors flex-shrink-0 cursor-pointer"
                     >
                       <i className="ri-delete-bin-line text-red-600"></i>

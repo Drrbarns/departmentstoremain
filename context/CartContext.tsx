@@ -19,8 +19,8 @@ export type CartItem = {
 type CartContextType = {
     cart: CartItem[];
     addToCart: (item: CartItem) => void;
-    removeFromCart: (itemId: string, variant?: string) => void;
-    updateQuantity: (itemId: string, quantity: number, variant?: string) => void;
+    removeFromCart: (itemId: string, variant?: string, variantId?: string) => void;
+    updateQuantity: (itemId: string, quantity: number, variant?: string, variantId?: string) => void;
     clearCart: () => void;
     cartCount: number;
     subtotal: number;
@@ -29,6 +29,13 @@ type CartContextType = {
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
+
+const sameCartLine = (item: CartItem, other: CartItem) => {
+    // Prefer stable variant id when available; fall back to variant label for legacy items.
+    if (item.id !== other.id) return false;
+    if (item.variantId || other.variantId) return item.variantId === other.variantId;
+    return item.variant === other.variant;
+};
 
 export function CartProvider({ children }: { children: ReactNode }) {
     const [cart, setCart] = useState<CartItem[]>([]);
@@ -82,7 +89,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const addToCart = (newItem: CartItem) => {
         setCart((prevCart) => {
             const existingItemIndex = prevCart.findIndex(
-                (item) => item.id === newItem.id && item.variant === newItem.variant
+                (item) => sameCartLine(item, newItem)
             );
 
             if (existingItemIndex > -1) {
@@ -103,29 +110,33 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setIsCartOpen(true); // Open cart when item is added
     };
 
-    const removeFromCart = (itemId: string, variant?: string) => {
+    const removeFromCart = (itemId: string, variant?: string, variantId?: string) => {
         setCart((prevCart) =>
-            prevCart.filter((item) => !(item.id === itemId && item.variant === variant))
+            prevCart.filter((item) => {
+                const sameProduct = item.id === itemId;
+                const sameVariant = variantId ? item.variantId === variantId : item.variant === variant;
+                return !(sameProduct && sameVariant);
+            })
         );
     };
 
-    const updateQuantity = (itemId: string, quantity: number, variant?: string) => {
+    const updateQuantity = (itemId: string, quantity: number, variant?: string, variantId?: string) => {
         setCart((prevCart) => {
-            const item = prevCart.find(i => i.id === itemId && i.variant === variant);
+            const item = prevCart.find(i => i.id === itemId && (variantId ? i.variantId === variantId : i.variant === variant));
             if (!item) return prevCart;
 
             const minQty = item.moq || 1;
             
             // If trying to reduce below MOQ, remove the item
             if (quantity < minQty) {
-                return prevCart.filter(i => !(i.id === itemId && i.variant === variant));
+                return prevCart.filter(i => !(i.id === itemId && (variantId ? i.variantId === variantId : i.variant === variant)));
             }
 
             // Clamp quantity between MOQ and maxStock
             const clampedQty = Math.min(Math.max(quantity, minQty), item.maxStock);
 
             return prevCart.map((i) =>
-                i.id === itemId && i.variant === variant
+                i.id === itemId && (variantId ? i.variantId === variantId : i.variant === variant)
                     ? { ...i, quantity: clampedQty }
                     : i
             );
