@@ -8,6 +8,14 @@ import { PUBLIC_CONTACT_PHONE } from '@/lib/brand-contact';
 const resend = new Resend(process.env.RESEND_API_KEY || 'missing_api_key');
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@standardecom.com';
 const ADMIN_PHONE = process.env.ADMIN_PHONE || '';
+const ADMIN_PHONES = Array.from(
+    new Set(
+        ADMIN_PHONE
+            .split(/[,\n;]+/)
+            .map((p) => p.trim())
+            .filter(Boolean)
+    )
+);
 const EMAIL_FROM = process.env.EMAIL_FROM || 'Discount Discovery Zone <noreply@discount-discovery-zone.vercel.app>';
 const BRAND = {
     name: 'Discount Discovery Zone',
@@ -393,13 +401,17 @@ ${emailButton('View Order in Admin', `${baseUrl}/admin/orders/${id}`)}
         });
     }
 
-    // 4. SMS to Admin (if ADMIN_PHONE is configured)
-    if (ADMIN_PHONE) {
+    // 4. SMS to Admin (supports multiple numbers via ADMIN_PHONE comma/semicolon/newline separated)
+    if (ADMIN_PHONES.length > 0) {
         const adminSms = `New order #${order_number || id} from ${name} — GH₵${Number(total).toFixed(2)}. View: ${baseUrl}/admin/orders/${id}`;
-        await sendSMS({
-            to: ADMIN_PHONE,
-            message: adminSms
-        });
+        await Promise.all(
+            ADMIN_PHONES.map((to) =>
+                sendSMS({
+                    to,
+                    message: adminSms
+                })
+            )
+        );
     }
 }
 
