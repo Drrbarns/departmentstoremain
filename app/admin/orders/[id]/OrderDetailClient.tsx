@@ -5,6 +5,12 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { orderLineItemImageUrl } from '@/lib/orderLineItemImage';
 import { PUBLIC_CONTACT_EMAIL } from '@/lib/brand-contact';
+import {
+  appendOrderStatusChange,
+  fetchCurrentStaffActor,
+  ORDER_STATUS_CHANGES_KEY,
+  type OrderStatusChangeEntry,
+} from '@/lib/orderStatusHistory';
 import FraudDetectionAlert from '@/components/FraudDetectionAlert';
 
 interface OrderDetailClientProps {
@@ -140,17 +146,33 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
   const handleUpdateStatus = async (newStatus?: string) => {
     try {
       setStatusUpdating(true);
+      const previousStatus = order.status;
       const statusToUpdate = newStatus || order.status;
+      const statusChanged = statusToUpdate !== previousStatus;
+
+      let nextMetadata: Record<string, unknown> = {
+        ...(order.metadata && typeof order.metadata === 'object' ? order.metadata : {}),
+        tracking_number: trackingNumber,
+      };
+
+      if (statusChanged) {
+        const actor = await fetchCurrentStaffActor(supabase);
+        const entry: OrderStatusChangeEntry = {
+          status: statusToUpdate,
+          changed_at: new Date().toISOString(),
+          changed_by_name: actor.name,
+          changed_by_email: actor.email,
+          changed_by_id: actor.id,
+        };
+        nextMetadata = appendOrderStatusChange(nextMetadata, entry);
+      }
 
       const { error } = await supabase
         .from('orders')
         .update({
           status: statusToUpdate,
           notes: adminNotes,
-          metadata: {
-            ...order.metadata,
-            tracking_number: trackingNumber
-          }
+          metadata: nextMetadata,
         })
         .eq('id', order.id);
 
@@ -161,12 +183,11 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
         ...order,
         status: statusToUpdate,
         notes: adminNotes,
-        metadata: { ...order.metadata, tracking_number: trackingNumber }
+        metadata: nextMetadata,
       });
 
       // Send Notification (Email + SMS)
       // Only send if status changed OR tracking number was added/changed
-      const statusChanged = statusToUpdate !== order.status;
       const trackingChanged = trackingNumber !== order.metadata?.tracking_number;
 
       if (statusChanged || (trackingChanged && trackingNumber)) {
@@ -215,9 +236,28 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
 
     try {
       setMarkingPaid(true);
+      const nextStatus = order.status === 'pending' ? 'processing' : order.status;
+      let nextMetadata: Record<string, unknown> =
+        order.metadata && typeof order.metadata === 'object' ? { ...order.metadata } : {};
+
+      if (order.status === 'pending' && nextStatus === 'processing') {
+        const actor = await fetchCurrentStaffActor(supabase);
+        nextMetadata = appendOrderStatusChange(nextMetadata, {
+          status: nextStatus,
+          changed_at: new Date().toISOString(),
+          changed_by_name: actor.name,
+          changed_by_email: actor.email,
+          changed_by_id: actor.id,
+        });
+      }
+
       const { error } = await supabase
         .from('orders')
-        .update({ payment_status: 'paid', status: order.status === 'pending' ? 'processing' : order.status })
+        .update({
+          payment_status: 'paid',
+          status: nextStatus,
+          metadata: nextMetadata,
+        })
         .eq('id', order.id);
 
       if (error) throw error;
@@ -225,7 +265,8 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
       setOrder({
         ...order,
         payment_status: 'paid',
-        status: order.status === 'pending' ? 'processing' : order.status
+        status: nextStatus,
+        metadata: nextMetadata,
       });
       alert('Order marked as paid successfully!');
     } catch (err: any) {
@@ -347,6 +388,14 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
   const customerName = (shippingAddress.firstName && shippingAddress.lastName)
     ? `${shippingAddress.firstName.trim()} ${shippingAddress.lastName.trim()}`
     : shippingAddress.full_name || shippingAddress.firstName || order.email?.split('@')[0] || 'Customer';
+
+  const statusChangeLog: OrderStatusChangeEntry[] = Array.isArray(
+    (order.metadata as Record<string, unknown> | undefined)?.[ORDER_STATUS_CHANGES_KEY]
+  )
+    ? [
+        ...((order.metadata as Record<string, unknown>)[ORDER_STATUS_CHANGES_KEY] as OrderStatusChangeEntry[]),
+      ].reverse()
+    : [];
 
   // Derive timeline from status (simplified logic as we don't have full history table joined here yet)
   const timeline = [
@@ -662,6 +711,37 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                 {statusUpdating ? 'Updating...' : 'Update Status'}
               </button>
             </div>
+
+            {statusChangeLog.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <h2 className="text-lg font-bold text-gray-900 mb-2">Who changed the status</h2>
+                <p className="text-sm text-gray-600 mb-4">
+                  Newest first. Each row is recorded when an admin or staff member saves a new order status.
+                </p>
+                <ul className="space-y-3 max-h-64 overflow-y-auto">
+                  {statusChangeLog.map((entry, idx) => (
+                    <li
+                      key={`${entry.changed_at}-${idx}`}
+                      className="text-sm border-b border-gray-100 last:border-0 pb-3 last:pb-0"
+                    >
+                      <p className="font-semibold text-gray-900">
+                        {statusLabel(entry.status)}
+                        <span className="font-normal text-gray-500">
+                          {' '}
+                          · {new Date(entry.changed_at).toLocaleString()}
+                        </span>
+                      </p>
+                      <p className="text-gray-700 mt-0.5">
+                        By <span className="font-medium">{entry.changed_by_name}</span>
+                        {entry.changed_by_email ? (
+                          <span className="text-gray-500"> ({entry.changed_by_email})</span>
+                        ) : null}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-bold text-gray-900 mb-4">Customer</h2>

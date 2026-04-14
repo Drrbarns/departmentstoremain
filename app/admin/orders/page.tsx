@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import ProductSalesStats from './ProductSalesStats';
+import { appendOrderStatusChange, fetchCurrentStaffActor } from '@/lib/orderStatusHistory';
 
 const ADMIN_ORDERS_LIST_SCROLL_KEY = 'ddz_admin_orders_list_scroll_y';
 
@@ -252,14 +253,28 @@ export default function AdminOrdersPage() {
   const handleBulkAction = async (action: string, newStatus?: string) => {
     if (newStatus) {
       try {
-        const { error } = await supabase
-          .from('orders')
-          .update({ status: newStatus })
-          .in('id', selectedOrders);
+        const actor = await fetchCurrentStaffActor(supabase);
+        const toUpdate = orders.filter((o) => selectedOrders.includes(o.id));
 
-        if (error) throw error;
-
-
+        for (const o of toUpdate) {
+          if (o.status === newStatus) continue;
+          const baseMeta =
+            o.metadata && typeof o.metadata === 'object' && !Array.isArray(o.metadata)
+              ? { ...(o.metadata as Record<string, unknown>) }
+              : {};
+          const nextMetadata = appendOrderStatusChange(baseMeta, {
+            status: newStatus,
+            changed_at: new Date().toISOString(),
+            changed_by_name: actor.name,
+            changed_by_email: actor.email,
+            changed_by_id: actor.id,
+          });
+          const { error: upErr } = await supabase
+            .from('orders')
+            .update({ status: newStatus, metadata: nextMetadata })
+            .eq('id', o.id);
+          if (upErr) throw upErr;
+        }
 
         // Send Notifications with auth token
         const { data: { session } } = await supabase.auth.getSession();

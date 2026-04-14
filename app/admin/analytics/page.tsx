@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, AreaChart, Area, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 export default function AnalyticsPage() {
-  const [timeRange, setTimeRange] = useState('30days');
+  const [timeRange, setTimeRange] = useState<'day' | 'week' | 'month'>('day');
   const [reportType, setReportType] = useState('overview');
   const [loading, setLoading] = useState(true);
 
@@ -29,25 +29,47 @@ export default function AnalyticsPage() {
     fetchAnalytics();
   }, [timeRange]);
 
+  const getPeriodBounds = () => {
+    const now = new Date();
+    const start = new Date(now);
+    const end = new Date(now);
+
+    if (timeRange === 'day') {
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    } else if (timeRange === 'week') {
+      // Monday-based week for business reporting
+      const day = now.getDay(); // 0 = Sun ... 6 = Sat
+      const diffToMonday = day === 0 ? 6 : day - 1;
+      start.setDate(now.getDate() - diffToMonday);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    } else {
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    }
+
+    return { start, end };
+  };
+
+  const periodLabel =
+    timeRange === 'day' ? 'Today' : timeRange === 'week' ? 'This Week' : 'This Month';
+
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
 
-      // Calculate start date based on timeRange
-      const now = new Date();
-      let startDate = new Date();
-      if (timeRange === '7days') startDate.setDate(now.getDate() - 7);
-      if (timeRange === '30days') startDate.setDate(now.getDate() - 30);
-      if (timeRange === '90days') startDate.setDate(now.getDate() - 90);
-      if (timeRange === 'year') startDate.setFullYear(now.getFullYear(), 0, 1);
-
-      const isoStart = startDate.toISOString();
+      const { start, end } = getPeriodBounds();
+      const isoStart = start.toISOString();
+      const isoEnd = end.toISOString();
 
       // Fetch Orders for Revenue & Count - only PAID orders count as revenue
       const { data: orders, error: orderError } = await supabase
         .from('orders')
         .select('id, created_at, total, payment_status')
         .gte('created_at', isoStart)
+        .lte('created_at', isoEnd)
         .eq('payment_status', 'paid') // Only count paid orders as revenue
         .neq('status', 'cancelled')
         .order('created_at');
@@ -62,7 +84,8 @@ export default function AnalyticsPage() {
             *,
             products (name, categories(name))
          `)
-        .gte('created_at', isoStart); // Assuming order_items has created_at or join orders.. 
+        .gte('created_at', isoStart)
+        .lte('created_at', isoEnd); // Assuming order_items has created_at or join orders.. 
       // Actually order_items usually doesn't have created_at directly in some schemas, 
       // so we should join orders to filter by date.
       // Simpler: fetch order_items for the fetched orders IDs.
@@ -107,9 +130,8 @@ export default function AnalyticsPage() {
       const salesMap: Record<string, any> = {};
 
       // Initialize map with all dates in range
-      const d = new Date(startDate);
-      const today = new Date();
-      while (d <= today) {
+      const d = new Date(start);
+      while (d <= end) {
         const dateKey = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         salesMap[dateKey] = {
           date: dateKey,
@@ -175,17 +197,16 @@ export default function AnalyticsPage() {
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <select
               value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value)}
+              onChange={(e) => setTimeRange(e.target.value as 'day' | 'week' | 'month')}
               className="px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium pr-8 cursor-pointer bg-white"
             >
-              <option value="7days">Last 7 Days</option>
-              <option value="30days">Last 30 Days</option>
-              <option value="90days">Last 90 Days</option>
-              <option value="year">This Year</option>
+              <option value="day">Today</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
             </select>
             <button
               onClick={() => {
-                const csvContent = `Date,Revenue,Orders\n${salesData.map(d => `${d.date},${d.revenue},${d.orders}`).join('\n')}`;
+                const csvContent = `Date,Revenue,Orders\n${salesData.map(d => `${d.date},${d.sales},${d.orders}`).join('\n')}`;
                 const blob = new Blob([csvContent], { type: 'text/csv' });
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -217,9 +238,9 @@ export default function AnalyticsPage() {
               <div className="w-12 h-12 flex items-center justify-center bg-blue-100 rounded-lg">
                 <i className="ri-money-dollar-circle-line text-2xl text-blue-700"></i>
               </div>
-              <span className="text-blue-700 font-semibold text-sm">Live</span>
+              <span className="text-blue-700 font-semibold text-sm">{periodLabel}</span>
             </div>
-            <p className="text-sm text-gray-600 mb-1">Total Revenue</p>
+            <p className="text-sm text-gray-600 mb-1">Revenue ({periodLabel})</p>
             <p className="text-3xl font-bold text-gray-900">GH₵{metrics.revenue.toLocaleString()}</p>
           </div>
 
@@ -229,7 +250,7 @@ export default function AnalyticsPage() {
                 <i className="ri-shopping-cart-line text-2xl text-blue-700"></i>
               </div>
             </div>
-            <p className="text-sm text-gray-600 mb-1">Total Orders</p>
+            <p className="text-sm text-gray-600 mb-1">Paid Orders ({periodLabel})</p>
             <p className="text-3xl font-bold text-gray-900">{metrics.orders}</p>
           </div>
 
