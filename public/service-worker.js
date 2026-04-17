@@ -1,5 +1,5 @@
-// Discount Discovery Zone - Service Worker v2.3
-const CACHE_VERSION = 'ddz-v3.0';
+// Discount Discovery Zone - Service Worker v4.0 (favicon hard-reset)
+const CACHE_VERSION = 'ddz-v4.0-favicon-reset';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `images-${CACHE_VERSION}`;
@@ -49,23 +49,37 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate: clean old caches
+// Activate: hard-wipe ALL caches (one-time favicon/branding reset)
+// We deliberately delete every cache the SW knows about — not just the
+// non-current ones — to guarantee that any previously cached multimey
+// favicon/PWA icon is purged from every device on the next visit.
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating v2.0...');
+  console.log('[SW] Activating v4.0 (hard cache wipe)...');
   event.waitUntil(
-    caches.keys()
-      .then((keys) => {
-        return Promise.all(
-          keys
-            .filter((key) => key !== STATIC_CACHE && key !== DYNAMIC_CACHE && key !== IMAGE_CACHE && key !== API_CACHE)
-            .map((key) => {
-              console.log('[SW] Removing old cache:', key);
-              return caches.delete(key);
-            })
-        );
-      })
-      .then(() => self.clients.claim())
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((key) => {
+        console.log('[SW] Deleting cache:', key);
+        return caches.delete(key);
+      }));
+      // Notify every controlled tab so it can drop in-memory image refs
+      // and reload to pick up the fresh icons.
+      const clientsList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      clientsList.forEach((client) => {
+        client.postMessage({ type: 'DDZ_CACHE_RESET', reason: 'favicon-reset' });
+      });
+      await self.clients.claim();
+    })()
   );
+});
+
+// Allow the page to ask us to wipe caches at any time.
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'DDZ_CLEAR_ALL_CACHES') {
+    event.waitUntil(
+      caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+    );
+  }
 });
 
 // Fetch: smart caching strategies

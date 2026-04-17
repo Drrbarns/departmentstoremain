@@ -1,49 +1,34 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { readFile } from 'fs/promises';
 import path from 'path';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
+// Serves the bundled DDZ icons from /public/icons.
+// IMPORTANT: This route never redirects to a remote logo. Earlier versions
+// pulled `site_settings.site_logo` and 302'd to it, which let an old branding
+// URL (multimey) leak into every favicon/PWA icon request and get cached
+// aggressively by browsers and the service worker.
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ icon: string }> }
 ) {
   const { icon } = await params;
 
-  // Only allow icon-*.png to prevent path traversal
   if (!/^icon-\d+x\d+\.png$/.test(icon) && !/^icon-maskable-\d+x\d+\.png$/.test(icon)) {
     return new NextResponse('Not Found', { status: 404 });
-  }
-
-  let siteLogo = '';
-
-  try {
-    const { data } = await supabase
-      .from('site_settings')
-      .select('value')
-      .eq('key', 'site_logo')
-      .maybeSingle();
-
-    if (data?.value != null) {
-      siteLogo = typeof data.value === 'string' ? data.value : String(data.value);
-    }
-  } catch {
-    // ignore
-  }
-
-  if (siteLogo) {
-    return NextResponse.redirect(siteLogo, 302);
   }
 
   const filePath = path.join(process.cwd(), 'public', 'icons', icon);
   try {
     const buffer = await readFile(filePath);
-    return new NextResponse(buffer, {
-      headers: { 'Content-Type': 'image/png' },
+    return new NextResponse(new Uint8Array(buffer), {
+      headers: {
+        'Content-Type': 'image/png',
+        // Force every device/proxy to revalidate so any previously cached
+        // remote-redirected response is replaced with the bundled icon.
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
     });
   } catch {
     return new NextResponse('Not Found', { status: 404 });

@@ -54,23 +54,23 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/favicon.png', sizes: '32x32', type: 'image/png' },
-      { url: '/icons/icon-16x16.png', sizes: '16x16', type: 'image/png' },
-      { url: '/icons/icon-32x32.png', sizes: '32x32', type: 'image/png' },
-      { url: '/icons/icon-48x48.png', sizes: '48x48', type: 'image/png' },
-      { url: '/icons/icon-96x96.png', sizes: '96x96', type: 'image/png' },
-      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+      { url: '/favicon.png?v=ddz-2026-04-17', sizes: '32x32', type: 'image/png' },
+      { url: '/icons/icon-16x16.png?v=ddz-2026-04-17', sizes: '16x16', type: 'image/png' },
+      { url: '/icons/icon-32x32.png?v=ddz-2026-04-17', sizes: '32x32', type: 'image/png' },
+      { url: '/icons/icon-48x48.png?v=ddz-2026-04-17', sizes: '48x48', type: 'image/png' },
+      { url: '/icons/icon-96x96.png?v=ddz-2026-04-17', sizes: '96x96', type: 'image/png' },
+      { url: '/icons/icon-192x192.png?v=ddz-2026-04-17', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512x512.png?v=ddz-2026-04-17', sizes: '512x512', type: 'image/png' },
     ],
     apple: [
-      { url: '/icons/icon-152x152.png', sizes: '152x152', type: 'image/png' },
-      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/icons/icon-384x384.png', sizes: '384x384', type: 'image/png' },
-      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+      { url: '/icons/icon-152x152.png?v=ddz-2026-04-17', sizes: '152x152', type: 'image/png' },
+      { url: '/icons/icon-192x192.png?v=ddz-2026-04-17', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-384x384.png?v=ddz-2026-04-17', sizes: '384x384', type: 'image/png' },
+      { url: '/icons/icon-512x512.png?v=ddz-2026-04-17', sizes: '512x512', type: 'image/png' },
     ],
-    shortcut: '/favicon.png',
+    shortcut: '/favicon.png?v=ddz-2026-04-17',
   },
-  manifest: '/manifest.json',
+  manifest: '/manifest.json?v=ddz-2026-04-17',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -133,14 +133,14 @@ export default function RootLayout({
         <meta name="msapplication-TileColor" content="#2563eb" />
         <meta name="msapplication-tap-highlight" content="no" />
 
-        {/* Apple Touch Icons */}
-        <link rel="apple-touch-icon" href="/icons/icon-152x152.png" />
-        <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png" />
-        <link rel="apple-touch-icon" sizes="384x384" href="/icons/icon-384x384.png" />
-        <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512x512.png" />
+        {/* Apple Touch Icons (versioned to bust the old multimey cache) */}
+        <link rel="apple-touch-icon" href="/icons/icon-152x152.png?v=ddz-2026-04-17" />
+        <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png?v=ddz-2026-04-17" />
+        <link rel="apple-touch-icon" sizes="384x384" href="/icons/icon-384x384.png?v=ddz-2026-04-17" />
+        <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512x512.png?v=ddz-2026-04-17" />
 
         {/* Apple Splash Screens */}
-        <link rel="apple-touch-startup-image" href="/icons/icon-512x512.png" />
+        <link rel="apple-touch-startup-image" href="/icons/icon-512x512.png?v=ddz-2026-04-17" />
 
         <link
           href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css"
@@ -159,7 +159,7 @@ export default function RootLayout({
               "@type": "Organization",
               "name": "Discount Discovery Zone",
               "url": siteUrl,
-              "logo": `${siteUrl}/icons/icon-512x512.png`,
+              "logo": `${siteUrl}/icons/icon-512x512.png?v=ddz-2026-04-17`,
               "description": "Shop dresses, electronics, bags, shoes and more at Discount Discovery Zone. Quality products delivered across Ghana from Accra.",
               "address": {
                 "@type": "PostalAddress",
