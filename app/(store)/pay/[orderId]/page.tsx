@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -10,13 +10,18 @@ export default function PaymentPage() {
   usePageTitle('Complete Payment');
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const orderId = params.orderId as string;
+  const initFailed = searchParams.get('init') === 'failed';
+  const stockEmpty = searchParams.get('stock') === 'empty';
 
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stockIssues, setStockIssues] = useState<{ name: string; variant?: string }[]>([]);
+  const [allOutOfStock, setAllOutOfStock] = useState(stockEmpty);
+  const [removedNotice, setRemovedNotice] = useState<{ items: { name: string; variant?: string }[]; newTotal: number } | null>(null);
 
   useEffect(() => {
     async function fetchOrder() {
@@ -71,6 +76,7 @@ export default function PaymentPage() {
 
     setProcessing(true);
     setError(null);
+    setRemovedNotice(null);
 
     try {
       const paymentRes = await fetch('/api/payment/moolre', {
@@ -85,8 +91,27 @@ export default function PaymentPage() {
 
       const paymentResult = await paymentRes.json();
 
+      // Every remaining item went out of stock — nothing to pay for.
+      if (paymentResult?.all_out_of_stock) {
+        setAllOutOfStock(true);
+        setStockIssues(paymentResult.outOfStock ?? []);
+        setProcessing(false);
+        return;
+      }
+
       if (!paymentResult.success) {
         throw new Error(paymentResult.message || 'Payment initialization failed');
+      }
+
+      // Server auto-removed some items — show the customer what happened
+      // and let them confirm before redirecting to the gateway.
+      if (Array.isArray(paymentResult.removedItems) && paymentResult.removedItems.length > 0) {
+        setRemovedNotice({
+          items: paymentResult.removedItems,
+          newTotal: Number(paymentResult.amount ?? 0)
+        });
+        setStockIssues([]);
+        setOrder((prev: any) => prev ? { ...prev, total: Number(paymentResult.amount ?? prev.total) } : prev);
       }
 
       // Redirect to Moolre payment page
@@ -177,6 +202,20 @@ export default function PaymentPage() {
         </div>
 
         {/* Payment Status */}
+        {initFailed && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start space-x-3">
+              <i className="ri-information-line text-xl text-blue-600 mt-0.5"></i>
+              <div>
+                <p className="text-sm font-semibold text-blue-800">Order saved successfully</p>
+                <p className="text-sm text-blue-700 mt-1">
+                  We could not open the payment gateway from checkout. Tap the button below to continue payment.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {order?.payment_status === 'pending' && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
             <div className="flex items-start space-x-3">
@@ -205,20 +244,66 @@ export default function PaymentPage() {
           </div>
         )}
 
-        {stockIssues.length > 0 && (
+        {allOutOfStock && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start space-x-3">
+              <i className="ri-close-circle-line text-xl text-red-600 mt-0.5 flex-shrink-0"></i>
+              <div>
+                <p className="text-sm font-semibold text-red-800 mb-1">All items in this order are unavailable</p>
+                <p className="text-sm text-red-700">
+                  The items in your order have gone out of stock. Please reach out to our support team for assistance.
+                </p>
+                {stockIssues.length > 0 && (
+                  <ul className="text-sm text-red-800 space-y-1 mt-2">
+                    {stockIssues.map((issue, i) => (
+                      <li key={i} className="flex items-center space-x-1">
+                        <i className="ri-close-circle-line text-red-500"></i>
+                        <span>{issue.name}{issue.variant ? ` — ${issue.variant}` : ''}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!allOutOfStock && stockIssues.length > 0 && (
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
             <div className="flex items-start space-x-3">
-              <i className="ri-error-warning-line text-xl text-orange-600 mt-0.5 flex-shrink-0"></i>
+              <i className="ri-information-line text-xl text-orange-600 mt-0.5 flex-shrink-0"></i>
               <div>
-                <p className="text-sm font-semibold text-orange-800 mb-1">Some items are no longer available</p>
+                <p className="text-sm font-semibold text-orange-800 mb-1">Some items went out of stock</p>
                 <p className="text-sm text-orange-700 mb-2">
-                  The following item(s) have gone out of stock since your order was placed. Please contact our support team to resolve this before payment.
+                  The following item(s) will be removed automatically when you tap Pay so you can checkout with the remaining items:
                 </p>
                 <ul className="text-sm text-orange-800 space-y-1">
                   {stockIssues.map((issue, i) => (
                     <li key={i} className="flex items-center space-x-1">
                       <i className="ri-close-circle-line text-orange-500"></i>
                       <span>{issue.name}{issue.variant ? ` — ${issue.variant}` : ''}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {removedNotice && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start space-x-3">
+              <i className="ri-check-line text-xl text-blue-600 mt-0.5 flex-shrink-0"></i>
+              <div>
+                <p className="text-sm font-semibold text-blue-800 mb-1">Order updated</p>
+                <p className="text-sm text-blue-700 mb-2">
+                  Out-of-stock item(s) were removed and your new total is <strong>GH₵ {removedNotice.newTotal.toFixed(2)}</strong>. Redirecting you to payment…
+                </p>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  {removedNotice.items.map((it, i) => (
+                    <li key={i} className="flex items-center space-x-1">
+                      <i className="ri-close-circle-line text-blue-400"></i>
+                      <span>{it.name}{it.variant ? ` — ${it.variant}` : ''}</span>
                     </li>
                   ))}
                 </ul>
@@ -236,8 +321,8 @@ export default function PaymentPage() {
         {/* Pay Button */}
         <button
           onClick={handlePayNow}
-          disabled={processing || stockIssues.length > 0}
-          className={`w-full py-4 rounded-xl font-semibold text-lg transition-colors disabled:opacity-70 flex items-center justify-center cursor-pointer ${stockIssues.length > 0 ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-blue-700 hover:bg-blue-800 text-white'}`}
+          disabled={processing || allOutOfStock}
+          className={`w-full py-4 rounded-xl font-semibold text-lg transition-colors disabled:opacity-70 flex items-center justify-center cursor-pointer ${allOutOfStock ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-blue-700 hover:bg-blue-800 text-white'}`}
         >
           {processing ? (
             <>

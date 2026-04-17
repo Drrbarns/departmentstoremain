@@ -76,11 +76,17 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: false, message: 'Order not found' }, { status: 404 });
         }
 
+        // Don't allow payment for already-paid orders
+        if (order.payment_status === 'paid') {
+            return NextResponse.json({ success: false, message: 'Order is already paid' }, { status: 400 });
+        }
+
         // Validate current stock before opening payment for this order.
-        // This blocks payment attempts for stale pending orders when inventory is gone.
+        // If some items are out of stock we transparently remove them from the order
+        // and recompute the total so the customer can still pay for what is available.
         const { data: orderItems, error: orderItemsError } = await supabaseAdmin
             .from('order_items')
-            .select('product_id, variant_id, product_name, variant_name, quantity')
+            .select('id, product_id, variant_id, product_name, variant_name, quantity, total_price')
             .eq('order_id', order.id);
 
         if (orderItemsError || !orderItems) {
@@ -108,42 +114,102 @@ export async function POST(req: Request) {
             for (const p of products ?? []) productStockMap[p.id] = p;
         }
 
-        const outOfStock: Array<{ name: string; variant?: string }> = [];
+        const outOfStockItems: Array<{ id: string; name: string; variant?: string; total_price: number }> = [];
         for (const item of orderItems) {
             const needed = Number(item.quantity ?? 0);
+            let isOOS = false;
             if (item.variant_id) {
                 const available = variantStockMap[item.variant_id] ?? -1;
-                if (available < needed) {
-                    outOfStock.push({ name: item.product_name, variant: item.variant_name ?? undefined });
-                }
+                if (available < needed) isOOS = true;
             } else if (item.product_id) {
                 const p = productStockMap[item.product_id];
                 const available = Number(p?.quantity ?? 0);
                 const bypass = Boolean(p?.continue_selling) || p?.track_quantity === false;
-                if (!bypass && available < needed) {
-                    outOfStock.push({ name: item.product_name });
-                }
+                if (!bypass && available < needed) isOOS = true;
+            }
+            if (isOOS) {
+                outOfStockItems.push({
+                    id: item.id,
+                    name: item.product_name,
+                    variant: item.variant_name ?? undefined,
+                    total_price: Number(item.total_price ?? 0)
+                });
             }
         }
 
-        if (outOfStock.length > 0) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: 'Some items are out of stock and cannot be paid for',
-                    outOfStock
-                },
-                { status: 409 }
-            );
+        let removedItems: Array<{ name: string; variant?: string }> = [];
+        let amount = Number(order.total);
+        let latestMetadata: Record<string, any> = order.metadata || {};
+
+        if (outOfStockItems.length > 0) {
+            // If every item is out of stock, refuse — there is nothing left to pay for.
+            if (outOfStockItems.length >= orderItems.length) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        all_out_of_stock: true,
+                        message: 'All items in this order are out of stock and cannot be paid for.',
+                        outOfStock: outOfStockItems.map(i => ({ name: i.name, variant: i.variant }))
+                    },
+                    { status: 409 }
+                );
+            }
+
+            // Auto-remove the out-of-stock line items from the order.
+            const removeIds = outOfStockItems.map(i => i.id);
+            const { error: deleteErr } = await supabaseAdmin
+                .from('order_items')
+                .delete()
+                .in('id', removeIds);
+
+            if (deleteErr) {
+                console.error('[Payment] Failed to remove OOS items:', deleteErr.message);
+                return NextResponse.json(
+                    { success: false, message: 'Some items are out of stock. Please try again.' },
+                    { status: 500 }
+                );
+            }
+
+            // Recompute totals from the remaining items.
+            const remaining = orderItems.filter(i => !removeIds.includes(i.id));
+            const newSubtotal = remaining.reduce((sum, i) => sum + Number(i.total_price ?? 0), 0);
+            const newTotal = newSubtotal; // shipping/tax/discount are already 0 for current flow
+
+            const updatedMetadata = {
+                ...latestMetadata,
+                auto_removed_items: [
+                    ...((latestMetadata.auto_removed_items as any[]) || []),
+                    ...outOfStockItems.map(i => ({
+                        name: i.name,
+                        variant: i.variant ?? null,
+                        removed_at: new Date().toISOString(),
+                        reason: 'out_of_stock_at_payment'
+                    }))
+                ]
+            };
+
+            const { error: updateErr } = await supabaseAdmin
+                .from('orders')
+                .update({
+                    subtotal: newSubtotal,
+                    total: newTotal,
+                    metadata: updatedMetadata
+                })
+                .eq('id', order.id);
+
+            if (updateErr) {
+                console.error('[Payment] Failed to update order totals after OOS removal:', updateErr.message);
+                return NextResponse.json(
+                    { success: false, message: 'Could not recalculate order. Please try again.' },
+                    { status: 500 }
+                );
+            }
+
+            removedItems = outOfStockItems.map(i => ({ name: i.name, variant: i.variant }));
+            amount = newTotal;
+            latestMetadata = updatedMetadata;
         }
 
-        // Don't allow payment for already-paid orders
-        if (order.payment_status === 'paid') {
-            return NextResponse.json({ success: false, message: 'Order is already paid' }, { status: 400 });
-        }
-
-        // Use the database amount, NOT the client-provided amount
-        const amount = Number(order.total);
         if (!amount || amount <= 0) {
             return NextResponse.json({ success: false, message: 'Invalid order amount' }, { status: 400 });
         }
@@ -194,7 +260,7 @@ export async function POST(req: Request) {
                 .from('orders')
                 .update({
                     metadata: {
-                        ...(order.metadata || {}),
+                        ...latestMetadata,
                         moolre_externalref: uniqueRef,
                         moolre_reference: result.data.reference || null
                     }
@@ -207,7 +273,13 @@ export async function POST(req: Request) {
                 console.log('[Payment] Stored externalref:', uniqueRef, 'for order:', orderRef);
             }
 
-            return NextResponse.json({ success: true, url: result.data.authorization_url, reference: result.data.reference });
+            return NextResponse.json({
+                success: true,
+                url: result.data.authorization_url,
+                reference: result.data.reference,
+                amount,
+                removedItems
+            });
         } else {
             return NextResponse.json({ success: false, message: result.message || 'Failed to generate payment link' }, { status: 400 });
         }

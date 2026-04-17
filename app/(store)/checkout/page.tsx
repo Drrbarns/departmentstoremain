@@ -262,7 +262,6 @@ export default function CheckoutPage() {
       if (paymentMethod === 'moolre') {
         try {
           // Payment link reminder will be sent automatically after 15 mins if unpaid (via cron)
-
           const paymentRes = await fetch('/api/payment/moolre', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -273,10 +272,41 @@ export default function CheckoutPage() {
             })
           });
 
-          const paymentResult = await paymentRes.json();
+          let paymentResult: any = null;
+          try {
+            paymentResult = await paymentRes.json();
+          } catch {
+            throw new Error(`Payment gateway returned an invalid response (${paymentRes.status})`);
+          }
 
-          if (!paymentResult.success) {
-            throw new Error(paymentResult.message || 'Payment initialization failed');
+          // Special case: every item went out of stock between cart and payment.
+          // Send the customer to the dedicated pay page where the issue is shown.
+          if (paymentResult?.all_out_of_stock) {
+            clearCart();
+            router.push(`/pay/${orderNumber}?stock=empty`);
+            return;
+          }
+
+          if (!paymentRes.ok || !paymentResult?.success) {
+            throw new Error(paymentResult?.message || 'Payment initialization failed');
+          }
+
+          // If the server auto-removed any out-of-stock items, let the customer know
+          // briefly before the redirect so the new total is not a surprise.
+          if (Array.isArray(paymentResult.removedItems) && paymentResult.removedItems.length > 0) {
+            const lines = paymentResult.removedItems
+              .map((it: { name: string; variant?: string }) =>
+                `• ${it.name}${it.variant ? ` — ${it.variant}` : ''}`
+              )
+              .join('\n');
+            const newTotal = typeof paymentResult.amount === 'number'
+              ? `GH₵ ${paymentResult.amount.toFixed(2)}`
+              : 'the updated amount';
+            alert(
+              `Some items went out of stock and were removed from your order:\n\n${lines}\n\n` +
+              `You'll be charged ${newTotal} for the remaining items. ` +
+              `If you'd like the removed items, please reach out to our support team.`
+            );
           }
 
           // Clear cart before redirecting
@@ -288,8 +318,10 @@ export default function CheckoutPage() {
 
         } catch (paymentErr: any) {
           console.error('Payment Error:', paymentErr);
-          alert('Failed to initialize payment: ' + paymentErr.message);
-          setIsLoading(false);
+          // Do not lose the created order on transient network/payment init errors.
+          // Send customer to hosted payment retry page for this order instead.
+          clearCart();
+          router.push(`/pay/${orderNumber}?init=failed`);
           return; // Stop execution
         }
       }
