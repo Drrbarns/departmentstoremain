@@ -359,14 +359,21 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                 // 1. Sync variant rows (update existing, insert new, delete removed)
                 const imageInserts: any[] = [];
                 let existingVariantIds: string[] = [];
+                let existingVariantLabels: Record<string, string> = {};
 
                 if (isEditMode) {
                     const { data: existingVariants, error: existingVariantsError } = await supabase
                         .from('product_variants')
-                        .select('id')
+                        .select('id, name, option1, option2')
                         .eq('product_id', productId);
                     if (existingVariantsError) throw existingVariantsError;
                     existingVariantIds = (existingVariants || []).map((v: any) => v.id).filter(Boolean);
+                    existingVariantLabels = Object.fromEntries(
+                        (existingVariants || []).map((v: any) => [
+                            v.id,
+                            `${v.option1 ?? v.name ?? 'Variant'}${v.option2 ? ` / ${v.option2}` : ''}`
+                        ])
+                    );
                 }
 
                 if (hasVariants) {
@@ -407,6 +414,25 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                         );
                         const removedIds = existingVariantIds.filter(id => !keepIds.has(id));
                         if (removedIds.length > 0) {
+                            // Safety gate: if removing these variants would wipe out every
+                            // existing variant, or if the form is about to delete more than
+                            // 2 at once, ask the admin to confirm first. This prevents a
+                            // stale form state from silently nuking a product's variants.
+                            const wouldDeleteAll = desiredRows.length === 0 || removedIds.length === existingVariantIds.length;
+                            const wouldDeleteMany = removedIds.length > 2;
+                            if (wouldDeleteAll || wouldDeleteMany) {
+                                const names = removedIds
+                                    .map((id) => existingVariantLabels[id] || id.slice(0, 8))
+                                    .join('\n• ');
+                                const ok = window.confirm(
+                                    `You are about to permanently remove ${removedIds.length} variant${removedIds.length === 1 ? '' : 's'} from "${productName}":\n\n• ${names}\n\nPast orders that used these variants will keep their name for shipping, but the variants themselves will be gone. Continue?`
+                                );
+                                if (!ok) {
+                                    setLoading(false);
+                                    return;
+                                }
+                            }
+
                             const { error: clearOrderItemVariantRefsError } = await supabase
                                 .from('order_items')
                                 .update({ variant_id: null })
@@ -458,7 +484,18 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                         }
                     });
                 } else if (isEditMode && existingVariantIds.length > 0) {
-                    // Variants removed completely from product
+                    // Variants removed completely from product — always confirm this one.
+                    const names = existingVariantIds
+                        .map((id) => existingVariantLabels[id] || id.slice(0, 8))
+                        .join('\n• ');
+                    const ok = window.confirm(
+                        `This will permanently remove ALL ${existingVariantIds.length} variant${existingVariantIds.length === 1 ? '' : 's'} from "${productName}":\n\n• ${names}\n\nPast orders that used these variants will keep their name for shipping, but the variants themselves will be gone. Continue?`
+                    );
+                    if (!ok) {
+                        setLoading(false);
+                        return;
+                    }
+
                     const { error: clearOrderItemVariantRefsError } = await supabase
                         .from('order_items')
                         .update({ variant_id: null })
