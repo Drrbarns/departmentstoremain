@@ -4,7 +4,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState } from 'react';
 import CartCountdown from '@/components/CartCountdown';
-import AdvancedCouponSystem from '@/components/AdvancedCouponSystem';
 import { useCart } from '@/context/CartContext';
 import PageHero from '@/components/PageHero';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -12,7 +11,6 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 export default function CartPage() {
   usePageTitle('Shopping Cart');
   const { cart: cartItems, removeFromCart, updateQuantity, subtotal, addToCart } = useCart();
-  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [savedItems, setSavedItems] = useState<any[]>([]);
 
   // Function to move item to saved for later (local state only for now)
@@ -33,29 +31,12 @@ export default function CartPage() {
     }
   };
 
-  const applyCoupon = (coupon: any) => {
-    setAppliedCoupon(coupon);
-  };
-
-  const removeCoupon = () => {
-    setAppliedCoupon(null);
-  };
-
   // Savings calculation is tricky without originalPrice in Context.
   // Assuming 0 for now unless we update Context.
   const savings = 0;
 
-  let couponDiscount = 0;
-  if (appliedCoupon) {
-    if (appliedCoupon.type === 'percentage') {
-      couponDiscount = subtotal * (appliedCoupon.discount / 100);
-    } else {
-      couponDiscount = appliedCoupon.discount;
-    }
-  }
-
   const shipping = subtotal >= 200 ? 0 : 15;
-  const total = subtotal - couponDiscount + shipping;
+  const total = subtotal + shipping;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -206,15 +187,6 @@ export default function CartPage() {
                         <span className="font-semibold">GH₵{subtotal.toFixed(2)}</span>
                       </div>
 
-                      {appliedCoupon && (
-                        <div className="flex justify-between text-blue-700">
-                          <div className="flex items-center space-x-2">
-                            <span>Coupon ({appliedCoupon.code})</span>
-                          </div>
-                          <span className="font-semibold">-GH₵{couponDiscount.toFixed(2)}</span>
-                        </div>
-                      )}
-
                       <div className="flex justify-between text-gray-700">
                         <span>Shipping</span>
                         <span className="font-semibold">{shipping === 0 ? 'FREE' : `GH₵${shipping.toFixed(2)}`}</span>
@@ -233,13 +205,6 @@ export default function CartPage() {
                         <span>GH₵{total.toFixed(2)}</span>
                       </div>
                     </div>
-
-                    <AdvancedCouponSystem
-                      subtotal={subtotal}
-                      onApply={applyCoupon}
-                      onRemove={removeCoupon}
-                      appliedCoupon={appliedCoupon}
-                    />
 
                     <Link
                       href="/checkout"
