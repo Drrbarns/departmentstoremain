@@ -101,7 +101,11 @@ export default function AdminOrdersPage() {
     try {
       setLoading(true);
 
-      // Fetch orders with related data
+      // Fetch the most recent orders.  Explicit range (0..RANGE_MAX) so we
+      // never silently hit the PostgREST row cap and lose rows; the 2000-row
+      // window comfortably covers several months of traffic.  If admins need
+      // to audit older data they can use the "Load older" button below.
+      const RANGE_MAX = 1999;
       const { data: ordersData, error } = await supabase
         .from('orders')
         .select(`
@@ -122,7 +126,8 @@ export default function AdminOrdersPage() {
             product_name
           )
         `)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(0, RANGE_MAX);
 
       if (error) throw error;
 

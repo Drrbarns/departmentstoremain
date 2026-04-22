@@ -122,7 +122,10 @@ export default function ProductsPage() {
       if (sortBy === 'name') query = query.order('name', { ascending: true });
       if (sortBy === 'stock') query = query.order('quantity', { ascending: true });
 
-      const { data, error } = await query;
+      // Explicit row window — PostgREST's default cap would silently truncate
+      // once the catalog grows past ~1k rows.  Use the POS/barcode tools for
+      // data-dump workflows instead of this paginated list.
+      const { data, error } = await query.range(0, 2499);
 
       if (error) throw error;
 
@@ -173,18 +176,28 @@ export default function ProductsPage() {
     }
   };
 
-  const deleteProductWithRelations = async (productIds: string[]) => {
-    // Delete related records first to avoid FK constraint errors
-    await supabase.from('cart_items').delete().in('product_id', productIds);
-    await supabase.from('wishlist_items').delete().in('product_id', productIds);
-    await supabase.from('reviews').delete().in('product_id', productIds);
-    await supabase.from('product_images').delete().in('product_id', productIds);
-    await supabase.from('product_variants').delete().in('product_id', productIds);
-    // Nullify order_items reference instead of deleting (preserve order history)
-    await supabase.from('order_items').update({ product_id: null }).in('product_id', productIds);
-    // Now delete the product(s)
-    const { error } = await supabase.from('products').delete().in('id', productIds);
-    return error;
+  const deleteProductWithRelations = async (productIds: string[]): Promise<{ message: string } | null> => {
+    // Route through the authenticated server endpoint which wraps the
+    // multi-table cleanup in a single SQL transaction and then removes
+    // the associated storage objects.  No more half-deleted products.
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/products/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token ?? ''}`,
+        },
+        body: JSON.stringify({ ids: productIds }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        return { message: body?.error || `Delete failed (${res.status})` };
+      }
+      return null;
+    } catch (err: any) {
+      return { message: err?.message || 'Delete failed' };
+    }
   };
 
   const handleDeleteProduct = async (productId: string) => {

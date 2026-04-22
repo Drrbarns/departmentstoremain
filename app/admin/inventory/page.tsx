@@ -30,7 +30,8 @@ export default function InventoryManagementPage() {
           quantity,
           categories(name)
         `)
-        .order('name');
+        .order('name')
+        .range(0, 2499);
 
       if (error) throw error;
 

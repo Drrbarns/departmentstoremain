@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 import { getOptimizedImageUrl } from '@/lib/imageOptimization';
 
 function OrderSuccessContent() {
@@ -23,21 +22,18 @@ function OrderSuccessContent() {
       }
 
       try {
-        const { data: orderData, error } = await supabase
-          .from('orders')
-          .select(`
-                    *,
-                    order_items (*)
-                `)
-          .eq('order_number', orderNumber)
-          .single();
-
-        if (error) throw error;
+        const res = await fetch(`/api/storefront/orders/${encodeURIComponent(orderNumber)}/summary`, {
+          cache: 'no-store',
+        });
+        if (!res.ok) {
+          setLoading(false);
+          return;
+        }
+        const { order: orderData } = await res.json();
         setOrder(orderData);
 
-        // If redirected from payment and order is still pending, try to verify
         if (paymentSuccess === 'true' && orderData && orderData.payment_status !== 'paid') {
-          verifyPayment(orderNumber, orderData.email, orderData);
+          verifyPayment(orderNumber, orderData.email);
         }
       } catch (err) {
         console.error('Error fetching order:', err);
@@ -49,20 +45,27 @@ function OrderSuccessContent() {
   }, [orderNumber]);
 
   // Payment verification - called when user is redirected from Moolre with payment_success=true
-  const verifyPayment = async (orderNum: string, orderEmail: string, initialOrder: any) => {
+  const verifyPayment = async (orderNum: string, orderEmail: string) => {
     setVerifying(true);
 
-    // Poll: give callback up to ~12 seconds to fire before falling back to verify
+    const fetchSummary = async () => {
+      try {
+        const res = await fetch(`/api/storefront/orders/${encodeURIComponent(orderNum)}/summary`, {
+          cache: 'no-store',
+        });
+        if (!res.ok) return null;
+        const { order: ord } = await res.json();
+        return ord;
+      } catch {
+        return null;
+      }
+    };
+
+    // Poll: give the callback up to ~12 seconds to fire before falling back.
     const pollIntervals = [3000, 4000, 5000];
     for (const delay of pollIntervals) {
       await new Promise(resolve => setTimeout(resolve, delay));
-
-      const { data: refreshed } = await supabase
-        .from('orders')
-        .select('*, order_items (*)')
-        .eq('order_number', orderNum)
-        .single();
-
+      const refreshed = await fetchSummary();
       if (refreshed?.payment_status === 'paid') {
         setOrder(refreshed);
         setVerifying(false);
@@ -70,24 +73,18 @@ function OrderSuccessContent() {
       }
     }
 
-    // Callback hasn't fired after polling — verify via our endpoint
     try {
       const res = await fetch('/api/payment/moolre/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // SECURITY: Email is required by the verify endpoint to confirm ownership
         body: JSON.stringify({ orderNumber: orderNum, email: orderEmail })
       });
-      
+
       const result = await res.json();
       console.log('Payment verification result:', result);
-      
+
       if (result.success && result.payment_status === 'paid') {
-        const { data: updated } = await supabase
-          .from('orders')
-          .select('*, order_items (*)')
-          .eq('order_number', orderNum)
-          .single();
+        const updated = await fetchSummary();
         if (updated) setOrder(updated);
       }
     } catch (err) {
