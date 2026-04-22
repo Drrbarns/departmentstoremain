@@ -1,5 +1,8 @@
-// Discount Discovery Zone - Service Worker v4.0 (favicon hard-reset)
-const CACHE_VERSION = 'ddz-v4.0-favicon-reset';
+// Discount Discovery Zone - Service Worker v5.0
+//   v5: stop caching storefront APIs & HTML navigations to avoid
+//       serving stale prices/stock/orders.  Images + /_next/static
+//       are still cache-first since they are content-hashed and safe.
+const CACHE_VERSION = 'ddz-v5.0-no-api-html-cache';
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `images-${CACHE_VERSION}`;
@@ -129,29 +132,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Strategy: Storefront API - Network First with cache fallback (short TTL)
-  if (url.pathname.startsWith('/api/storefront')) {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const responseClone = response.clone();
-            caches.open(API_CACHE).then((cache) => {
-              cache.put(request, responseClone);
-              trimCache(API_CACHE, API_CACHE_LIMIT);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          return caches.match(request).then((cached) => {
-            return cached || new Response(JSON.stringify({ error: 'Offline' }), {
-              headers: { 'Content-Type': 'application/json' }
-            });
-          });
-        })
-    );
-    return;
+  // Strategy: API routes - network-only.  Prices, stock, orders, and
+  // auth tokens change constantly; stale responses here cause real bugs
+  // (customers seeing an old cart, out-of-stock items, other people's
+  // order tracking results, etc.).
+  if (url.pathname.startsWith('/api/')) {
+    return; // let the browser handle it directly, no SW caching
   }
 
   // Strategy: Static assets (JS, CSS, fonts) - Cache First
@@ -176,25 +162,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Strategy: Pages - Network First with cache fallback
+  // Strategy: Pages — network-only with an offline fallback.
+  // We deliberately DO NOT cache HTML responses because they embed the
+  // current cart, session hints, and freshly-rendered product prices.
+  // Serving a cached HTML can show yesterday's data to today's customer.
   if (request.mode === 'navigate' || request.headers.get('accept')?.includes('text/html')) {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const responseClone = response.clone();
-            caches.open(DYNAMIC_CACHE).then((cache) => {
-              cache.put(request, responseClone);
-              trimCache(DYNAMIC_CACHE, DYNAMIC_CACHE_LIMIT);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          return caches.match(request).then((cached) => {
-            return cached || caches.match('/offline');
-          });
-        })
+      fetch(request).catch(() => caches.match('/offline'))
     );
     return;
   }

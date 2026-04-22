@@ -40,7 +40,7 @@ export async function POST(request: Request) {
         // campaign = marketing HTML — admin + full staff only
         const fullStaffOnlyTypes = ['campaign'];
         // Order workflows — POS / orders staff need these
-        const adminPanelTypes = ['order_updated', 'order_status', 'payment_link'];
+        const adminPanelTypes = ['order_updated', 'order_status', 'payment_link', 'pos_receipt_sms'];
         const requiresFullStaffAuth = fullStaffOnlyTypes.includes(type);
         const requiresAdminPanelAuth =
             requiresFullStaffAuth || adminPanelTypes.includes(type);
@@ -215,13 +215,20 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: true, message: 'Payment link sent' });
         }
 
-        // POS receipt SMS (order must exist, recent, with phone)
+        // POS receipt SMS (order must exist, recent, with phone).
+        // Admin-auth gate applied above via adminPanelTypes.
         if (type === 'pos_receipt_sms') {
             if (!payload.order_number && !payload.id) {
                 return NextResponse.json({ error: 'Missing order identifier' }, { status: 400 });
             }
 
             const orderRef = String(payload.order_number || payload.id);
+            const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            const ORDER_NUMBER_RE = /^ORD-\d+-\d+$/;
+            if (!UUID_RE.test(orderRef) && !ORDER_NUMBER_RE.test(orderRef)) {
+                return NextResponse.json({ error: 'Invalid order reference' }, { status: 400 });
+            }
+
             const result = await sendPosReceiptSmsByOrderRef(orderRef);
             if (!result.ok) {
                 if (result.error === 'Order not found') {

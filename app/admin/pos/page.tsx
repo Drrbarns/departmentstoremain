@@ -449,15 +449,26 @@ export default function POSPage() {
 
             if (itemsError) throw itemsError;
 
-            // For paid POS checkouts (cash/card), reduce inventory immediately.
-            // mark_order_paid is idempotent and sets metadata.stock_reduced.
+            // For paid POS checkouts (cash/card), reduce inventory immediately
+            // through the authenticated admin route.  The mark_order_paid RPC
+            // is locked down (no public EXECUTE) so we can only reach it with
+            // a staff access token.
             if (isCashOrCard) {
-                const { error: stockError } = await supabase.rpc('mark_order_paid', {
-                    order_ref: orderNumber,
-                    moolre_ref: `pos-${paymentMethod}-${Date.now()}`
+                const { data: { session } } = await supabase.auth.getSession();
+                const res = await fetch('/api/admin/orders/mark-paid', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${session?.access_token ?? ''}`,
+                    },
+                    body: JSON.stringify({
+                        orderNumber,
+                        reference: `pos-${paymentMethod}-${Date.now()}`,
+                    }),
                 });
-                if (stockError) {
-                    throw new Error(`Stock update failed: ${stockError.message}`);
+                if (!res.ok) {
+                    const body = await res.json().catch(() => ({}));
+                    throw new Error(body?.error || 'Stock update failed');
                 }
             }
 
@@ -493,27 +504,23 @@ export default function POSPage() {
                 }
             }
 
-            // 4. If Cash or Card — mark as paid, reduce stock
+            // 4. Cash/card already marked as paid above (stock already reduced).
+            //    The RPC is idempotent via metadata.stock_reduced so this
+            //    previous double-call is no longer needed.
             if (isCashOrCard) {
-                // Call mark_order_paid to reduce stock (uses order_number as order_ref)
-                try {
-                    await supabase.rpc('mark_order_paid', {
-                        order_ref: orderNumber,
-                        moolre_ref: `POS-${paymentMethod.toUpperCase()}-${Date.now()}`
-                    });
-                } catch (stockErr) {
-                    console.error('Stock reduction error (non-fatal):', stockErr);
-                }
-
                 setCart([]);
 
                 // Receipt SMS for every POS sale when a customer phone is present
                 let receiptSmsNote: string | null = null;
                 if (customerPhone?.trim()) {
                     try {
+                        const { data: { session: smsSession } } = await supabase.auth.getSession();
                         const smsRes = await fetch('/api/notifications', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${smsSession?.access_token ?? ''}`,
+                            },
                             body: JSON.stringify({
                                 type: 'pos_receipt_sms',
                                 payload: { order_number: orderNumber }

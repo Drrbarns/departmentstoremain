@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
 export default function PaymentPage() {
@@ -26,16 +25,27 @@ export default function PaymentPage() {
   useEffect(() => {
     async function fetchOrder() {
       try {
-        // Fetch order by ID (UUID) or order_number
-        let query = supabase
-          .from('orders')
-          .select('*')
-          .or(`id.eq.${orderId},order_number.eq.${orderId}`)
-          .single();
+        // SECURITY: Fetch via server route that only returns payment-summary fields.
+        // The direct supabase query here was leaking full order PII via RLS.
+        const res = await fetch(`/api/storefront/orders/${encodeURIComponent(orderId)}/payment-summary`, {
+          method: 'GET',
+          cache: 'no-store',
+        });
 
-        const { data, error: fetchError } = await query;
+        if (res.status === 404) {
+          setError('Order not found. Please check your link and try again.');
+          setLoading(false);
+          return;
+        }
 
-        if (fetchError || !data) {
+        if (!res.ok) {
+          setError('Failed to load order details.');
+          setLoading(false);
+          return;
+        }
+
+        const { order: data } = await res.json();
+        if (!data) {
           setError('Order not found. Please check your link and try again.');
           setLoading(false);
           return;
@@ -43,13 +53,11 @@ export default function PaymentPage() {
 
         setOrder(data);
 
-        // If already paid, redirect to success page
         if (data.payment_status === 'paid') {
           router.push(`/order-success?order=${data.order_number}`);
           return;
         }
 
-        // Validate that all items are still in stock
         const stockRes = await fetch(`/api/orders/${data.id}/validate-stock`);
         if (stockRes.ok) {
           const stockData = await stockRes.json();
@@ -79,13 +87,12 @@ export default function PaymentPage() {
     setRemovedNotice(null);
 
     try {
+      // The server re-reads amount and email from the DB — we only need orderId.
       const paymentRes = await fetch('/api/payment/moolre', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orderId: order.order_number,
-          amount: order.total,
-          customerEmail: order.email
         })
       });
 

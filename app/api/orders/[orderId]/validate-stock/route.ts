@@ -21,12 +21,23 @@ export async function GET(
         return NextResponse.json({ error: 'Order ID required' }, { status: 400 });
     }
 
-    // Resolve order (accepts UUID or order_number)
+    // SECURITY: validate format up front so we don't interpolate arbitrary
+    // input into a PostgREST filter (`.or()` treats commas as separators).
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const ORDER_NUMBER_RE = /^ORD-\d+-\d+$/;
+    const raw = orderId.trim();
+
+    if (!UUID_RE.test(raw) && !ORDER_NUMBER_RE.test(raw)) {
+        return NextResponse.json({ error: 'Invalid order reference' }, { status: 400 });
+    }
+
+    const column = UUID_RE.test(raw) ? 'id' : 'order_number';
+
     const { data: order, error: orderError } = await supabaseAdmin
         .from('orders')
         .select('id, payment_status')
-        .or(`id.eq.${orderId},order_number.eq.${orderId}`)
-        .single();
+        .eq(column, raw)
+        .maybeSingle();
 
     if (orderError || !order) {
         return NextResponse.json({ error: 'Order not found' }, { status: 404 });

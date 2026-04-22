@@ -242,7 +242,16 @@ export default function CheckoutPage() {
         .from('order_items')
         .insert(orderItems);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        // Compensating delete — an order row with zero line items is a
+        // dead record that confuses admins and blocks payment flows.
+        try {
+          await supabase.from('orders').delete().eq('id', order.id);
+        } catch (cleanupErr) {
+          console.error('[Checkout] Failed to clean up empty order', order.id, cleanupErr);
+        }
+        throw itemsError;
+      }
 
       // Note: Stock reduction happens in mark_order_paid when payment is confirmed
 

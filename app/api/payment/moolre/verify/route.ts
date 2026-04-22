@@ -29,6 +29,21 @@ export async function POST(req: Request) {
             );
         }
 
+        // SECURITY: Require same-origin request so a leaked (order_number, email)
+        // pair can't be abused cross-site or by a script on another domain.
+        const origin = req.headers.get('origin') || '';
+        const host = req.headers.get('host') || '';
+        const allowedOrigins = [
+            process.env.NEXT_PUBLIC_APP_URL,
+            process.env.NEXT_PUBLIC_SITE_URL,
+            host ? `https://${host}` : null,
+            host ? `http://${host}` : null,
+        ].filter(Boolean) as string[];
+        if (origin && !allowedOrigins.some((o) => origin === o)) {
+            console.warn('[Verify] Rejected cross-origin request from:', origin);
+            return NextResponse.json({ success: false, message: 'Cross-origin requests not allowed' }, { status: 403 });
+        }
+
         const body = await req.json();
         const { orderNumber, email } = body;
 

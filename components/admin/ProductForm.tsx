@@ -509,15 +509,6 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                     if (deleteAllVariantsError) throw deleteAllVariantsError;
                 }
 
-                // Always rebuild product_images for consistency (variant + product-level)
-                if (isEditMode) {
-                    const { error: deleteImagesError } = await supabase
-                        .from('product_images')
-                        .delete()
-                        .eq('product_id', productId);
-                    if (deleteImagesError) throw deleteImagesError;
-                }
-
                 // 2. Product-level images
                 images.forEach((img, idx) => {
                     imageInserts.push({
@@ -529,7 +520,61 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                     });
                 });
 
-                if (imageInserts.length > 0) {
+                // SAFE IMAGE SYNC: diff against existing rows instead of the
+                // old "delete-all-then-insert" pattern, which would wipe a
+                // product's images entirely if the insert failed midway.
+                //
+                //   - keepKey = `${variant_id ?? 'null'}::${url}`
+                //   - existing rows with a matching key stay put (and their
+                //     position/alt_text is refreshed in-place).
+                //   - existing rows whose key is no longer desired are removed.
+                //   - new desired rows that don't exist yet are inserted.
+                const keyOf = (v: string | null | undefined, u: string) => `${v ?? 'null'}::${u}`;
+                const desiredKeys = new Set(imageInserts.map(i => keyOf(i.variant_id, i.url)));
+
+                if (isEditMode) {
+                    const { data: existingImgs } = await supabase
+                        .from('product_images')
+                        .select('id, url, variant_id')
+                        .eq('product_id', productId);
+
+                    const existingByKey = new Map<string, { id: string }>();
+                    for (const img of existingImgs ?? []) {
+                        existingByKey.set(keyOf(img.variant_id, img.url), { id: img.id });
+                    }
+
+                    const toDelete = (existingImgs ?? [])
+                        .filter(img => !desiredKeys.has(keyOf(img.variant_id, img.url)))
+                        .map(img => img.id);
+
+                    const toInsert = imageInserts.filter(i => !existingByKey.has(keyOf(i.variant_id, i.url)));
+                    const toUpdate = imageInserts
+                        .filter(i => existingByKey.has(keyOf(i.variant_id, i.url)))
+                        .map(i => ({
+                            id: existingByKey.get(keyOf(i.variant_id, i.url))!.id,
+                            position: i.position,
+                            alt_text: i.alt_text,
+                        }));
+
+                    if (toInsert.length > 0) {
+                        const { error: insErr } = await supabase.from('product_images').insert(toInsert);
+                        if (insErr) throw insErr;
+                    }
+                    for (const row of toUpdate) {
+                        const { error: updErr } = await supabase
+                            .from('product_images')
+                            .update({ position: row.position, alt_text: row.alt_text })
+                            .eq('id', row.id);
+                        if (updErr) throw updErr;
+                    }
+                    if (toDelete.length > 0) {
+                        const { error: delErr } = await supabase
+                            .from('product_images')
+                            .delete()
+                            .in('id', toDelete);
+                        if (delErr) throw delErr;
+                    }
+                } else if (imageInserts.length > 0) {
                     const { error: imgError } = await supabase.from('product_images').insert(imageInserts);
                     if (imgError) throw imgError;
                 }

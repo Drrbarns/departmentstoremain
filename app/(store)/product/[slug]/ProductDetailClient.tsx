@@ -14,6 +14,7 @@ import { useCart } from '@/context/CartContext';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { getShopListingReturnHref } from '@/lib/shopListingReturn';
 import ProductShareControls from '@/components/ProductShareControls';
+import { PUBLIC_SITE_DOMAIN } from '@/lib/brand-contact';
 
 // Map common color names to hex values for the swatch preview
 function colorNameToHex(name: string): string {
@@ -312,11 +313,12 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
     category: product.category
   });
 
+  const siteOrigin = `https://${PUBLIC_SITE_DOMAIN}`;
   const breadcrumbSchema = generateBreadcrumbSchema([
-    { name: 'Home', url: 'https://standardecom.com' },
-    { name: 'Shop', url: 'https://standardecom.com/shop' },
-    { name: product.category, url: `https://standardecom.com/shop?category=${product.category.toLowerCase().replace(/\s+/g, '-')}` },
-    { name: product.name, url: `https://standardecom.com/product/${slug}` }
+    { name: 'Home', url: siteOrigin },
+    { name: 'Shop', url: `${siteOrigin}/shop` },
+    { name: product.category, url: `${siteOrigin}/shop?category=${product.category.toLowerCase().replace(/\s+/g, '-')}` },
+    { name: product.name, url: `${siteOrigin}/product/${slug}` }
   ]);
 
   return (

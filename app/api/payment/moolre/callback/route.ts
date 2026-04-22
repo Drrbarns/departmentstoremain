@@ -76,29 +76,28 @@ export async function POST(req: Request) {
         const data = body.data || {};
 
         // ============================================================
-        // SECURITY: Verify callback secret FIRST (mandatory)
+        // SECURITY: Verify callback secret FIRST (mandatory, fail-closed)
         // ============================================================
         const expectedSecret = process.env.MOOLRE_CALLBACK_SECRET;
-        const providedSecret = body.secret ?? data.secret;
-        if (expectedSecret) {
-            // SECURITY: Use timing-safe comparison to prevent timing attacks
-            let secretMatch = false;
-            try {
-                const a = Buffer.from(String(providedSecret || ''), 'utf8');
-                const b = Buffer.from(expectedSecret, 'utf8');
-                secretMatch = a.length === b.length && require('crypto').timingSafeEqual(a, b);
-            } catch {
-                secretMatch = false;
-            }
-            if (!providedSecret || !secretMatch) {
-                // SECURITY: Never log any part of the secret — even partial values can aid brute-force
-                console.error('[Callback] Secret mismatch — rejecting callback');
-                return NextResponse.json({ success: false, message: 'Invalid callback signature' }, { status: 403 });
-            }
-            console.log('[Callback] Secret verified OK');
-        } else {
-            console.warn('[Callback] WARNING: MOOLRE_CALLBACK_SECRET not configured. Callback origin cannot be verified.');
+        if (!expectedSecret) {
+            console.error('[Callback] CRITICAL: MOOLRE_CALLBACK_SECRET not configured — rejecting all callbacks until fixed');
+            return NextResponse.json({ success: false, message: 'Callback verification is not configured' }, { status: 503 });
         }
+
+        const providedSecret = body.secret ?? data.secret;
+        let secretMatch = false;
+        try {
+            const a = Buffer.from(String(providedSecret || ''), 'utf8');
+            const b = Buffer.from(expectedSecret, 'utf8');
+            secretMatch = a.length === b.length && require('crypto').timingSafeEqual(a, b);
+        } catch {
+            secretMatch = false;
+        }
+        if (!providedSecret || !secretMatch) {
+            console.error('[Callback] Secret mismatch — rejecting callback');
+            return NextResponse.json({ success: false, message: 'Invalid callback signature' }, { status: 403 });
+        }
+        console.log('[Callback] Secret verified OK');
 
         // ============================================================
         // EXTRACT FIELDS - Moolre nests payment data inside body.data
@@ -176,18 +175,24 @@ export async function POST(req: Request) {
             }
 
             // ============================================================
-            // SECURITY: Verify amount matches — REJECT if mismatch
+            // SECURITY: Amount must be present AND match — REJECT otherwise
             // ============================================================
-            const callbackAmount = data.amount ? parseFloat(data.amount) : (body.amount ? parseFloat(body.amount) : null);
-            if (callbackAmount !== null) {
-                const expectedAmount = Number(existingOrder.total);
-                if (Math.abs(callbackAmount - expectedAmount) > 0.01) {
-                    console.error('[Callback] AMOUNT MISMATCH — REJECTING! Expected:', expectedAmount, 'Got:', callbackAmount, 'Order:', merchantOrderRef);
-                    return NextResponse.json({
-                        success: false,
-                        message: 'Payment amount does not match order total'
-                    }, { status: 400 });
-                }
+            const rawCallbackAmount = data.amount ?? body.amount ?? data.value ?? body.value;
+            const callbackAmount = rawCallbackAmount != null ? parseFloat(String(rawCallbackAmount)) : NaN;
+            if (!Number.isFinite(callbackAmount)) {
+                console.error('[Callback] AMOUNT MISSING — REJECTING! Order:', merchantOrderRef);
+                return NextResponse.json({
+                    success: false,
+                    message: 'Payment amount missing from callback'
+                }, { status: 400 });
+            }
+            const expectedAmount = Number(existingOrder.total);
+            if (Math.abs(callbackAmount - expectedAmount) > 0.01) {
+                console.error('[Callback] AMOUNT MISMATCH — REJECTING! Expected:', expectedAmount, 'Got:', callbackAmount, 'Order:', merchantOrderRef);
+                return NextResponse.json({
+                    success: false,
+                    message: 'Payment amount does not match order total'
+                }, { status: 400 });
             }
 
             // Mark order as paid via RPC
@@ -271,6 +276,7 @@ export async function POST(req: Request) {
     }
 }
 
-export async function GET(_req: Request) {
-    return NextResponse.json({ message: 'Moolre callback endpoint ready', timestamp: new Date().toISOString() });
+export async function GET() {
+    // Return 405 rather than exposing a "ready" probe that helps attackers fingerprint the endpoint.
+    return new NextResponse(null, { status: 405, headers: { Allow: 'POST' } });
 }

@@ -29,28 +29,59 @@ export default function AnalyticsPage() {
     fetchAnalytics();
   }, [timeRange]);
 
-  const getPeriodBounds = () => {
-    const now = new Date();
-    const start = new Date(now);
-    const end = new Date(now);
+  // Business timezone — all day/week/month boundaries are computed here so
+  // reports line up with the store's operating hours regardless of where
+  // the admin's browser is.
+  const STORE_TIMEZONE = 'Africa/Accra';
 
-    if (timeRange === 'day') {
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
-    } else if (timeRange === 'week') {
-      // Monday-based week for business reporting
-      const day = now.getDay(); // 0 = Sun ... 6 = Sat
-      const diffToMonday = day === 0 ? 6 : day - 1;
-      start.setDate(now.getDate() - diffToMonday);
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
-    } else {
-      start.setDate(1);
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
+  const getPeriodBounds = () => {
+    // Build the store-local "today" components by formatting now in the
+    // store timezone.  Then construct a UTC Date from those components and
+    // offset by the store's current UTC offset so the ISO value we send
+    // to Postgres is correct.
+    const now = new Date();
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: STORE_TIMEZONE,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+    }).formatToParts(now).reduce<Record<string, string>>((acc, p) => {
+      if (p.type !== 'literal') acc[p.type] = p.value;
+      return acc;
+    }, {});
+
+    const year = Number(parts.year);
+    const month = Number(parts.month); // 1-12
+    const day = Number(parts.day);
+    const dow = new Date(Date.UTC(year, month - 1, day)).getUTCDay(); // 0 = Sun
+
+    let startY = year, startM = month, startD = day;
+    if (timeRange === 'week') {
+      const diffToMonday = dow === 0 ? 6 : dow - 1;
+      const base = new Date(Date.UTC(year, month - 1, day - diffToMonday));
+      startY = base.getUTCFullYear();
+      startM = base.getUTCMonth() + 1;
+      startD = base.getUTCDate();
+    } else if (timeRange === 'month') {
+      startD = 1;
     }
 
-    return { start, end };
+    // Resolve the UTC offset of the store at this instant so we can convert
+    // the local "midnight" / "end-of-day" back to UTC for the DB query.
+    const offsetMinutes = (() => {
+      const nowStr = new Intl.DateTimeFormat('en-US', { timeZone: STORE_TIMEZONE, timeZoneName: 'shortOffset' })
+        .formatToParts(now).find(p => p.type === 'timeZoneName')?.value ?? 'GMT';
+      const match = /GMT([+-])(\d{1,2})(?::(\d{2}))?/.exec(nowStr);
+      if (!match) return 0; // Africa/Accra = GMT+0 all year
+      const sign = match[1] === '-' ? -1 : 1;
+      const h = Number(match[2] ?? 0);
+      const m = Number(match[3] ?? 0);
+      return sign * (h * 60 + m);
+    })();
+
+    const utcStart = new Date(Date.UTC(startY, startM - 1, startD, 0, 0, 0, 0) - offsetMinutes * 60_000);
+    const utcEnd = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999) - offsetMinutes * 60_000);
+
+    return { start: utcStart, end: utcEnd };
   };
 
   const periodLabel =
