@@ -1,4 +1,8 @@
 import { Metadata } from 'next';
+import { PUBLIC_CONTACT_PHONE, PUBLIC_SITE_DOMAIN } from '@/lib/brand-contact';
+
+const SITE_URL = `https://${PUBLIC_SITE_DOMAIN.replace(/^www\./, '')}`;
+const SITE_NAME = 'Discount Discovery Zone';
 
 interface SEOProps {
   title?: string;
@@ -29,8 +33,8 @@ export function generateMetadata({
   author,
   noindex = false
 }: SEOProps): Metadata {
-  const siteName = 'PremiumShop Ghana';
-  const siteUrl = 'https://premiumshop.com';
+  const siteName = SITE_NAME;
+  const siteUrl = SITE_URL;
   const fullTitle = title.includes(siteName) ? title : `${title} | ${siteName}`;
 
   const defaultKeywords = [
@@ -114,7 +118,7 @@ export function generateProductSchema(product: {
     sku: product.sku,
     brand: {
       '@type': 'Brand',
-      name: product.brand || 'PremiumShop'
+      name: product.brand || SITE_NAME
     },
     offers: {
       '@type': 'Offer',
@@ -162,12 +166,11 @@ export function generateOrganizationSchema() {
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'PremiumShop Ghana',
-    url: 'https://premiumshop.com',
-    logo: 'https://readdy.ai/api/search-image?query=premium%20shop%20logo%20elegant%20modern&width=200&height=200&seq=logo&orientation=squarish',
+    name: SITE_NAME,
+    url: SITE_URL,
     contactPoint: {
       '@type': 'ContactPoint',
-      telephone: '+233-XX-XXX-XXXX',
+      telephone: PUBLIC_CONTACT_PHONE,
       contactType: 'Customer Service',
       areaServed: 'GH',
       availableLanguage: ['English']
@@ -180,13 +183,13 @@ export function generateWebsiteSchema() {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'PremiumShop Ghana',
-    url: 'https://premiumshop.com',
+    name: SITE_NAME,
+    url: SITE_URL,
     potentialAction: {
       '@type': 'SearchAction',
       target: {
         '@type': 'EntryPoint',
-        urlTemplate: 'https://premiumshop.com/shop?search={search_term_string}'
+        urlTemplate: `${SITE_URL}/shop?search={search_term_string}`
       },
       'query-input': 'required name=search_term_string'
     }

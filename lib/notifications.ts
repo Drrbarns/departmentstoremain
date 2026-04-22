@@ -6,7 +6,7 @@ import { getPublicSiteUrl } from '@/lib/site-url';
 import { PUBLIC_CONTACT_PHONE } from '@/lib/brand-contact';
 
 const resend = new Resend(process.env.RESEND_API_KEY || 'missing_api_key');
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@standardecom.com';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'info@discountdiscoveryzone.com';
 const ADMIN_PHONE = process.env.ADMIN_PHONE || '';
 const ADMIN_PHONES = Array.from(
     new Set(

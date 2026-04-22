@@ -190,33 +190,47 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
       // Only send if status changed OR tracking number was added/changed
       const trackingChanged = trackingNumber !== order.metadata?.tracking_number;
 
+      let notificationWarning: string | null = null;
       if (statusChanged || (trackingChanged && trackingNumber)) {
-        // Get auth token for notification API
         const { data: { session } } = await supabase.auth.getSession();
         const authToken = session?.access_token;
 
-        fetch('/api/notifications', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(authToken && { 'Authorization': `Bearer ${authToken}` })
-          },
-          body: JSON.stringify({
-            type: 'order_status',
-            payload: {
-              email: order.email,
-              name: customerName,
-              orderId: orderId,
-              orderNumber: order.order_number || orderId,
-              status: statusToUpdate,
-              trackingNumber: trackingNumber,
-              phone: shippingAddress.phone || order.phone // Ensure phone is passed for SMS
-            }
-          })
-        }).catch(err => console.error('Notification error:', err));
+        try {
+          const notifRes = await fetch('/api/notifications', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+            },
+            body: JSON.stringify({
+              type: 'order_status',
+              payload: {
+                email: order.email,
+                name: customerName,
+                orderId: orderId,
+                orderNumber: order.order_number || orderId,
+                status: statusToUpdate,
+                trackingNumber: trackingNumber,
+                phone: shippingAddress.phone || order.phone
+              }
+            })
+          });
+          if (!notifRes.ok) {
+            const body = await notifRes.json().catch(() => ({}));
+            notificationWarning = `Order saved, but customer notification failed (${notifRes.status}): ${(body && (body as { error?: string }).error) || 'unknown error'}`;
+            console.error('[OrderDetail] Notification non-2xx:', notifRes.status, body);
+          }
+        } catch (err: any) {
+          notificationWarning = `Order saved, but notification could not be sent: ${err?.message || 'network error'}`;
+          console.error('[OrderDetail] Notification threw:', err);
+        }
       }
 
-      alert('Order updated successfully');
+      alert(
+        notificationWarning
+          ? `Order updated, but the customer was not notified.\n\n${notificationWarning}`
+          : 'Order updated successfully'
+      );
       setShowStatusMenu(false);
     } catch (err) {
       console.error('Error updating order:', err);
