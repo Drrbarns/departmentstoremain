@@ -145,127 +145,55 @@ export default function CheckoutPage() {
       const trackingId = Array.from({ length: 6 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
       const trackingNumber = `SLI-${trackingId}`;
 
-      // 1. Create Order
-      const preferredDate =
-        typeof shippingData.preferredDate === 'string' && shippingData.preferredDate.trim()
-          ? shippingData.preferredDate.trim()
-          : null;
-
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert([{
-          order_number: orderNumber,
-          user_id: user?.id || null, // Capture user_id if logged in
+      // 1. Create the order + items server-side.  Guests can't insert rows
+      // into `orders` directly because RLS requires the inserted row to
+      // pass a SELECT policy for `RETURNING` to succeed, and we intentionally
+      // removed the permissive guest-SELECT policy to stop PII enumeration.
+      // The server route uses the service role to do this atomically.
+      const createRes = await fetch('/api/storefront/orders/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderNumber,
+          trackingNumber,
+          userId: user?.id || null,
           email: shippingData.email,
           phone: shippingData.phone,
-          status: 'pending',
-          payment_status: 'pending',
+          shippingData,
+          deliveryMethod,
+          paymentMethod,
           currency: 'GHS',
-          subtotal: subtotal,
-          tax_total: tax,
-          shipping_total: shippingCost,
-          discount_total: 0,
-          total: total,
-          shipping_method: deliveryMethod,
-          payment_method: paymentMethod,
-          shipping_address: shippingData,
-          billing_address: shippingData, // Using same for now
-          metadata: {
-            guest_checkout: !user,
-            first_name: shippingData.firstName,
-            last_name: shippingData.lastName,
-            tracking_number: trackingNumber,
-            ...(preferredDate ? { customer_preferred_date: preferredDate } : {})
-          }
-        }])
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      // 2. Create Order Items (with UUID validation)
-      // Helper to check if string is a valid UUID
-      const isValidUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
-      
-      // Build order items, resolving slugs to UUIDs if needed
-      const orderItems = [];
-      
-      // Batch-fetch product metadata (for preorder_shipping etc.)
-      const productIds = cart.map(item => item.id).filter(id => isValidUUID(id));
-      const { data: productsData } = productIds.length > 0
-        ? await supabase.from('products').select('id, metadata').in('id', productIds)
-        : { data: [] };
-      const productMetaMap = new Map((productsData || []).map((p: any) => [p.id, p.metadata]));
-      
-      for (const item of cart) {
-        let productId = item.id;
-        
-        // If id is not a valid UUID, it might be a slug - try to resolve it
-        if (!isValidUUID(productId)) {
-          const { data: product } = await supabase
-            .from('products')
-            .select('id, metadata')
-            .or(`slug.eq.${productId},id.eq.${productId}`)
-            .single();
-          
-          if (product) {
-            productId = product.id;
-            productMetaMap.set(product.id, product.metadata);
-          } else {
-            throw new Error(`Product not found: ${item.name}. Please remove it from your cart and try again.`);
-          }
-        }
-        
-        const prodMeta = productMetaMap.get(productId);
-        
-        const variantId =
-          item.variantId && isValidUUID(item.variantId) ? item.variantId : null;
-
-        orderItems.push({
-          order_id: order.id,
-          product_id: productId,
-          variant_id: variantId,
-          product_name: item.name,
-          variant_name: item.variant,
-          quantity: item.quantity,
-          unit_price: item.price,
-          total_price: item.price * item.quantity,
-          metadata: {
+          subtotal,
+          tax,
+          shippingCost,
+          total,
+          items: cart.map((item) => ({
+            id: item.id,
+            name: item.name,
+            variant: item.variant,
+            variantId: item.variantId,
+            quantity: item.quantity,
+            price: item.price,
             image: item.image,
             slug: item.slug,
-            preorder_shipping: prodMeta?.preorder_shipping || null
-          }
-        });
-      }
-
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
-
-      if (itemsError) {
-        // Compensating delete — an order row with zero line items is a
-        // dead record that confuses admins and blocks payment flows.
-        try {
-          await supabase.from('orders').delete().eq('id', order.id);
-        } catch (cleanupErr) {
-          console.error('[Checkout] Failed to clean up empty order', order.id, cleanupErr);
-        }
-        throw itemsError;
-      }
-
-      // Note: Stock reduction happens in mark_order_paid when payment is confirmed
-
-      // 3. Upsert Customer Record (for both guest and registered users)
-      const fullName = `${shippingData.firstName} ${shippingData.lastName}`.trim();
-      await supabase.rpc('upsert_customer_from_order', {
-        p_email: shippingData.email,
-        p_phone: shippingData.phone,
-        p_full_name: fullName,
-        p_first_name: shippingData.firstName,
-        p_last_name: shippingData.lastName,
-        p_user_id: user?.id || null,
-        p_address: shippingData
+          })),
+        }),
       });
+
+      let createdOrderPayload: { id?: string; order_number?: string; error?: string } = {};
+      try {
+        createdOrderPayload = await createRes.json();
+      } catch {
+        throw new Error(`Checkout server returned an invalid response (${createRes.status})`);
+      }
+
+      if (!createRes.ok || !createdOrderPayload.id) {
+        throw new Error(createdOrderPayload.error || 'Failed to place order. Please try again.');
+      }
+
+      const order = { id: createdOrderPayload.id, order_number: createdOrderPayload.order_number || orderNumber };
+
+      // Stock reduction happens in mark_order_paid when payment is confirmed.
 
       // 4. Handle Payment Redirects or Completion
       if (paymentMethod === 'moolre') {
