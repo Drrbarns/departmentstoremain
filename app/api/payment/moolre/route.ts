@@ -50,7 +50,9 @@ export async function POST(req: Request) {
             // Try by UUID first, then by order_number (order_number could also look like a UUID)
             const byId = await supabaseAdmin
                 .from('orders')
-                .select('id, order_number, total, email, payment_status, metadata')
+                .select(
+                    'id, order_number, total, subtotal, shipping_total, tax_total, discount_total, email, payment_status, metadata'
+                )
                 .eq('id', orderId)
                 .maybeSingle();
             if (!byId.error && byId.data) {
@@ -58,7 +60,9 @@ export async function POST(req: Request) {
             } else {
                 const byRef = await supabaseAdmin
                     .from('orders')
-                    .select('id, order_number, total, email, payment_status, metadata')
+                    .select(
+                        'id, order_number, total, subtotal, shipping_total, tax_total, discount_total, email, payment_status, metadata'
+                    )
                     .eq('order_number', orderId)
                     .maybeSingle();
                 order = byRef.data;
@@ -67,7 +71,9 @@ export async function POST(req: Request) {
         } else {
             const result = await supabaseAdmin
                 .from('orders')
-                .select('id, order_number, total, email, payment_status, metadata')
+                .select(
+                    'id, order_number, total, subtotal, shipping_total, tax_total, discount_total, email, payment_status, metadata'
+                )
                 .eq('order_number', orderId)
                 .single();
             order = result.data;
@@ -208,23 +214,28 @@ export async function POST(req: Request) {
         const dbServerSubtotal = Number(
             repricedItems.reduce((sum, r) => sum + r.server_total_price, 0).toFixed(2)
         );
+        const shippingGhs = Number(order.shipping_total ?? 0) || 0;
+        const taxGhs = Number(order.tax_total ?? 0) || 0;
+        const discountGhs = Number(order.discount_total ?? 0) || 0;
+        const dbServerTotal = Number(
+            (dbServerSubtotal + shippingGhs + taxGhs - discountGhs).toFixed(2)
+        );
         const clientTotal = Number(order.total);
 
-        // If the client-written total diverges from the recomputed total
-        // by more than 1 cent, sync the DB row so the Moolre charge is
-        // based on authoritative prices.  This defends against a tampered
-        // checkout that writes a smaller total.
-        if (Math.abs(clientTotal - dbServerSubtotal) > 0.01) {
+        // If the order total diverges from authoritative line items + fees
+        // by more than 1 cent, sync the DB row so Moolre charges the right amount.
+        if (Math.abs(clientTotal - dbServerTotal) > 0.01) {
             console.warn(
-                '[Payment] Re-pricing detected tampered total for order',
+                '[Payment] Re-pricing / total mismatch for order',
                 orderRefForLog(order),
-                '| client:', clientTotal, '| server:', dbServerSubtotal
+                '| client:', clientTotal, '| server subtotal:', dbServerSubtotal,
+                '| shipping:', shippingGhs, '| server total:', dbServerTotal
             );
             const { error: syncErr } = await supabaseAdmin
                 .from('orders')
                 .update({
                     subtotal: dbServerSubtotal,
-                    total: dbServerSubtotal,
+                    total: dbServerTotal,
                     metadata: {
                         ...(order.metadata || {}),
                         server_repriced_at: new Date().toISOString(),
@@ -239,7 +250,7 @@ export async function POST(req: Request) {
                     { status: 500 }
                 );
             }
-            order.total = dbServerSubtotal;
+            order.total = dbServerTotal;
         }
 
         let removedItems: Array<{ name: string; variant?: string }> = [];
@@ -278,7 +289,10 @@ export async function POST(req: Request) {
             // Recompute totals from the remaining items.
             const remaining = orderItems.filter(i => !removeIds.includes(i.id));
             const newSubtotal = remaining.reduce((sum, i) => sum + Number(i.total_price ?? 0), 0);
-            const newTotal = newSubtotal; // shipping/tax/discount are already 0 for current flow
+            const shipKeep = Number(order.shipping_total ?? 0) || 0;
+            const taxKeep = Number(order.tax_total ?? 0) || 0;
+            const discKeep = Number(order.discount_total ?? 0) || 0;
+            const newTotal = Number((newSubtotal + shipKeep + taxKeep - discKeep).toFixed(2));
 
             const updatedMetadata = {
                 ...latestMetadata,
