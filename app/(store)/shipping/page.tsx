@@ -3,24 +3,17 @@ import Link from 'next/link';
 export default function ShippingPage() {
   const deliveryOptions = [
     {
-      type: 'Standard Delivery',
-      time: '2-5 Business Days',
-      cost: 'GHS 20',
-      description: 'Perfect for regular orders with no rush',
+      type: 'Doorstep Delivery',
+      time: '1-3 Business Days',
+      cost: 'At a Cost',
+      description: 'We deliver straight to your address. Our team will contact you with the exact delivery fee based on your location.',
       icon: 'ri-truck-line'
     },
     {
-      type: 'Express Delivery',
-      time: 'Next Day',
-      cost: 'GHS 40',
-      description: 'Available for Accra & Kumasi orders placed before 2pm',
-      icon: 'ri-rocket-line'
-    },
-    {
       type: 'Store Pickup',
-      time: 'Same Day',
+      time: 'Ready in 24 hours',
       cost: 'FREE',
-      description: 'Collect from our Accra location',
+      description: 'Collect your order from our Accra store at no extra charge.',
       icon: 'ri-store-2-line'
     }
   ];
@@ -59,7 +52,7 @@ export default function ShippingPage() {
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-5xl font-bold text-gray-900 mb-6">Shipping & Delivery</h1>
             <p className="text-xl text-gray-600 leading-relaxed">
-              Fast, reliable delivery across Ghana. Free standard shipping on orders over GHS 300.
+              Fast, reliable delivery across Ghana. Doorstep delivery is charged based on your location — or pick up free from our Accra store.
             </p>
           </div>
         </div>
@@ -68,7 +61,7 @@ export default function ShippingPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="mb-16">
           <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Delivery Options</h2>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {deliveryOptions.map((option, index) => (
               <div key={index} className="bg-white border-2 border-gray-200 p-8 rounded-2xl hover:border-blue-500 hover:shadow-lg transition-all">
                 <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mb-6">
@@ -85,11 +78,11 @@ export default function ShippingPage() {
 
         <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-8 mb-16 text-center">
           <div className="w-16 h-16 bg-blue-700 rounded-full flex items-center justify-center mx-auto mb-4">
-            <i className="ri-gift-line text-3xl text-white"></i>
+            <i className="ri-store-2-line text-3xl text-white"></i>
           </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-3">Free Standard Shipping</h3>
+          <h3 className="text-2xl font-bold text-gray-900 mb-3">Free Store Pickup</h3>
           <p className="text-lg text-gray-600">
-            Spend GHS 300 or more and get <span className="font-bold text-blue-700">FREE standard delivery</span> anywhere in Ghana
+            Skip the delivery fee — pick up your order from our Accra store at <span className="font-bold text-blue-700">no cost</span>.
           </p>
         </div>
 

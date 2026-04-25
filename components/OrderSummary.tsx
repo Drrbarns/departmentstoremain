@@ -19,12 +19,6 @@ interface OrderSummaryProps {
 }
 
 export default function OrderSummary({ items, subtotal, shipping, tax, total, deliveryMethod }: OrderSummaryProps) {
-  const isPickup = deliveryMethod === 'pickup';
-  const shippingLabel = shipping > 0
-    ? `GH₵ ${shipping.toFixed(2)}`
-    : isPickup
-      ? 'FREE'
-      : 'At a Cost';
   return (
     <div className="bg-white rounded-xl shadow-sm p-6 sticky top-4">
       <h2 className="text-xl font-bold text-gray-900 mb-6">Order Summary</h2>
@@ -59,8 +53,12 @@ export default function OrderSummary({ items, subtotal, shipping, tax, total, de
         </div>
         <div className="flex justify-between text-gray-700">
           <span>Shipping</span>
-          <span className={`font-semibold ${!isPickup && shipping === 0 ? 'text-amber-600' : 'text-gray-900'}`}>
-            {shippingLabel}
+          <span className={`font-semibold ${deliveryMethod === 'pickup' ? 'text-blue-700' : 'text-amber-600'}`}>
+            {deliveryMethod === 'pickup'
+              ? 'FREE'
+              : shipping > 0
+                ? `GH₵ ${shipping.toFixed(2)}`
+                : 'At a Cost'}
           </span>
         </div>
 

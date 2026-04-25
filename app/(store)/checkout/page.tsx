@@ -9,7 +9,6 @@ import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRecaptcha } from '@/hooks/useRecaptcha';
-import { getCheckoutShippingGhs } from '@/lib/checkout-shipping';
 
 export default function CheckoutPage() {
   usePageTitle('Checkout');
@@ -57,7 +56,10 @@ export default function CheckoutPage() {
     'Western North'
   ];
 
-  const [deliveryMethod, setDeliveryMethod] = useState('pickup');
+  // Default to doorstep so the Order Summary shows "At a Cost" upfront and
+  // the customer actively opts in to free Store Pickup if that's what they
+  // want — pickup is no longer assumed.
+  const [deliveryMethod, setDeliveryMethod] = useState('doorstep');
   const [paymentMethod, setPaymentMethod] = useState('moolre');
   const [errors, setErrors] = useState<any>({});
 
@@ -92,7 +94,7 @@ export default function CheckoutPage() {
 
   // Calculate Totals
   const subtotal = cartSubtotal;
-  const shippingCost = getCheckoutShippingGhs(deliveryMethod);
+  const shippingCost = 0; // Delivery options temporarily disabled
   const tax = 0; // No Tax
   const total = subtotal + shippingCost + tax;
 
@@ -571,7 +573,7 @@ export default function CheckoutPage() {
                         />
                         <div>
                           <p className="font-semibold text-gray-900">Doorstep Delivery</p>
-                          <p className="text-sm text-gray-600">Our rider will collect the delivery fee on arrival</p>
+                          <p className="text-sm text-gray-600">We will contact you with the delivery cost</p>
                         </div>
                       </div>
                       <p className="font-semibold text-amber-600 text-sm">At a Cost</p>

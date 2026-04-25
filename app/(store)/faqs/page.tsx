@@ -45,12 +45,12 @@ export default function FAQsPage() {
     {
       category: 'shipping',
       question: 'What are your delivery times?',
-      answer: 'Standard delivery takes 2-5 business days within Ghana. Express delivery (next-day) is available for Accra and Kumasi. Orders placed before 2pm are dispatched same day. Remote areas may take 5-7 business days.'
+      answer: 'Doorstep delivery typically takes 1-3 business days within Ghana. Orders placed before 2pm are dispatched the same day. Remote areas may take a little longer. Store pickup from our Accra location is usually ready within 24 hours.'
     },
     {
       category: 'shipping',
       question: 'How much does shipping cost?',
-      answer: 'Standard shipping costs GHS 20. Express delivery costs GHS 40. Orders over GHS 300 qualify for FREE standard shipping. Store pickup is also available at no charge from our Accra location.'
+      answer: 'Doorstep delivery is charged based on your location — our team will contact you with the exact delivery fee after you place the order. Store pickup from our Accra store is completely FREE.'
     },
     {
       category: 'shipping',
