@@ -555,7 +555,7 @@ export default function CheckoutPage() {
                           <p className="text-sm text-gray-600">Pick up from our store — Ready in 24 hours</p>
                         </div>
                       </div>
-                      <p className="font-bold text-blue-700">GH₵ {getCheckoutShippingGhs('pickup').toFixed(2)}</p>
+                      <p className="font-bold text-blue-700">FREE</p>
                     </label>
 
                     <label className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition-colors ${deliveryMethod === 'doorstep' ? 'border-blue-700 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
@@ -571,10 +571,10 @@ export default function CheckoutPage() {
                         />
                         <div>
                           <p className="font-semibold text-gray-900">Doorstep Delivery</p>
-                          <p className="text-sm text-gray-600">Delivered to your address (fee may be adjusted for remote areas)</p>
+                          <p className="text-sm text-gray-600">Our rider will collect the delivery fee on arrival</p>
                         </div>
                       </div>
-                      <p className="font-bold text-blue-700">GH₵ {getCheckoutShippingGhs('doorstep').toFixed(2)}</p>
+                      <p className="font-semibold text-amber-600 text-sm">At a Cost</p>
                     </label>
 
                     {/* Comprehensive delivery options - to be re-enabled later
@@ -645,6 +645,7 @@ export default function CheckoutPage() {
               shipping={shippingCost}
               tax={tax}
               total={total}
+              deliveryMethod={deliveryMethod}
             />
           </div>
         </div>
