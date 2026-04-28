@@ -36,8 +36,14 @@ export async function POST(request: Request) {
         });
 
         if (error) {
-            console.error('[admin/products/delete] RPC error:', error.message);
-            return NextResponse.json({ error: 'Failed to delete products' }, { status: 500 });
+            // The route is admin-gated, so it is safe (and far more useful)
+            // to surface the underlying message back to the caller instead
+            // of swallowing it as a generic "Failed to delete products".
+            console.error('[admin/products/delete] RPC error:', error);
+            return NextResponse.json(
+                { error: `Delete failed: ${error.message || 'unknown database error'}` },
+                { status: 500 }
+            );
         }
 
         const urls: string[] = Array.isArray(data) && data[0]?.image_urls ? data[0].image_urls : [];
