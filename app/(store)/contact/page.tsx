@@ -131,7 +131,7 @@ export default function ContactPage() {
   const faqs = [
     {
       question: 'What are your delivery times?',
-      answer: 'Standard delivery takes 2-5 business days within Ghana. Express delivery is available for Accra and Kumasi. We ship dresses, electronics, bags, shoes and all other items with care.'
+      answer: 'Doorstep delivery typically takes 1-3 business days within Ghana. Orders placed before 2pm are dispatched the same day. The rider will tell you the delivery fee at hand-off based on your location. Store pickup from our Accra location is usually ready within 24 hours and is free.'
     },
     {
       question: 'Do you offer international shipping?',

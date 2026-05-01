@@ -263,10 +263,22 @@ function OrderSuccessContent() {
                   <span>Subtotal</span>
                   <span>GH₵{order.subtotal.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-sm text-gray-600 mb-2">
-                  <span>Shipping</span>
-                  <span>GH₵{order.shipping_total.toFixed(2)}</span>
-                </div>
+                {order.shipping_method === 'pickup' ? (
+                  <div className="flex justify-between text-sm text-gray-600 mb-2">
+                    <span>Store Pickup</span>
+                    <span className="text-blue-700 font-semibold">Free</span>
+                  </div>
+                ) : (
+                  <div className="mb-2">
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>Delivery</span>
+                      <span className="text-amber-600 font-semibold">At a Cost</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      The rider will tell you the delivery fee at hand-off.
+                    </p>
+                  </div>
+                )}
 
                 <div className="flex justify-between text-xl font-bold text-gray-900 border-t border-gray-200 pt-2">
                   <span>Total Paid</span>

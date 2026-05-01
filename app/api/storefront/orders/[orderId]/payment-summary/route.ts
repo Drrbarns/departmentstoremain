@@ -36,7 +36,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ orderId: strin
 
         const { data: order, error } = await supabaseAdmin
             .from('orders')
-            .select('id, order_number, payment_status, subtotal, shipping_total, discount_total, total, metadata, shipping_address')
+            .select('id, order_number, payment_status, subtotal, shipping_total, shipping_method, discount_total, total, metadata, shipping_address')
             .eq(column, raw)
             .maybeSingle();
 
@@ -54,6 +54,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ orderId: strin
                 payment_status: order.payment_status,
                 subtotal: order.subtotal,
                 shipping_total: order.shipping_total,
+                shipping_method: order.shipping_method,
                 discount_total: order.discount_total,
                 total: order.total,
                 metadata: {

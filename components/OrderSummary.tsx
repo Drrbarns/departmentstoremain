@@ -57,11 +57,14 @@ export default function OrderSummary({ items, subtotal, shipping, tax, total, de
             <span className="font-semibold text-blue-700">Free</span>
           </div>
         ) : (
-          <div className="flex justify-between text-gray-700">
-            <span>Shipping</span>
-            <span className="font-semibold text-amber-600">
-              {shipping > 0 ? `GH₵ ${shipping.toFixed(2)}` : 'At a Cost'}
-            </span>
+          <div>
+            <div className="flex justify-between text-gray-700">
+              <span>Delivery</span>
+              <span className="font-semibold text-amber-600">At a Cost</span>
+            </div>
+            <p className="mt-1 text-xs text-gray-500">
+              The rider will tell you the delivery fee at hand-off.
+            </p>
           </div>
         )}
 

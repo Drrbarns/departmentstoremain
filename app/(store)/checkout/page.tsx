@@ -92,11 +92,13 @@ export default function CheckoutPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentStep]);
 
-  // Calculate Totals
+  // Calculate Totals.  Delivery is never priced at checkout — the rider
+  // quotes the customer at hand-off (or pickup is free).  Sales tax is
+  // not charged either, so the order total is just the items subtotal.
   const subtotal = cartSubtotal;
-  const shippingCost = 0; // Delivery options temporarily disabled
-  const tax = 0; // No Tax
-  const total = subtotal + shippingCost + tax;
+  const shippingCost = 0;
+  const tax = 0;
+  const total = subtotal;
 
   const validateShipping = () => {
     const newErrors: any = {};
@@ -579,30 +581,10 @@ export default function CheckoutPage() {
                       <p className="font-semibold text-amber-600 text-sm">At a Cost</p>
                     </label>
 
-                    {/* Comprehensive delivery options - to be re-enabled later
-                    <label className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition-colors ${deliveryMethod === 'accra' ? 'border-blue-700 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
-                      }`}>
-                      <div className="flex items-center space-x-4">
-                        <input type="radio" name="delivery" value="accra" checked={deliveryMethod === 'accra'} onChange={(e) => setDeliveryMethod(e.target.value)} className="w-5 h-5 text-blue-700" />
-                        <div>
-                          <p className="font-semibold text-gray-900">Accra Delivery</p>
-                          <p className="text-sm text-gray-600">Delivery within Accra</p>
-                        </div>
-                      </div>
-                      <p className="font-bold text-gray-900">GH₵ 40.00</p>
-                    </label>
-                    <label className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition-colors ${deliveryMethod === 'outside-accra' ? 'border-blue-700 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
-                      }`}>
-                      <div className="flex items-center space-x-4">
-                        <input type="radio" name="delivery" value="outside-accra" checked={deliveryMethod === 'outside-accra'} onChange={(e) => setDeliveryMethod(e.target.value)} className="w-5 h-5 text-blue-700" />
-                        <div>
-                          <p className="font-semibold text-gray-900">Outside Accra Delivery</p>
-                          <p className="text-sm text-gray-600">Delivery to bus stations (VIP, OA, STC, etc.)</p>
-                        </div>
-                      </div>
-                      <p className="font-bold text-gray-900">GH₵ 30.00</p>
-                    </label>
-                    */}
+                    {/* No predefined delivery zones — delivery is always
+                        priced at hand-off by the rider, so the only options
+                        we show are Store Pickup (free) and Doorstep
+                        Delivery (At a Cost). */}
                   </div>
 
                   <div className="flex flex-col-reverse md:flex-row gap-4 mt-6">

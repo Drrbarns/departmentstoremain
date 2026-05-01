@@ -35,8 +35,9 @@ export default function CartPage() {
   // Assuming 0 for now unless we update Context.
   const savings = 0;
 
-  const shipping = subtotal >= 200 ? 0 : 15;
-  const total = subtotal + shipping;
+  // Shipping is never priced upfront — the rider quotes the customer
+  // at delivery (or it's free for Store Pickup).  See OrderSummary.
+  const total = subtotal;
 
   return (
     <div className="min-h-screen bg-gray-50">

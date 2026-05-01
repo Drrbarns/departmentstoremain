@@ -190,10 +190,22 @@ export default function PaymentPage() {
               <span className="text-gray-600">Subtotal</span>
               <span className="text-gray-900">GH₵ {order?.subtotal?.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Shipping</span>
-              <span className="text-gray-900">GH₵ {order?.shipping_total?.toFixed(2)}</span>
-            </div>
+            {order?.shipping_method === 'pickup' ? (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Store Pickup</span>
+                <span className="text-blue-700 font-semibold">Free</span>
+              </div>
+            ) : (
+              <div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Delivery</span>
+                  <span className="text-amber-600 font-semibold">At a Cost</span>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  The rider will tell you the delivery fee at hand-off.
+                </p>
+              </div>
+            )}
             {order?.discount_total > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Discount</span>
