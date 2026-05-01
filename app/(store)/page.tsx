@@ -38,7 +38,7 @@ export default function Home() {
       backgroundImage: '/home-hero-mall.png'
     },
     banners: [
-      { text: '🚚 Free delivery on orders over GH₵ 500 within Accra!', active: false },
+      { text: '🚚 Doorstep delivery available across Ghana — pickup is free in Accra!', active: false },
       { text: '✨ New stock arriving this weekend - Pre-order now!', active: false },
       { text: '💳 Secure payments via Mobile Money & Card', active: false }
     ]
