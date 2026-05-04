@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPaged } from '@/lib/supabase-paginate';
 
 // Helper for currency formatting
 const formatCurrency = (amount: number) => {
@@ -35,19 +36,17 @@ export default function CustomerInsightsPage() {
     try {
       setLoading(true);
 
-      // 1. Fetch Profiles
-      const { data: profiles, error: profileError } = await supabase
-        .from('profiles')
-        .select('*');
+      // 1. Fetch Profiles, paged so we don't truncate at 1000
+      const profiles = await fetchAllPaged<any>(() =>
+        supabase.from('profiles').select('*')
+      );
 
-      if (profileError) throw profileError;
-
-      // 2. Fetch Orders for calculations
-      const { data: orders, error: orderError } = await supabase
-        .from('orders')
-        .select('user_id, total, created_at, status');
-
-      if (orderError) throw orderError;
+      // 2. Fetch Orders, paged for the same reason
+      const orders = await fetchAllPaged<any>(() =>
+        supabase
+          .from('orders')
+          .select('user_id, total, created_at, status')
+      );
 
       // 3. Aggregate Data
       const aggregated = profiles.map((profile: any) => {

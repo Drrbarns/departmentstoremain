@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPaged } from '@/lib/supabase-paginate';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function AdminDashboard() {
@@ -53,17 +54,28 @@ export default function AdminDashboard() {
   useEffect(() => {
     async function fetchDashboardData() {
       try {
-        // 1. Fetch ALL Orders for count & customers
-        const { data: allOrdersData, error: ordersError } = await supabase
-          .from('orders')
-          .select('total, status, payment_status, created_at, email');
-
-        if (ordersError) throw ordersError;
+        // 1. Fetch ALL Orders for count & customers.  We page through
+        //    1000-row chunks because PostgREST silently caps a bare
+        //    SELECT at max-rows (Supabase default = 1000), which used
+        //    to make the "Orders" tile freeze at 1000 once the shop
+        //    crossed that threshold.
+        const allOrdersData = await fetchAllPaged<{
+          total: number | null;
+          status: string;
+          payment_status: string;
+          created_at: string;
+          email: string;
+        }>(() =>
+          supabase
+            .from('orders')
+            .select('total, status, payment_status, created_at, email')
+            .order('created_at', { ascending: false })
+        );
 
         // Only count PAID orders for revenue & avg order value
-        const paidOrders = allOrdersData?.filter(o => o.payment_status === 'paid') || [];
+        const paidOrders = allOrdersData.filter(o => o.payment_status === 'paid');
         const totalRevenue = paidOrders.reduce((sum, order) => sum + (order.total || 0), 0);
-        const totalOrders = allOrdersData?.length || 0;
+        const totalOrders = allOrdersData.length;
         const paidOrderCount = paidOrders.length;
         const avgOrderValue = paidOrderCount > 0 ? totalRevenue / paidOrderCount : 0;
 
@@ -71,7 +83,7 @@ export default function AdminDashboard() {
         // Since we can't query auth.users directly from client, we'll estimate active customers via orders or just keep it 0 if we can't.
         // Actually, best to just show "Orders" or "Recent Signups" if we had a public profiles table.
         // We'll use unique emails from orders as a proxy for "Customers"
-        const uniqueCustomers = new Set(allOrdersData?.map(o => o.email)).size;
+        const uniqueCustomers = new Set(allOrdersData.map(o => o.email)).size;
 
 
         // Process Chart Data (Last 7 Days) - only count PAID orders as revenue

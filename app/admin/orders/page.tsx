@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPaged } from '@/lib/supabase-paginate';
 import ProductSalesStats from './ProductSalesStats';
 import { appendOrderStatusChange, fetchCurrentStaffActor } from '@/lib/orderStatusHistory';
 
@@ -101,37 +102,35 @@ export default function AdminOrdersPage() {
     try {
       setLoading(true);
 
-      // Fetch the most recent orders.  Explicit range (0..RANGE_MAX) so we
-      // never silently hit the PostgREST row cap and lose rows; the 2000-row
-      // window comfortably covers several months of traffic.  If admins need
-      // to audit older data they can use the "Load older" button below.
-      const RANGE_MAX = 1999;
-      const { data: ordersData, error } = await supabase
-        .from('orders')
-        .select(`
-          id,
-          order_number,
-          email,
-          total,
-          status,
-          payment_status,
-          payment_method,
-          shipping_method,
-          created_at,
-          phone,
-          shipping_address,
-          metadata,
-          order_items (
-            quantity,
-            product_name
-          )
-        `)
-        .order('created_at', { ascending: false })
-        .range(0, RANGE_MAX);
+      // Page through every order.  PostgREST silently caps a bare select
+      // at 1000 rows, and bumping `.range()` does NOT bypass the server's
+      // own max-rows setting — you have to issue multiple requests.  This
+      // helper fetches in 1000-row chunks until the table is exhausted.
+      const ordersData = await fetchAllPaged<any>(() =>
+        supabase
+          .from('orders')
+          .select(`
+            id,
+            order_number,
+            email,
+            total,
+            status,
+            payment_status,
+            payment_method,
+            shipping_method,
+            created_at,
+            phone,
+            shipping_address,
+            metadata,
+            order_items (
+              quantity,
+              product_name
+            )
+          `)
+          .order('created_at', { ascending: false })
+      );
 
-      if (error) throw error;
-
-      setOrders(ordersData || []);
+      setOrders(ordersData);
 
       // Extract unique product names for filter
       const productNames = new Set<string>();

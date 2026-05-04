@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPaged } from '@/lib/supabase-paginate';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, AreaChart, Area, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 export default function AnalyticsPage() {
@@ -95,50 +96,46 @@ export default function AnalyticsPage() {
       const isoStart = start.toISOString();
       const isoEnd = end.toISOString();
 
-      // Fetch Orders for Revenue & Count - only PAID orders count as revenue
-      const { data: orders, error: orderError } = await supabase
-        .from('orders')
-        .select('id, created_at, total, payment_status')
-        .gte('created_at', isoStart)
-        .lte('created_at', isoEnd)
-        .eq('payment_status', 'paid') // Only count paid orders as revenue
-        .neq('status', 'cancelled')
-        .order('created_at');
+      // Fetch Orders for Revenue & Count - only PAID orders count as revenue.
+      // Page through chunks so we never undercount once the shop crosses the
+      // 1000-order PostgREST cap.
+      const orders = await fetchAllPaged<{
+        id: string;
+        created_at: string;
+        total: number | null;
+        payment_status: string;
+      }>(() =>
+        supabase
+          .from('orders')
+          .select('id, created_at, total, payment_status')
+          .gte('created_at', isoStart)
+          .lte('created_at', isoEnd)
+          .eq('payment_status', 'paid')
+          .neq('status', 'cancelled')
+          .order('created_at')
+      );
 
-      if (orderError) throw orderError;
-
-      // Fetch Order Items for Products & Categories
-      // This might be heavy for large DBs, but fine for typical small shop admin
-      const { data: items, error: itemError } = await supabase
-        .from('order_items')
-        .select(`
-            *,
-            products (name, categories(name))
-         `)
-        .gte('created_at', isoStart)
-        .lte('created_at', isoEnd); // Assuming order_items has created_at or join orders.. 
-      // Actually order_items usually doesn't have created_at directly in some schemas, 
-      // so we should join orders to filter by date.
-      // Simpler: fetch order_items for the fetched orders IDs.
-
+      // Fetch order_items for the fetched orders, paged so we can survive
+      // shops with thousands of line items in the period.
       let validItems: any[] = [];
-      if (orders && orders.length > 0) {
+      if (orders.length > 0) {
         const orderIds = orders.map(o => o.id);
-        const { data: fetchedItems, error: itemFetchError } = await supabase
-          .from('order_items')
-          .select(`
-            quantity, 
-            unit_price, 
-            total_price,
-            product_id,
-            products!inner(name, category_id, categories(name))
-          `)
-          .in('order_id', orderIds);
-
-        if (itemFetchError) {
+        try {
+          validItems = await fetchAllPaged<any>(() =>
+            supabase
+              .from('order_items')
+              .select(`
+                quantity,
+                unit_price,
+                total_price,
+                product_id,
+                products!inner(name, category_id, categories(name))
+              `)
+              .in('order_id', orderIds)
+          );
+        } catch (itemFetchError) {
           console.error('Error fetching order items:', itemFetchError);
         }
-        if (fetchedItems) validItems = fetchedItems;
       }
 
       // Process Metrics

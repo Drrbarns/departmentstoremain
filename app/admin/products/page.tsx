@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPaged } from '@/lib/supabase-paginate';
 
 const PRODUCTS_SCROLL_KEY = 'admin_products_scroll_y';
 const PRODUCTS_UI_STATE_KEY = 'admin_products_ui_state';
@@ -106,30 +107,31 @@ export default function ProductsPage() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      let query = supabase
-        .from('products')
-        .select(`
-          *,
-          categories(name),
-          product_variants(count),
-          product_images(url, position)
-        `);
 
-      // Apply sorting
-      if (sortBy === 'newest') query = query.order('created_at', { ascending: false });
-      if (sortBy === 'price_asc') query = query.order('price', { ascending: true });
-      if (sortBy === 'price_desc') query = query.order('price', { ascending: false });
-      if (sortBy === 'name') query = query.order('name', { ascending: true });
-      if (sortBy === 'stock') query = query.order('quantity', { ascending: true });
+      // Page through every product.  PostgREST silently caps a bare select
+      // at 1000 rows and `.range(0, 2499)` does NOT bypass that — we have
+      // to issue multiple requests.  We pass a factory that rebuilds the
+      // sorted query for each chunk.
+      const buildQuery = () => {
+        let query = supabase
+          .from('products')
+          .select(`
+            *,
+            categories(name),
+            product_variants(count),
+            product_images(url, position)
+          `);
+        if (sortBy === 'newest') query = query.order('created_at', { ascending: false });
+        if (sortBy === 'price_asc') query = query.order('price', { ascending: true });
+        if (sortBy === 'price_desc') query = query.order('price', { ascending: false });
+        if (sortBy === 'name') query = query.order('name', { ascending: true });
+        if (sortBy === 'stock') query = query.order('quantity', { ascending: true });
+        return query;
+      };
 
-      // Explicit row window — PostgREST's default cap would silently truncate
-      // once the catalog grows past ~1k rows.  Use the POS/barcode tools for
-      // data-dump workflows instead of this paginated list.
-      const { data, error } = await query.range(0, 2499);
+      const data = await fetchAllPaged<any>(buildQuery);
 
-      if (error) throw error;
-
-      if (data) {
+      {
         // Transform data for UI
         const transformedProducts = data.map((p: any) => ({
           ...p,

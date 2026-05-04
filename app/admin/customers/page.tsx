@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPaged } from '@/lib/supabase-paginate';
 
 export default function AdminCustomersPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -77,16 +78,20 @@ export default function AdminCustomersPage() {
   // Fallback for when customers table doesn't exist
   const fetchCustomersFromProfiles = async () => {
     try {
-      const { data: profiles, error: pError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Page through profiles + orders so the customer list never silently
+      // truncates once the shop has more than 1000 of either.
+      const profiles = await fetchAllPaged<any>(() =>
+        supabase
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false })
+      );
 
-      if (pError) throw pError;
-
-      const { data: orders } = await supabase
-        .from('orders')
-        .select('id, user_id, email, total, created_at, status, shipping_address');
+      const orders = await fetchAllPaged<any>(() =>
+        supabase
+          .from('orders')
+          .select('id, user_id, email, total, created_at, status, shipping_address')
+      );
 
       // Process registered users
       const registeredCustomers = (profiles || []).map((profile: any) => {

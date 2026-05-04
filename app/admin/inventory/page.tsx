@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPaged } from '@/lib/supabase-paginate';
 
 export default function InventoryManagementPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,20 +21,22 @@ export default function InventoryManagementPage() {
   const fetchInventory = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          id,
-          name,
-          sku,
-          price,
-          quantity,
-          categories(name)
-        `)
-        .order('name')
-        .range(0, 2499);
-
-      if (error) throw error;
+      // Page through every product — `.range(0, 2499)` does NOT bypass
+      // PostgREST's server-side row cap, so we have to fetch in chunks
+      // to ever see beyond the first 1000 products.
+      const data = await fetchAllPaged<any>(() =>
+        supabase
+          .from('products')
+          .select(`
+            id,
+            name,
+            sku,
+            price,
+            quantity,
+            categories(name)
+          `)
+          .order('name')
+      );
 
       if (data) {
         const mapped = data.map((p: any) => {
