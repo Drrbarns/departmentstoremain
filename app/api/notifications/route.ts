@@ -261,8 +261,19 @@ export async function POST(request: Request) {
             if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
                 return NextResponse.json({ error: 'Recipients required' }, { status: 400 });
             }
-            if (!subject || !message) {
-                return NextResponse.json({ error: 'Subject and message required' }, { status: 400 });
+
+            const msg = typeof message === 'string' ? message.trim() : '';
+            const sub = typeof subject === 'string' ? subject.trim() : '';
+
+            if (!msg) {
+                return NextResponse.json({ error: 'Message required' }, { status: 400 });
+            }
+            // Subject is only needed for email — SMS-only campaigns hide the subject field in admin UI.
+            if (channels?.email && !sub) {
+                return NextResponse.json({ error: 'Email subject required when sending email' }, { status: 400 });
+            }
+            if (!channels?.email && !channels?.sms) {
+                return NextResponse.json({ error: 'Select at least one channel (email or SMS)' }, { status: 400 });
             }
 
             // Deduplicate phone numbers and emails server-side
@@ -271,8 +282,8 @@ export async function POST(request: Request) {
             const results = { email: 0, sms: 0, errors: 0 };
 
             // SECURITY: Sanitize subject and message to prevent XSS in emails
-            const safeSubject = escapeHtml(subject);
-            const safeMessage = escapeHtml(message);
+            const safeSubject = escapeHtml(sub);
+            const safeMessage = escapeHtml(msg);
 
             for (const recipient of recipients) {
                 try {
@@ -289,7 +300,7 @@ export async function POST(request: Request) {
 `, safeSubject);
                             await sendEmail({
                                 to: recipient.email,
-                                subject: subject, // Keep original for email subject header
+                                subject: sub,
                                 html: brandedHtml
                             });
                             results.email++;
@@ -303,7 +314,7 @@ export async function POST(request: Request) {
                             seenPhones.add(phoneKey);
                             await sendSMS({
                                 to: recipient.phone,
-                                message: message // SMS is plain text, no XSS risk
+                                message: msg // SMS is plain text, no XSS risk
                             });
                             results.sms++;
                         }

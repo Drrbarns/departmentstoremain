@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPaged } from '@/lib/supabase-paginate';
 
 export default function NotificationsPage() {
     const [loading, setLoading] = useState(false);
@@ -28,12 +29,20 @@ export default function NotificationsPage() {
                 throw new Error('You must be logged in as admin to send campaigns');
             }
 
-            // 2. Fetch Recipients from the customers table (includes secondary contacts)
-            const { data: customers, error: fetchError } = await supabase
-                .from('customers')
-                .select('email, phone, full_name, secondary_phone, secondary_email');
-
-            if (fetchError) throw fetchError;
+            // 2. Fetch Recipients from the customers table (includes secondary contacts).
+            //    Page through rows — PostgREST caps bare selects at 1000.
+            const customers = await fetchAllPaged<{
+                email: string | null;
+                phone: string | null;
+                full_name: string | null;
+                secondary_phone: string | null;
+                secondary_email: string | null;
+            }>(() =>
+                supabase
+                    .from('customers')
+                    .select('email, phone, full_name, secondary_phone, secondary_email')
+                    .order('id', { ascending: true })
+            );
 
             // Build recipients with deduplication
             const seenPhones = new Set<string>();
@@ -42,9 +51,13 @@ export default function NotificationsPage() {
             const normalizePhone = (p: string) => p.replace(/[\s\-\(\)\.]+/g, '').replace(/^00/, '+');
 
             const recipients: any[] = [];
-            for (const c of (customers || [])) {
-                const phones = [c.phone, c.secondary_phone].filter(Boolean).map((p: string) => normalizePhone(p));
-                const emails = [c.email, c.secondary_email].filter(Boolean).map((e: string) => e.toLowerCase().trim());
+            for (const c of customers) {
+                const phones = [c.phone, c.secondary_phone]
+                    .filter((p): p is string => typeof p === 'string' && p.length > 0)
+                    .map((p) => normalizePhone(p));
+                const emails = [c.email, c.secondary_email]
+                    .filter((e): e is string => typeof e === 'string' && e.length > 0)
+                    .map((e) => e.toLowerCase().trim());
 
                 // Pick first unique phone for this customer
                 const uniquePhone = phones.find(p => !seenPhones.has(p)) || null;
