@@ -9,8 +9,11 @@ type Row = {
     order_number: string | null;
     total: number | null;
     payment_status: string | null;
+    payment_method: string | null;
     created_at: string | null;
     email: string | null;
+    hubtel_client_reference: string | null;
+    hubtel_checkout_id: string | null;
     moolre_externalref: string | null;
     moolre_reference: string | null;
 };
@@ -20,6 +23,8 @@ export default function ReconcilePaymentsPage() {
     const [note, setNote] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [reconcilingId, setReconcilingId] = useState<string | null>(null);
+    const [actionMsg, setActionMsg] = useState<{ id: string; text: string; ok: boolean } | null>(null);
 
     const load = useCallback(async () => {
         setError(null);
@@ -51,19 +56,48 @@ export default function ReconcilePaymentsPage() {
         }
     }, []);
 
+    const reverify = useCallback(async (id: string) => {
+        setActionMsg(null);
+        setReconcilingId(id);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            if (!token) {
+                setActionMsg({ id, text: 'Not signed in', ok: false });
+                return;
+            }
+            const res = await fetch('/api/admin/reconcile-payments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ orderId: id })
+            });
+            const json = await res.json();
+            const ok = res.ok && json.success && json.payment_status === 'paid';
+            setActionMsg({ id, text: json.message || json.error || (ok ? 'Marked paid' : 'Not confirmed'), ok });
+            if (ok) {
+                setRows((prev) => prev.filter((r) => r.id !== id));
+            }
+        } catch (e) {
+            setActionMsg({ id, text: e instanceof Error ? e.message : 'Re-verify failed', ok: false });
+        } finally {
+            setReconcilingId(null);
+        }
+    }, []);
+
     useEffect(() => {
         load();
     }, [load]);
 
     return (
         <div className="p-6 max-w-6xl">
-            <h1 className="text-2xl font-bold mb-2">Payment reconciliation (Moolre)</h1>
+            <h1 className="text-2xl font-bold mb-2">Payment reconciliation (Hubtel)</h1>
             <p className="text-gray-600 mb-4 max-w-3xl">
-                Supabase does not store Moolre callback payloads unless we add a dedicated log table.
-                This list shows orders where a Moolre payment link was generated (
-                <code className="text-sm bg-gray-100 px-1 rounded">moolre_externalref</code>
-                ) but the order is still not marked paid — the usual suspects when money arrived at Moolre
-                but our callback or success flow did not complete.
+                This list shows orders where a payment link was generated but the order is still
+                not marked paid — the usual suspects when money arrived at the gateway but our
+                callback or success flow did not complete. For Hubtel orders, click
+                <strong> Re-verify</strong> to re-query Hubtel and auto-mark the order paid if the
+                payment actually succeeded. Legacy Moolre orders must be confirmed in the Moolre
+                dashboard and marked paid manually.
             </p>
             {note && <p className="text-sm text-gray-700 mb-4 border-l-4 border-amber-400 pl-3">{note}</p>}
 
@@ -89,7 +123,7 @@ export default function ReconcilePaymentsPage() {
             )}
 
             {!loading && !error && rows.length === 0 && (
-                <p className="text-gray-600">No unmatched Moolre link orders in the recent window.</p>
+                <p className="text-gray-600">No unmatched payment-link orders in the recent window.</p>
             )}
 
             {rows.length > 0 && (
@@ -100,9 +134,9 @@ export default function ReconcilePaymentsPage() {
                                 <th className="p-3 font-semibold">Order</th>
                                 <th className="p-3 font-semibold">Total</th>
                                 <th className="p-3 font-semibold">Status</th>
+                                <th className="p-3 font-semibold">Gateway</th>
                                 <th className="p-3 font-semibold">Created</th>
-                                <th className="p-3 font-semibold">External ref</th>
-                                <th className="p-3 font-semibold">Moolre ref</th>
+                                <th className="p-3 font-semibold">Client ref</th>
                                 <th className="p-3 font-semibold">Action</th>
                             </tr>
                         </thead>
@@ -117,22 +151,41 @@ export default function ReconcilePaymentsPage() {
                                     <td className="p-3">
                                         <span className="text-amber-700">{r.payment_status || '—'}</span>
                                     </td>
+                                    <td className="p-3 whitespace-nowrap">
+                                        <span className="text-xs uppercase tracking-wide text-gray-600">
+                                            {r.payment_method || '—'}
+                                        </span>
+                                    </td>
                                     <td className="p-3 whitespace-nowrap text-gray-600">
                                         {r.created_at ? new Date(r.created_at).toLocaleString() : '—'}
                                     </td>
                                     <td className="p-3 font-mono text-xs max-w-[180px] break-all">
-                                        {r.moolre_externalref || '—'}
-                                    </td>
-                                    <td className="p-3 font-mono text-xs max-w-[120px] break-all">
-                                        {r.moolre_reference ?? '—'}
+                                        {r.hubtel_client_reference || r.moolre_externalref || '—'}
                                     </td>
                                     <td className="p-3">
-                                        <Link
-                                            href={`/admin/orders/${r.id}`}
-                                            className="text-blue-600 hover:underline whitespace-nowrap"
-                                        >
-                                            Open order
-                                        </Link>
+                                        <div className="flex flex-col gap-1.5">
+                                            {r.payment_method === 'hubtel' && r.hubtel_client_reference && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => reverify(r.id)}
+                                                    disabled={reconcilingId === r.id}
+                                                    className="px-3 py-1 bg-emerald-600 text-white text-xs rounded hover:bg-emerald-700 disabled:opacity-50 whitespace-nowrap"
+                                                >
+                                                    {reconcilingId === r.id ? 'Checking…' : 'Re-verify'}
+                                                </button>
+                                            )}
+                                            <Link
+                                                href={`/admin/orders/${r.id}`}
+                                                className="text-blue-600 hover:underline whitespace-nowrap text-xs"
+                                            >
+                                                Open order
+                                            </Link>
+                                            {actionMsg?.id === r.id && (
+                                                <span className={`text-xs ${actionMsg.ok ? 'text-green-700' : 'text-red-600'}`}>
+                                                    {actionMsg.text}
+                                                </span>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -142,10 +195,12 @@ export default function ReconcilePaymentsPage() {
             )}
 
             <p className="mt-8 text-sm text-gray-500 max-w-3xl">
-                If you have raw callback JSON from Moolre (or a spreadsheet of successful transactions), you can
-                match <code className="bg-gray-100 px-1 rounded">data.externalref</code> to{' '}
-                <code className="bg-gray-100 px-1 rounded">moolre_externalref</code> here, then mark the order paid
-                after confirming the amount. A future improvement is storing each callback in the database for audit.
+                Hubtel orders can be reconciled directly here with <strong>Re-verify</strong>, which
+                re-queries Hubtel using the stored{' '}
+                <code className="bg-gray-100 px-1 rounded">hubtel_client_reference</code> and only marks
+                the order paid when Hubtel reports the transaction as Paid and the settled amount matches
+                the order total. Legacy Moolre orders still require manual confirmation in the Moolre
+                dashboard before being marked paid.
             </p>
         </div>
     );

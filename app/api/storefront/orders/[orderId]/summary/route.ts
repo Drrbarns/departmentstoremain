@@ -69,7 +69,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ orderId: strin
             return NextResponse.json({ error: 'Order not found' }, { status: 404 });
         }
 
-        // The order-success page needs the email to call /api/payment/moolre/verify
+        // The order-success page needs the email to call /api/payment/hubtel/verify
         // when the Moolre callback has not yet fired.  The URL bearer
         // (order_number) is already unguessable, and the verify endpoint
         // itself re-checks same-origin + order age + externalref.

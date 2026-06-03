@@ -569,9 +569,9 @@ export default function POSPage() {
                 }
             }
 
-            // 5. If Momo — initiate Moolre payment
+            // 5. If Momo — initiate Hubtel payment
             if (paymentMethod === 'momo') {
-                const paymentRes = await fetch('/api/payment/moolre', {
+                const paymentRes = await fetch('/api/payment/hubtel', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

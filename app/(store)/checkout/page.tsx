@@ -60,7 +60,7 @@ export default function CheckoutPage() {
   // the customer actively opts in to free Store Pickup if that's what they
   // want — pickup is no longer assumed.
   const [deliveryMethod, setDeliveryMethod] = useState('doorstep');
-  const [paymentMethod, setPaymentMethod] = useState('moolre');
+  const [paymentMethod, setPaymentMethod] = useState('hubtel');
   const [errors, setErrors] = useState<any>({});
 
 
@@ -122,7 +122,7 @@ export default function CheckoutPage() {
   };
 
   const handleContinueToPayment = async () => {
-    // Skip step 3 and directly initiate payment with default method (Moolre/Mobile Money)
+    // Skip step 3 and directly initiate payment with default method (Hubtel/Mobile Money)
     await handlePlaceOrder();
   };
 
@@ -201,10 +201,10 @@ export default function CheckoutPage() {
       // Stock reduction happens in mark_order_paid when payment is confirmed.
 
       // 4. Handle Payment Redirects or Completion
-      if (paymentMethod === 'moolre') {
+      if (paymentMethod === 'hubtel') {
         try {
           // Payment link reminder will be sent automatically after 15 mins if unpaid (via cron)
-          const paymentRes = await fetch('/api/payment/moolre', {
+          const paymentRes = await fetch('/api/payment/hubtel', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -254,7 +254,7 @@ export default function CheckoutPage() {
           // Clear cart before redirecting
           clearCart();
 
-          // Redirect to Moolre
+          // Redirect to Hubtel hosted checkout
           window.location.href = paymentResult.url;
           return;
 

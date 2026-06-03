@@ -74,7 +74,7 @@ function OrderSuccessContent() {
     }
 
     try {
-      const res = await fetch('/api/payment/moolre/verify', {
+      const res = await fetch('/api/payment/hubtel/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderNumber: orderNum, email: orderEmail })

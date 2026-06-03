@@ -814,7 +814,7 @@ export default function OrderDetailClient({ orderId }: OrderDetailClientProps) {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Transaction</span>
                   <span className="text-sm text-gray-900 font-mono truncate max-w-[150px]">
-                    {order.metadata?.moolre_reference || order.payment_transaction_id || 'N/A'}
+                    {order.metadata?.hubtel_checkout_id || order.metadata?.moolre_reference || order.payment_transaction_id || 'N/A'}
                   </span>
                 </div>
               </div>

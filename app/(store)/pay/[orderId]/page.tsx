@@ -88,7 +88,7 @@ export default function PaymentPage() {
 
     try {
       // The server re-reads amount and email from the DB — we only need orderId.
-      const paymentRes = await fetch('/api/payment/moolre', {
+      const paymentRes = await fetch('/api/payment/hubtel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -121,7 +121,7 @@ export default function PaymentPage() {
         setOrder((prev: any) => prev ? { ...prev, total: Number(paymentResult.amount ?? prev.total) } : prev);
       }
 
-      // Redirect to Moolre payment page
+      // Redirect to Hubtel hosted checkout
       window.location.href = paymentResult.url;
 
     } catch (err: any) {
@@ -363,7 +363,7 @@ export default function PaymentPage() {
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500 flex items-center justify-center">
             <i className="ri-lock-line mr-1"></i>
-            Secure payment powered by Moolre
+            Secure payment powered by Hubtel
           </p>
         </div>
 
