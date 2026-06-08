@@ -312,6 +312,11 @@ export default function AdminLayout({
       path: '/admin/products'
     },
     {
+      title: 'Sales',
+      icon: 'ri-price-tag-3-line',
+      path: '/admin/sales'
+    },
+    {
       title: 'Categories',
       icon: 'ri-folder-line',
       path: '/admin/categories'

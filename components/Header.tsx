@@ -91,6 +91,7 @@ export default function Header() {
               <div className="hidden lg:flex items-center justify-center space-x-12">
                 {[
                   { label: 'Shop', href: '/shop' },
+                  { label: 'Sale', href: '/sale' },
                   { label: 'Categories', href: '/categories' },
                   { label: 'About', href: '/about' },
                   { label: 'Contact', href: '/contact' },
@@ -98,10 +99,14 @@ export default function Header() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="group relative py-2 text-sm uppercase tracking-widest font-medium text-gray-900 transition-colors hover:text-gray-600"
+                    className={`group relative py-2 text-sm uppercase tracking-widest font-medium transition-colors ${
+                      link.label === 'Sale'
+                        ? 'text-red-600 hover:text-red-700'
+                        : 'text-gray-900 hover:text-gray-600'
+                    }`}
                   >
                     {link.label}
-                    <span className="absolute inset-x-0 bottom-0 h-px scale-x-0 bg-gray-900 transition-transform duration-300 ease-out group-hover:scale-x-100" />
+                    <span className={`absolute inset-x-0 bottom-0 h-px scale-x-0 transition-transform duration-300 ease-out group-hover:scale-x-100 ${link.label === 'Sale' ? 'bg-red-600' : 'bg-gray-900'}`} />
                   </Link>
                 ))}
               </div>
@@ -236,6 +241,7 @@ export default function Header() {
               {[
                 { label: 'Home', href: '/' },
                 { label: 'Shop', href: '/shop' },
+                { label: 'Sale', href: '/sale' },
                 { label: 'Categories', href: '/categories' },
                 { label: 'About', href: '/about' },
                 { label: 'Contact', href: '/contact' },
@@ -243,7 +249,11 @@ export default function Header() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="block px-4 py-3 text-lg font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors"
+                  className={`block px-4 py-3 text-lg font-medium rounded-lg transition-colors ${
+                    link.label === 'Sale'
+                      ? 'text-red-600 hover:bg-red-50 hover:text-red-700'
+                      : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                  }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   {link.label}
