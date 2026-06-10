@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import LazyImage from './LazyImage';
 import { useCart } from '@/context/CartContext';
+import { useAffiliate } from '@/context/AffiliateContext';
 
 // Map common color names to hex values for swatches
 const COLOR_MAP: Record<string, string> = {
@@ -74,12 +75,15 @@ export default function ProductCard({
   colorVariants = []
 }: ProductCardProps) {
   const { addToCart } = useCart();
+  const { mk } = useAffiliate();
   const [activeColor, setActiveColor] = useState<string | null>(null);
   const displayPrice = hasVariants && minVariantPrice ? minVariantPrice : price;
   const discount = originalPrice ? Math.round((1 - displayPrice / originalPrice) * 100) : 0;
   const MAX_SWATCHES = 5;
 
-  const formatPrice = (val: number) => `GH\u20B5${val.toFixed(2)}`;
+  // Affiliate markup is display-only; the cart always stores the base price so
+  // the order is re-priced authoritatively server-side at checkout.
+  const formatPrice = (val: number) => `GH\u20B5${mk(val, id).toFixed(2)}`;
 
   return (
     <div className="group bg-transparent rounded-lg h-full flex flex-col hover-lift">

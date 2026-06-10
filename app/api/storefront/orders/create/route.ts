@@ -12,9 +12,17 @@ interface IncomingItem {
     variant?: string | null;
     variantId?: string | null;
     quantity: number;
-    price: number;
+    price: number; // marked-up unit price the customer pays
+    basePrice?: number; // pre-markup unit price (for affiliate commission)
     image?: string | null;
     slug?: string | null;
+}
+
+interface AffiliateMeta {
+    code: string;
+    commission_pct: number;
+    base_subtotal: number;
+    commission_amount: number;
 }
 
 interface CreateOrderPayload {
@@ -35,6 +43,7 @@ interface CreateOrderPayload {
     tax: number;
     shippingCost: number;
     total: number;
+    affiliate?: AffiliateMeta | null;
     items: IncomingItem[];
 }
 
@@ -112,6 +121,21 @@ export async function POST(req: Request) {
                 ? body.shippingData.preferredDate.trim()
                 : null;
 
+        // Sanitize affiliate attribution (best-effort; commission is re-verified
+        // server-side from the affiliate's locked-in % when the order is paid).
+        const a = body.affiliate;
+        const affiliateMeta =
+            a && typeof a.code === 'string' && a.code.trim() && Number(a.commission_amount) > 0
+                ? {
+                      affiliate: {
+                          code: a.code.trim(),
+                          commission_pct: Number(a.commission_pct) || 0,
+                          base_subtotal: Number(a.base_subtotal) || 0,
+                          commission_amount: Number(a.commission_amount) || 0,
+                      },
+                  }
+                : {};
+
         const orderRow = {
             order_number: body.orderNumber,
             user_id: body.userId || null,
@@ -135,6 +159,7 @@ export async function POST(req: Request) {
                 last_name: body.shippingData?.lastName || null,
                 tracking_number: body.trackingNumber,
                 ...(preferredDate ? { customer_preferred_date: preferredDate } : {}),
+                ...affiliateMeta,
             },
         };
 
@@ -173,6 +198,7 @@ export async function POST(req: Request) {
                 metadata: {
                     image: item.image || null,
                     slug: item.slug || null,
+                    base_unit_price: typeof item.basePrice === 'number' ? item.basePrice : unit,
                     preorder_shipping: prodMeta?.preorder_shipping || null,
                 },
             };

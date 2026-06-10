@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { sendOrderConfirmation, sendPosReceiptSmsByOrderRef, isPosSaleOrder } from '@/lib/notifications';
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-limit';
+import { recordAffiliateCommission } from '@/lib/affiliate-server';
 
 /**
  * Moolre Callback Payload Structure (from their actual API):
@@ -240,6 +241,9 @@ export async function POST(req: Request) {
             } catch (notifyError: any) {
                 console.error('[Callback] Notification failed:', notifyError.message);
             }
+
+            // Record affiliate commission (best-effort, idempotent — verify may also fire).
+            await recordAffiliateCommission(merchantOrderRef);
 
             return NextResponse.json({ success: true, message: 'Payment verified and Order Updated' });
 

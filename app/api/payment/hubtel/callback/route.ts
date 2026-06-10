@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { sendOrderConfirmation, sendPosReceiptSmsByOrderRef, isPosSaleOrder } from '@/lib/notifications';
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-limit';
 import { checkHubtelStatus, isHubtelPaid, stripHubtelReferenceSuffix } from '@/lib/hubtel';
+import { recordAffiliateCommission } from '@/lib/affiliate-server';
 
 /**
  * Hubtel Online Checkout callback handler.
@@ -232,6 +233,9 @@ export async function POST(req: Request) {
         } catch (e: any) {
             console.error('[Hubtel Callback] Notification failed:', e?.message || e);
         }
+
+        // Record affiliate commission (best-effort, idempotent — verify may also fire).
+        await recordAffiliateCommission(merchantOrderRef);
 
         return NextResponse.json({ success: true, message: 'Payment verified and order updated' });
     } catch (error: any) {

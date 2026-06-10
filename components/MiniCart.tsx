@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect } from 'react';
 import { useCart } from '@/context/CartContext';
+import { useAffiliate } from '@/context/AffiliateContext';
 import { getOptimizedImageUrl } from '@/lib/imageOptimization';
 
 interface MiniCartProps {
@@ -11,7 +12,11 @@ interface MiniCartProps {
 }
 
 export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
-  const { cart, removeFromCart, updateQuantity, subtotal } = useCart();
+  const { cart, removeFromCart, updateQuantity } = useCart();
+  const { mk } = useAffiliate();
+
+  // Cart stores base prices; affiliate markup is applied for display only.
+  const subtotal = cart.reduce((sum, item) => sum + mk(item.price, item.id) * item.quantity, 0);
 
   // Lock body scroll when cart is open
   useEffect(() => {
@@ -87,7 +92,7 @@ export default function MiniCart({ isOpen, onClose }: MiniCartProps) {
 
                       <div className="flex items-center justify-between mt-2">
                         <span className="text-lg font-bold text-blue-700">
-                          GH₵{item.price.toFixed(2)}
+                          GH₵{mk(item.price, item.id).toFixed(2)}
                         </span>
 
                         <div className="flex items-center border border-gray-300 rounded bg-white">

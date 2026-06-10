@@ -327,6 +327,11 @@ export default function AdminLayout({
       path: '/admin/customers'
     },
     {
+      title: 'Affiliates',
+      icon: 'ri-user-star-line',
+      path: '/admin/affiliates'
+    },
+    {
       title: 'Reviews',
       icon: 'ri-chat-smile-2-line',
       path: '/admin/reviews'

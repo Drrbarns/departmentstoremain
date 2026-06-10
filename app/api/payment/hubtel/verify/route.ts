@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { sendOrderConfirmation, sendPosReceiptSmsByOrderRef, isPosSaleOrder } from '@/lib/notifications';
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-limit';
 import { checkHubtelStatus, isHubtelPaid } from '@/lib/hubtel';
+import { recordAffiliateCommission } from '@/lib/affiliate-server';
 
 /**
  * Server-side Hubtel verification, called from /order-success after the
@@ -198,6 +199,9 @@ export async function POST(req: Request) {
                 console.error('[Hubtel Verify] Notification failed:', notifyError.message);
             }
         }
+
+        // Record affiliate commission (best-effort, idempotent — webhook may also fire).
+        await recordAffiliateCommission(orderNumber);
 
         return NextResponse.json({
             success: true,

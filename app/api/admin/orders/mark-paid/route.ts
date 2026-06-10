@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { verifyAuth } from '@/lib/auth';
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-limit';
+import { recordAffiliateCommission } from '@/lib/affiliate-server';
 
 /**
  * Admin-only route to call mark_order_paid.  Used by POS cash/card sales.
@@ -43,6 +44,9 @@ export async function POST(request: Request) {
             console.error('[admin/mark-paid] RPC error:', error.message);
             return NextResponse.json({ error: 'Failed to mark order as paid' }, { status: 500 });
         }
+
+        // Record affiliate commission (best-effort, idempotent — no-op for POS sales).
+        await recordAffiliateCommission(orderNumber);
 
         return NextResponse.json({ success: true, order: data });
     } catch (err: any) {

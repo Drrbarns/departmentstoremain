@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import OrderHistory from './OrderHistory';
 import AddressBook from './AddressBook';
+import AffiliateDashboardPanel from '@/components/AffiliateDashboardPanel';
 import { supabase } from '@/lib/supabase';
 
 function AccountContent() {
@@ -19,7 +20,7 @@ function AccountContent() {
   // Update active tab when URL param changes
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab && ['profile', 'orders', 'addresses', 'security'].includes(tab)) {
+    if (tab && ['profile', 'orders', 'addresses', 'security', 'affiliate'].includes(tab)) {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -193,6 +194,7 @@ function AccountContent() {
                     { id: 'profile', icon: 'ri-user-settings-line', label: 'Profile Settings' },
                     { id: 'orders', icon: 'ri-shopping-bag-3-line', label: 'Order History' },
                     { id: 'addresses', icon: 'ri-map-pin-2-line', label: 'Addresses' },
+                    { id: 'affiliate', icon: 'ri-user-star-line', label: 'Affiliate' },
                     { id: 'security', icon: 'ri-shield-keyhole-line', label: 'Security' }
                   ].map(tab => (
                     <button
@@ -218,6 +220,7 @@ function AccountContent() {
                   { id: 'profile', icon: 'ri-user-settings-line', label: 'Profile' },
                   { id: 'orders', icon: 'ri-shopping-bag-3-line', label: 'Orders' },
                   { id: 'addresses', icon: 'ri-map-pin-2-line', label: 'Address' },
+                  { id: 'affiliate', icon: 'ri-user-star-line', label: 'Affiliate' },
                   { id: 'security', icon: 'ri-shield-keyhole-line', label: 'Security' }
                 ].map(tab => (
                   <button
@@ -364,6 +367,13 @@ function AccountContent() {
                 {activeTab === 'orders' && <OrderHistory />}
 
                 {activeTab === 'addresses' && <AddressBook />}
+
+                {activeTab === 'affiliate' && (
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Affiliate</h2>
+                    <AffiliateDashboardPanel />
+                  </div>
+                )}
 
                 {activeTab === 'security' && (
                   <div>

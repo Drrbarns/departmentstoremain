@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { sendOrderConfirmation, sendPosReceiptSmsByOrderRef, isPosSaleOrder } from '@/lib/notifications';
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/rate-limit';
+import { recordAffiliateCommission } from '@/lib/affiliate-server';
 
 /**
  * Payment verification endpoint.
@@ -163,6 +164,9 @@ export async function POST(req: Request) {
                 console.error('[Verify] Notification failed:', notifyError.message);
             }
         }
+
+        // Record affiliate commission (best-effort, idempotent — webhook may also fire).
+        await recordAffiliateCommission(orderNumber);
 
         return NextResponse.json({
             success: true,

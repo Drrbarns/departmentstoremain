@@ -5,13 +5,19 @@ import Image from 'next/image';
 import { useState } from 'react';
 import CartCountdown from '@/components/CartCountdown';
 import { useCart } from '@/context/CartContext';
+import { useAffiliate } from '@/context/AffiliateContext';
 import PageHero from '@/components/PageHero';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
 export default function CartPage() {
   usePageTitle('Shopping Cart');
-  const { cart: cartItems, removeFromCart, updateQuantity, subtotal, addToCart } = useCart();
+  const { cart: cartItems, removeFromCart, updateQuantity, addToCart } = useCart();
+  const { mk } = useAffiliate();
   const [savedItems, setSavedItems] = useState<any[]>([]);
+
+  // Cart stores base prices; affiliate markup is applied for display + the
+  // running subtotal here, then re-priced authoritatively server-side.
+  const subtotal = cartItems.reduce((sum, item) => sum + mk(item.price, item.id) * item.quantity, 0);
 
   // Function to move item to saved for later (local state only for now)
   const saveForLater = (id: string) => {
@@ -100,7 +106,7 @@ export default function CartPage() {
 
                             <div className="flex items-center justify-between flex-wrap gap-4">
                               <div className="flex items-baseline space-x-3">
-                                <span className="text-xl font-bold text-gray-900">GH₵{item.price.toFixed(2)}</span>
+                                <span className="text-xl font-bold text-gray-900">GH₵{mk(item.price, item.id).toFixed(2)}</span>
                               </div>
 
                               <div className="flex items-center space-x-4">
@@ -167,7 +173,7 @@ export default function CartPage() {
                             </div>
                             <div className="flex-1">
                               <p className="font-semibold text-gray-900 mb-1">{item.name}</p>
-                              <p className="text-lg font-bold text-gray-900 mb-2">GH₵{item.price.toFixed(2)}</p>
+                              <p className="text-lg font-bold text-gray-900 mb-2">GH₵{mk(item.price, item.id).toFixed(2)}</p>
                               {/* Move to cart disabled for now */}
                             </div>
                           </div>

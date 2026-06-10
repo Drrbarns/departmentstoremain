@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { verifyAuth } from '@/lib/auth';
 import { sendOrderConfirmation, sendPosReceiptSmsByOrderRef, isPosSaleOrder } from '@/lib/notifications';
 import { checkHubtelStatus, isHubtelPaid } from '@/lib/hubtel';
+import { recordAffiliateCommission } from '@/lib/affiliate-server';
 
 type ReconcileRow = {
     id: string;
@@ -187,6 +188,11 @@ export async function POST(request: Request) {
         } catch (e: any) {
             console.error('[reconcile-payments] Notification failed:', e?.message || e);
         }
+    }
+
+    // Record affiliate commission (best-effort, idempotent).
+    if (order.order_number) {
+        await recordAffiliateCommission(order.order_number);
     }
 
     return NextResponse.json({

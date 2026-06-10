@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import CheckoutSteps from '@/components/CheckoutSteps';
 import OrderSummary from '@/components/OrderSummary';
 import { useCart } from '@/context/CartContext';
+import { useAffiliate } from '@/context/AffiliateContext';
+import { round2 } from '@/lib/affiliate';
 import { supabase } from '@/lib/supabase';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRecaptcha } from '@/hooks/useRecaptcha';
@@ -13,7 +15,8 @@ import { useRecaptcha } from '@/hooks/useRecaptcha';
 export default function CheckoutPage() {
   usePageTitle('Checkout');
   const router = useRouter();
-  const { cart, subtotal: cartSubtotal, clearCart } = useCart();
+  const { cart, clearCart } = useCart();
+  const { mk, affiliate, commissionPct } = useAffiliate();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -95,10 +98,19 @@ export default function CheckoutPage() {
   // Calculate Totals.  Delivery is never priced at checkout — the rider
   // quotes the customer at hand-off (or pickup is free).  Sales tax is
   // not charged either, so the order total is just the items subtotal.
-  const subtotal = cartSubtotal;
+  //
+  // Affiliate markup: the cart stores base prices, so the marked subtotal is
+  // what the customer actually pays. The pre-markup base + per-line affiliate
+  // commission are persisted with the order for server-side verification.
+  const baseSubtotal = round2(cart.reduce((sum, item) => sum + item.price * item.quantity, 0));
+  const subtotal = round2(cart.reduce((sum, item) => sum + round2(mk(item.price, item.id)) * item.quantity, 0));
   const shippingCost = 0;
   const tax = 0;
   const total = subtotal;
+
+  // Marked-up line items for the Order Summary so the displayed prices match
+  // what is charged. The cart itself is untouched (still base prices).
+  const displayItems = cart.map((item) => ({ ...item, price: round2(mk(item.price, item.id)) }));
 
   const validateShipping = () => {
     const newErrors: any = {};
@@ -150,6 +162,20 @@ export default function CheckoutPage() {
       const trackingId = Array.from({ length: 6 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
       const trackingNumber = `SLI-${trackingId}`;
 
+      // Affiliate attribution: the commission is the sum of per-line markup
+      // deltas. It's re-verified server-side from the affiliate's locked-in %
+      // when the order is marked paid.
+      const commissionAmount = round2(subtotal - baseSubtotal);
+      const affiliate_meta =
+        affiliate?.code && commissionAmount > 0
+          ? {
+              code: affiliate.code,
+              commission_pct: commissionPct,
+              base_subtotal: baseSubtotal,
+              commission_amount: commissionAmount,
+            }
+          : null;
+
       // 1. Create the order + items server-side.  Guests can't insert rows
       // into `orders` directly because RLS requires the inserted row to
       // pass a SELECT policy for `RETURNING` to succeed, and we intentionally
@@ -172,13 +198,15 @@ export default function CheckoutPage() {
           tax,
           shippingCost,
           total,
+          affiliate: affiliate_meta,
           items: cart.map((item) => ({
             id: item.id,
             name: item.name,
             variant: item.variant,
             variantId: item.variantId,
             quantity: item.quantity,
-            price: item.price,
+            price: round2(mk(item.price, item.id)),
+            basePrice: item.price,
             image: item.image,
             slug: item.slug,
           })),
@@ -624,7 +652,7 @@ export default function CheckoutPage() {
 
           <div className="lg:col-span-1">
             <OrderSummary
-              items={cart}
+              items={displayItems}
               subtotal={subtotal}
               shipping={shippingCost}
               tax={tax}
