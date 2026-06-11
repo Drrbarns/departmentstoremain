@@ -16,24 +16,40 @@ type ProductRow = {
     category: string;
     image: string;
     variantsCount: number;
+    pausedSalePrice: number | null;
 };
 
 const PAGE_SIZE = 24;
 
 const fmt = (v: number) => `GH\u20B5${Number(v || 0).toFixed(2)}`;
 
-/** Regular (pre-sale) price — mirrors the SQL the server uses. */
+/**
+ * Regular (pre-sale) price — mirrors the SQL the server uses.
+ * When the campaign is paused, the discounted price is stashed in
+ * metadata.paused_sale_price and `price` already holds the regular price.
+ */
 function regularPrice(p: ProductRow): number {
+    if (p.pausedSalePrice != null) return p.price;
     if (p.on_sale && p.compare_at_price != null && p.compare_at_price > p.price) {
         return p.compare_at_price;
     }
     return p.price;
 }
 
+/** The effective sale price (active discount, or the paused/stashed one). */
+function salePrice(p: ProductRow): number | null {
+    if (p.pausedSalePrice != null) return p.pausedSalePrice;
+    if (p.on_sale && p.compare_at_price != null && p.compare_at_price > p.price) {
+        return p.price;
+    }
+    return null;
+}
+
 function discountPct(p: ProductRow): number {
     const reg = regularPrice(p);
-    if (!p.on_sale || reg <= 0 || p.price >= reg) return 0;
-    return Math.round((1 - p.price / reg) * 100);
+    const sale = salePrice(p);
+    if (sale == null || reg <= 0 || sale >= reg) return 0;
+    return Math.round((1 - sale / reg) * 100);
 }
 
 export default function AdminSalesPage() {
@@ -52,6 +68,19 @@ export default function AdminSalesPage() {
     const [rowPrice, setRowPrice] = useState<Record<string, string>>({});
     const [busy, setBusy] = useState(false);
     const [toast, setToast] = useState<{ text: string; ok: boolean } | null>(null);
+    const [salesActive, setSalesActive] = useState(true);
+    const [togglingActive, setTogglingActive] = useState(false);
+
+    const fetchSalesActive = useCallback(async () => {
+        const { data } = await supabase
+            .from('site_settings')
+            .select('value')
+            .eq('key', 'sales_active')
+            .maybeSingle();
+        // Missing row defaults to ON. jsonb boolean comes back as a real boolean.
+        if (!data) setSalesActive(true);
+        else setSalesActive(data.value === true || data.value === 'true');
+    }, []);
 
     const fetchProducts = useCallback(async () => {
         setLoading(true);
@@ -60,7 +89,7 @@ export default function AdminSalesPage() {
                 supabase
                     .from('products')
                     .select(`
-                        id, name, slug, price, compare_at_price, on_sale, status,
+                        id, name, slug, price, compare_at_price, on_sale, status, metadata,
                         categories(name),
                         product_variants(count),
                         product_images(url, position)
@@ -81,6 +110,8 @@ export default function AdminSalesPage() {
                     p.product_images?.[0]?.url ||
                     'https://via.placeholder.com/80?text=No+Image',
                 variantsCount: p.product_variants?.[0]?.count || 0,
+                pausedSalePrice:
+                    p.metadata?.paused_sale_price != null ? Number(p.metadata.paused_sale_price) : null,
             }));
             setProducts(rows);
             setCategories(Array.from(new Set(rows.map((r) => r.category))).sort());
@@ -93,8 +124,9 @@ export default function AdminSalesPage() {
     }, []);
 
     useEffect(() => {
+        fetchSalesActive();
         fetchProducts();
-    }, [fetchProducts]);
+    }, [fetchSalesActive, fetchProducts]);
 
     useEffect(() => {
         if (!toast) return;
@@ -160,6 +192,34 @@ export default function AdminSalesPage() {
         const json = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(json?.error || `Request failed (${res.status})`);
         return json;
+    };
+
+    const toggleSalesActive = async () => {
+        const next = !salesActive;
+        if (
+            !next &&
+            !confirm(
+                'Turn OFF all sales? Every product will revert to its normal price and the Sale page will be empty until you turn sales back on. Your sale setup is saved and will return when you switch it on.',
+            )
+        ) {
+            return;
+        }
+        setTogglingActive(true);
+        try {
+            await callApi({ action: 'set_active', active: next });
+            setSalesActive(next);
+            await fetchProducts();
+            setToast({
+                text: next
+                    ? 'Sales turned ON — discounts are live again.'
+                    : 'Sales turned OFF — all products are at normal prices.',
+                ok: true,
+            });
+        } catch (err: any) {
+            setToast({ text: err?.message || 'Failed to toggle sales', ok: false });
+        } finally {
+            setTogglingActive(false);
+        }
     };
 
     /** Optimistically apply the same math the server uses, so the table updates instantly. */
@@ -306,6 +366,51 @@ export default function AdminSalesPage() {
                 </Link>
             </div>
 
+            {/* Master on/off switch */}
+            <div
+                className={`rounded-xl border p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                    salesActive ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'
+                }`}
+            >
+                <div className="flex items-start gap-3">
+                    <i
+                        className={`text-2xl mt-0.5 ${
+                            salesActive ? 'ri-flashlight-fill text-green-600' : 'ri-pause-circle-line text-amber-600'
+                        }`}
+                    ></i>
+                    <div>
+                        <p className="font-semibold text-gray-900">
+                            Sales are currently {salesActive ? 'ON' : 'OFF'}
+                        </p>
+                        <p className="text-sm text-gray-600 mt-0.5 max-w-xl">
+                            {salesActive
+                                ? 'Discounts are live on the storefront and the Sale page shows your sale items.'
+                                : 'All products show their normal prices and the Sale page is empty. Your sale setup is saved — turn it back on anytime.'}
+                        </p>
+                    </div>
+                </div>
+                <button
+                    onClick={toggleSalesActive}
+                    disabled={togglingActive || busy}
+                    role="switch"
+                    aria-checked={salesActive}
+                    className={`relative inline-flex h-9 w-16 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
+                        salesActive ? 'bg-green-600' : 'bg-gray-300'
+                    }`}
+                    aria-label="Toggle all sales"
+                >
+                    <span
+                        className={`inline-block h-7 w-7 transform rounded-full bg-white shadow transition-transform ${
+                            salesActive ? 'translate-x-8' : 'translate-x-1'
+                        }`}
+                    >
+                        {togglingActive && (
+                            <i className="ri-loader-4-line animate-spin text-gray-500 text-sm absolute inset-0 flex items-center justify-center"></i>
+                        )}
+                    </span>
+                </button>
+            </div>
+
             {/* Stats */}
             <div className="grid grid-cols-3 gap-4">
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -354,7 +459,14 @@ export default function AdminSalesPage() {
                 </select>
             </div>
 
-            {/* Bulk action bar */}
+            {/* Bulk action bar — only while sales are ON (editing while paused
+                would create an inconsistent discounted-but-hidden state). */}
+            {!salesActive ? (
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm text-gray-600 flex items-center gap-2">
+                    <i className="ri-information-line text-gray-400 text-lg"></i>
+                    Editing is disabled while sales are off. Turn sales on above to add or change product sales.
+                </div>
+            ) : (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 sticky top-2 z-20">
                 <div className="flex flex-col lg:flex-row lg:items-center gap-3">
                     <div className="flex items-center gap-2 lg:w-56">
@@ -424,6 +536,7 @@ export default function AdminSalesPage() {
                     For variant products use a percentage.
                 </p>
             </div>
+            )}
 
             {toast && (
                 <div
@@ -461,6 +574,7 @@ export default function AdminSalesPage() {
                             <tbody>
                                 {pageRows.map((p) => {
                                     const reg = regularPrice(p);
+                                    const sale = salePrice(p);
                                     const pct = discountPct(p);
                                     return (
                                         <tr key={p.id} className="border-b border-gray-100 hover:bg-gray-50/70">
@@ -469,7 +583,8 @@ export default function AdminSalesPage() {
                                                     type="checkbox"
                                                     checked={selected.has(p.id)}
                                                     onChange={() => toggleOne(p.id)}
-                                                    className="w-4 h-4 rounded border-gray-300"
+                                                    disabled={!salesActive}
+                                                    className="w-4 h-4 rounded border-gray-300 disabled:opacity-40"
                                                 />
                                             </td>
                                             <td className="p-3">
@@ -493,8 +608,13 @@ export default function AdminSalesPage() {
                                             </td>
                                             <td className="p-3 whitespace-nowrap text-gray-700">{fmt(reg)}</td>
                                             <td className="p-3 whitespace-nowrap">
-                                                {p.on_sale ? (
-                                                    <span className="font-semibold text-red-600">{fmt(p.price)}</span>
+                                                {sale != null ? (
+                                                    <span className="font-semibold text-red-600">
+                                                        {fmt(sale)}
+                                                        {!salesActive && (
+                                                            <span className="ml-1 text-[10px] font-normal text-amber-600">(paused)</span>
+                                                        )}
+                                                    </span>
                                                 ) : (
                                                     <span className="text-gray-400">—</span>
                                                 )}
@@ -507,7 +627,9 @@ export default function AdminSalesPage() {
                                                 )}
                                             </td>
                                             <td className="p-3">
-                                                {p.variantsCount > 0 ? (
+                                                {!salesActive ? (
+                                                    <span className="text-xs text-gray-300">—</span>
+                                                ) : p.variantsCount > 0 ? (
                                                     <span className="text-xs text-gray-400">use % off</span>
                                                 ) : (
                                                     <div className="flex items-center gap-1">
@@ -531,7 +653,7 @@ export default function AdminSalesPage() {
                                                 )}
                                             </td>
                                             <td className="p-3 text-right">
-                                                {p.on_sale && (
+                                                {salesActive && p.on_sale && (
                                                     <button
                                                         onClick={() => removeRow(p)}
                                                         disabled={busy}
