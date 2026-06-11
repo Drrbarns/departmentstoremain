@@ -40,10 +40,37 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
     const [loading, setLoading] = useState(false);
     const [categories, setCategories] = useState<any[]>([]);
 
+    // ── Sale-aware pricing initialisation ─────────────────────────────────
+    // DB model: while a product is ON SALE, `price` holds the discounted
+    // (charged) price and `compare_at_price` holds the regular price. While
+    // the campaign is PAUSED (sales mode off), `price` is back to regular and
+    // the sale price is stashed in metadata.paused_sale_price.
+    // The form always presents: Price = regular price, Sale price = discount.
+    const initialPricing = (() => {
+        const md = initialData?.metadata || {};
+        const hasVariantRows = (initialData?.product_variants || []).length > 0;
+        const rawPrice = initialData?.price ?? '';
+        const rawCompare = initialData?.compare_at_price ?? '';
+        if (!hasVariantRows) {
+            if (md.paused_sale_price != null) {
+                // Campaign paused: price already holds the regular price.
+                return { price: rawPrice, compare: rawCompare, sale: String(md.paused_sale_price) };
+            }
+            if (initialData?.on_sale && Number(rawCompare) > Number(rawPrice)) {
+                // Active sale: unswap so "Price" shows the regular price.
+                return { price: rawCompare, compare: '', sale: String(rawPrice) };
+            }
+        }
+        return { price: rawPrice, compare: rawCompare, sale: '' };
+    })();
+
     const [productName, setProductName] = useState(initialData?.name || '');
     const [categoryId, setCategoryId] = useState(initialData?.category_id || '');
-    const [price, setPrice] = useState(initialData?.price || '');
-    const [comparePrice, setComparePrice] = useState(initialData?.compare_at_price || '');
+    const [price, setPrice] = useState(initialPricing.price);
+    const [comparePrice, setComparePrice] = useState(initialPricing.compare);
+    const [salePrice, setSalePrice] = useState(initialPricing.sale);
+    // Master campaign switch (site_settings.sales_active); defaults to ON.
+    const [salesActive, setSalesActive] = useState(true);
     const [sku, setSku] = useState(initialData?.sku || '');
     const [barcode, setBarcode] = useState(initialData?.barcode || '');
     const [posCode, setPosCode] = useState(getPosCodeFromMetadata(initialData?.metadata));
@@ -274,6 +301,18 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
         }
     }, [isEditMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    useEffect(() => {
+        async function fetchSalesActive() {
+            const { data } = await supabase
+                .from('site_settings')
+                .select('value')
+                .eq('key', 'sales_active')
+                .maybeSingle();
+            if (data) setSalesActive(data.value === true || data.value === 'true');
+        }
+        fetchSalesActive();
+    }, []);
+
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         try {
             if (!e.target.files || e.target.files.length === 0) return;
@@ -314,13 +353,71 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                 )
                 : parseInt(stock) || 0;
 
+            // ── Sale-aware pricing ────────────────────────────────────────
+            // The form's "Price" field is always the REGULAR price. If a sale
+            // price is set (variant-free products only — variant products are
+            // discounted via Admin → Sales % tool, since checkout charges the
+            // variant price):
+            //   * sales mode ON  → store sale price in `price` (charged) and
+            //     the regular price in `compare_at_price` (struck through).
+            //   * sales mode OFF → store the regular price in `price` and
+            //     stash the sale price in metadata.paused_sale_price; the
+            //     master switch swaps it in when sales are turned on.
+            const regularP = parseFloat(price) || 0;
+            const saleP = salePrice ? parseFloat(salePrice) : NaN;
+            const hasSale = !hasVariants && Number.isFinite(saleP) && saleP > 0;
+
+            if (hasSale && saleP >= regularP) {
+                alert('Sale price must be lower than the regular price.');
+                setLoading(false);
+                return;
+            }
+            if (!hasVariants && salePrice && !hasSale) {
+                alert('Sale price is invalid. Leave it empty for no sale.');
+                setLoading(false);
+                return;
+            }
+
+            const metadata: Record<string, any> = {
+                ...(initialData?.metadata || {}),
+                pos_code: ensuredPosCode || null,
+                low_stock_threshold: parseInt(lowStockThreshold) || 5,
+                preorder_shipping: preorderShipping.trim() || null,
+            };
+
+            let pricingFields: Record<string, any>;
+            if (hasVariants) {
+                // Variant products: untouched legacy behaviour; sale state is
+                // managed from Admin → Sales and preserved via metadata spread.
+                pricingFields = {
+                    price: regularP,
+                    compare_at_price: comparePrice ? parseFloat(comparePrice) : null,
+                };
+            } else if (hasSale && salesActive) {
+                delete metadata.paused_sale_price;
+                pricingFields = { price: saleP, compare_at_price: regularP, on_sale: true };
+            } else if (hasSale) {
+                metadata.paused_sale_price = saleP;
+                pricingFields = {
+                    price: regularP,
+                    compare_at_price: comparePrice ? parseFloat(comparePrice) : null,
+                    on_sale: true,
+                };
+            } else {
+                delete metadata.paused_sale_price;
+                pricingFields = {
+                    price: regularP,
+                    compare_at_price: comparePrice ? parseFloat(comparePrice) : null,
+                    on_sale: false,
+                };
+            }
+
             const productData = {
                 name: productName,
                 slug: urlSlug || productName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
                 description,
                 category_id: categoryId || null,
-                price: parseFloat(price) || 0,
-                compare_at_price: comparePrice ? parseFloat(comparePrice) : null,
+                ...pricingFields,
                 sku: sku || generateSku(),
                 barcode: barcode || generateBarcode(),
                 quantity: hasVariants ? variantStockTotal : (parseInt(stock) || 0),
@@ -330,12 +427,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                 seo_title: seoTitle,
                 seo_description: metaDescription,
                 tags: (keywords as string).split(',').map((k: string) => k.trim()).filter(Boolean),
-                metadata: {
-                    ...(initialData?.metadata || {}),
-                    pos_code: ensuredPosCode || null,
-                    low_stock_threshold: parseInt(lowStockThreshold) || 5,
-                    preorder_shipping: preorderShipping.trim() || null,
-                }
+                metadata
             };
 
             let productId = initialData?.id;
@@ -361,10 +453,11 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                 let existingVariantIds: string[] = [];
                 let existingVariantLabels: Record<string, string> = {};
 
+                let existingVariantMetadata: Record<string, any> = {};
                 if (isEditMode) {
                     const { data: existingVariants, error: existingVariantsError } = await supabase
                         .from('product_variants')
-                        .select('id, name, option1, option2')
+                        .select('id, name, option1, option2, metadata')
                         .eq('product_id', productId);
                     if (existingVariantsError) throw existingVariantsError;
                     existingVariantIds = (existingVariants || []).map((v: any) => v.id).filter(Boolean);
@@ -373,6 +466,9 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                             v.id,
                             `${v.option1 ?? v.name ?? 'Variant'}${v.option2 ? ` / ${v.option2}` : ''}`
                         ])
+                    );
+                    existingVariantMetadata = Object.fromEntries(
+                        (existingVariants || []).map((v: any) => [v.id, v.metadata || {}])
                     );
                 }
 
@@ -399,9 +495,15 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                     option1: sizeLabel,
                                     option2: option2Value,
                                     image_url: group.imageUrl || null,
-                                    metadata: group.colorHex && group.appearanceType === 'color'
-                                        ? { color_hex: group.colorHex }
-                                        : {}
+                                    // Merge with the variant's existing metadata so flags
+                                    // owned by other tools (e.g. paused_sale_price from the
+                                    // sales master switch) survive a form save.
+                                    metadata: {
+                                        ...(existingId ? existingVariantMetadata[existingId] || {} : {}),
+                                        ...(group.colorHex && group.appearanceType === 'color'
+                                            ? { color_hex: group.colorHex }
+                                            : {})
+                                    }
                                 }
                             };
                         });
@@ -778,6 +880,73 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                     </p>
                                 </div>
                             )}
+
+                            {/* ── SALE ── */}
+                            <div className="pt-6 border-t border-gray-200">
+                                <div className="flex items-center gap-3 mb-1">
+                                    <h3 className="text-lg font-bold text-gray-900">Sale</h3>
+                                    <span
+                                        className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                                            salesActive ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                                        }`}
+                                    >
+                                        Sales mode {salesActive ? 'ON' : 'OFF'}
+                                    </span>
+                                </div>
+                                <p className="text-sm text-gray-500 mb-4">
+                                    Set a sale price for this product. It only shows to customers while sales mode is ON
+                                    (Admin → Sales). When sales mode is OFF, the product sells at its regular price and
+                                    this sale price is saved for the next campaign.
+                                </p>
+
+                                {variantGroups.length > 0 ? (
+                                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600 flex items-start gap-2">
+                                        <i className="ri-information-line text-gray-400 text-lg mt-0.5"></i>
+                                        <span>
+                                            This product has variants, and customers are charged the variant price.
+                                            Put it on sale with a percentage from the <strong>Admin → Sales</strong> page,
+                                            which discounts every variant correctly.
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <div className="grid md:grid-cols-2 gap-6 items-start">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-900 mb-2">Sale Price (GH₵)</label>
+                                            <div className="relative">
+                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 font-semibold">GH₵</span>
+                                                <input
+                                                    type="number"
+                                                    value={salePrice}
+                                                    onChange={(e) => setSalePrice(e.target.value)}
+                                                    className="w-full pl-16 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-400 focus:border-red-400"
+                                                    step="0.01" placeholder="No sale"
+                                                />
+                                            </div>
+                                            <p className="text-sm text-gray-500 mt-2">Leave empty for no sale.</p>
+                                        </div>
+                                        {salePrice && price && parseFloat(salePrice) > 0 && parseFloat(salePrice) < parseFloat(price) && (
+                                            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                                                <p className="text-red-900 font-semibold mb-1">
+                                                    Sale: GH₵ {parseFloat(salePrice).toFixed(2)}
+                                                    <span className="ml-2 text-xs font-bold bg-red-100 px-2 py-0.5 rounded">
+                                                        -{Math.round((1 - parseFloat(salePrice) / parseFloat(price)) * 100)}%
+                                                    </span>
+                                                </p>
+                                                <p className="text-red-800 text-sm">
+                                                    {salesActive
+                                                        ? 'Goes live as soon as you save.'
+                                                        : 'Saved — will go live when you turn sales mode on.'}
+                                                </p>
+                                            </div>
+                                        )}
+                                        {salePrice && price && parseFloat(salePrice) >= parseFloat(price) && (
+                                            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                                                Sale price must be lower than the regular price (GH₵ {parseFloat(price).toFixed(2)}).
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
 
                             <div className="pt-6 border-t border-gray-200">
                                 <h3 className="text-lg font-bold text-gray-900 mb-4">Inventory</h3>
