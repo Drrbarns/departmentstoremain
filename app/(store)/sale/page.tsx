@@ -22,6 +22,8 @@ function SaleContent() {
     const [categories, setCategories] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [totalProducts, setTotalProducts] = useState(0);
+    // null = still checking; controls whether the whole campaign is live.
+    const [salesActive, setSalesActive] = useState<boolean | null>(null);
 
     const selectedCategory = searchParams.get('category') || 'all';
     const sortBy = searchParams.get('sort') || 'newest';
@@ -58,10 +60,32 @@ function SaleContent() {
                 /* non-fatal */
             }
         }
+        async function fetchSalesActive() {
+            try {
+                const { data } = await supabase
+                    .from('site_settings')
+                    .select('value')
+                    .eq('key', 'sales_active')
+                    .maybeSingle();
+                // Missing row defaults to ON.
+                setSalesActive(!data ? true : data.value === true || data.value === 'true');
+            } catch {
+                setSalesActive(true);
+            }
+        }
         fetchCategories();
+        fetchSalesActive();
     }, []);
 
     useEffect(() => {
+        // Wait until we know the campaign state; show nothing while paused.
+        if (salesActive === null) return;
+        if (salesActive === false) {
+            setProducts([]);
+            setTotalProducts(0);
+            setLoading(false);
+            return;
+        }
         async function fetchProducts() {
             setLoading(true);
             try {
@@ -146,7 +170,7 @@ function SaleContent() {
             }
         }
         fetchProducts();
-    }, [selectedCategory, sortBy, page]);
+    }, [selectedCategory, sortBy, page, salesActive]);
 
     const totalPages = Math.ceil(totalProducts / PRODUCTS_PER_PAGE);
 
