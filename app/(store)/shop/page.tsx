@@ -98,6 +98,92 @@ function ShopContent() {
         const { data, count, error } = await cachedQuery<{ data: any; count: any; error: any }>(
           cacheKey,
           async () => {
+            // --------------------------------------------------------------
+            // SEARCH PATH — comprehensive ranked search via the
+            // `search_products` RPC (exact > prefix > phrase > all-words >
+            // partial-words > typo/trigram). Covers name, SKU, barcode, POS
+            // code, brand, tags, category, variants and descriptions.
+            // --------------------------------------------------------------
+            if (search?.trim()) {
+              const frag = search.trim().replace(/\s+/g, ' ');
+              const { data: hits, error: rpcError } = await supabase
+                .rpc('search_products', { p_query: frag, p_limit: 300 });
+
+              if (rpcError) return { data: null, count: 0, error: rpcError };
+              if (!hits || hits.length === 0) return { data: [], count: 0, error: null };
+
+              const rankById = new Map<string, number>(
+                hits.map((h: any, i: number) => [h.id, i])
+              );
+
+              let rowsQuery = supabase
+                .from('products')
+                .select(`
+                  *,
+                  categories(name, slug),
+                  product_images!product_id(url, position),
+                  product_variants(id, name, price, quantity, option1, option2, image_url)
+                `)
+                .in('id', hits.map((h: any) => h.id))
+                .order('position', { foreignTable: 'product_images', ascending: true });
+
+              // Price / rating filters still apply on top of search results
+              if (priceRange[1] < 5000) {
+                rowsQuery = rowsQuery.gte('price', priceRange[0]).lte('price', priceRange[1]);
+              }
+              if (selectedRating > 0) {
+                rowsQuery = rowsQuery.gte('rating_avg', selectedRating);
+              }
+
+              const { data: rows, error: rowsError } = await rowsQuery;
+              if (rowsError) return { data: null, count: 0, error: rowsError };
+
+              // Category filter (incl. subcategories) applied client-side so
+              // searched products keep their relevance ranking.
+              let filtered = rows || [];
+              if (selectedCategory !== 'all') {
+                const categoryObj = categories.find(c => c.slug === selectedCategory);
+                const targetSlugs = new Set([selectedCategory]);
+                if (categoryObj) {
+                  categories
+                    .filter(c => c.parent_id === categoryObj.id)
+                    .forEach(c => targetSlugs.add(c.slug));
+                }
+                filtered = filtered.filter((r: any) => r.categories?.slug && targetSlugs.has(r.categories.slug));
+              }
+
+              // Order by search relevance unless the user picked another sort.
+              switch (sortBy) {
+                case 'price-low':
+                  filtered.sort((a: any, b: any) => a.price - b.price);
+                  break;
+                case 'price-high':
+                  filtered.sort((a: any, b: any) => b.price - a.price);
+                  break;
+                case 'rating':
+                  filtered.sort((a: any, b: any) => (b.rating_avg || 0) - (a.rating_avg || 0));
+                  break;
+                case 'new':
+                  filtered.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                  break;
+                default:
+                  filtered.sort((a: any, b: any) =>
+                    (rankById.get(a.id) ?? Infinity) - (rankById.get(b.id) ?? Infinity)
+                  );
+                  break;
+              }
+
+              const from = (page - 1) * productsPerPage;
+              return {
+                data: filtered.slice(from, from + productsPerPage),
+                count: filtered.length,
+                error: null,
+              };
+            }
+
+            // --------------------------------------------------------------
+            // BROWSE PATH — no search term; standard filtered listing.
+            // --------------------------------------------------------------
             let query = supabase
               .from('products')
               .select(`
@@ -108,15 +194,6 @@ function ShopContent() {
               `, { count: 'exact' })
               .eq('status', 'active')
               .order('position', { foreignTable: 'product_images', ascending: true });
-
-            // Search: name, SKU, barcode, and POS store code (metadata.pos_code — same as shelf/POS labels)
-            if (search?.trim()) {
-              // Commas break PostgREST `.or()` argument parsing; strip them from the fragment.
-              const frag = search.trim().replace(/,/g, ' ');
-              query = query.or(
-                `name.ilike.%${frag}%,sku.ilike.%${frag}%,barcode.ilike.%${frag}%,metadata->>pos_code.ilike.%${frag}%`
-              );
-            }
 
             // Category Filter with Subcategories
             if (selectedCategory !== 'all') {

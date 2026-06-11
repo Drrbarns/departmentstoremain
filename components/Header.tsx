@@ -50,8 +50,9 @@ export default function Header() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      window.location.href = `/shop?search=${encodeURIComponent(searchQuery)}`;
+    const q = searchQuery.trim().replace(/\s+/g, ' ');
+    if (q) {
+      window.location.href = `/shop?search=${encodeURIComponent(q)}`;
     }
   };
 
