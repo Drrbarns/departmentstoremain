@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, Fragment } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPaged } from '@/lib/supabase-paginate';
@@ -17,6 +17,13 @@ type ProductRow = {
     image: string;
     variantsCount: number;
     pausedSalePrice: number | null;
+};
+
+type VariantRow = {
+    id: string;
+    label: string;
+    regular: number;
+    sale: number | null;
 };
 
 const PAGE_SIZE = 24;
@@ -66,6 +73,12 @@ export default function AdminSalesPage() {
     const [bulkPercent, setBulkPercent] = useState('');
     const [bulkFixed, setBulkFixed] = useState('');
     const [rowPrice, setRowPrice] = useState<Record<string, string>>({});
+    // Per-variant price editor (expandable row for variant products)
+    const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [variantData, setVariantData] = useState<Record<string, VariantRow[]>>({});
+    const [variantLoading, setVariantLoading] = useState(false);
+    const [variantInputs, setVariantInputs] = useState<Record<string, string>>({});
+    const [variantFillAll, setVariantFillAll] = useState('');
     const [busy, setBusy] = useState(false);
     const [toast, setToast] = useState<{ text: string; ok: boolean } | null>(null);
     const [salesActive, setSalesActive] = useState(true);
@@ -208,6 +221,8 @@ export default function AdminSalesPage() {
         try {
             await callApi({ action: 'set_active', active: next });
             setSalesActive(next);
+            setVariantData({});
+            setExpandedId(null);
             await fetchProducts();
             setToast({
                 text: next
@@ -304,6 +319,9 @@ export default function AdminSalesPage() {
             setSelected(new Set());
             setBulkPercent('');
             setBulkFixed('');
+            // Variant prices may have changed server-side; refetch on next expand.
+            setVariantData({});
+            setExpandedId(null);
         } catch (err: any) {
             setToast({ text: err?.message || 'Action failed', ok: false });
         } finally {
@@ -339,7 +357,120 @@ export default function AdminSalesPage() {
         try {
             await callApi({ action: 'remove', productIds: [p.id] });
             applyLocal(new Set([p.id]), 'remove');
+            // Variants were reverted server-side too — drop the cached rows.
+            setVariantData((prev) => {
+                const next = { ...prev };
+                delete next[p.id];
+                return next;
+            });
+            if (expandedId === p.id) setExpandedId(null);
             setToast({ text: `${p.name} removed from sale`, ok: true });
+        } catch (err: any) {
+            setToast({ text: err?.message || 'Action failed', ok: false });
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    /** Expand a variant product's row and lazily load its variants. */
+    const toggleVariants = async (p: ProductRow) => {
+        if (expandedId === p.id) {
+            setExpandedId(null);
+            return;
+        }
+        setExpandedId(p.id);
+        setVariantFillAll('');
+        if (variantData[p.id]) return;
+        setVariantLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('product_variants')
+                .select('id, name, option1, option2, price, compare_at_price, metadata')
+                .eq('product_id', p.id)
+                .order('option2', { ascending: true })
+                .order('option1', { ascending: true });
+            if (error) throw error;
+            const rows: VariantRow[] = (data || []).map((v: any) => {
+                const priceNum = Number(v.price) || 0;
+                const compare = v.compare_at_price != null ? Number(v.compare_at_price) : null;
+                const paused = v.metadata?.paused_sale_price != null ? Number(v.metadata.paused_sale_price) : null;
+                // Same regular/sale derivation as the product-level helpers.
+                let regular = priceNum;
+                let sale: number | null = null;
+                if (paused != null) {
+                    sale = paused;
+                } else if (compare != null && compare > priceNum) {
+                    regular = compare;
+                    sale = priceNum;
+                }
+                const label = [v.option2, v.option1 || v.name].filter(Boolean).join(' / ') || v.name || 'Variant';
+                return { id: v.id, label, regular, sale };
+            });
+            setVariantData((prev) => ({ ...prev, [p.id]: rows }));
+        } catch (err) {
+            console.error('[admin/sales] variant load error:', err);
+            setToast({ text: 'Failed to load variants', ok: false });
+            setExpandedId(null);
+        } finally {
+            setVariantLoading(false);
+        }
+    };
+
+    /** Apply the typed sale prices for one product's variants. */
+    const applyVariantPrices = async (p: ProductRow) => {
+        const rows = variantData[p.id] || [];
+        const items: { variantId: string; price: number }[] = [];
+        for (const v of rows) {
+            const raw = variantInputs[v.id];
+            if (raw == null || raw.trim() === '') continue;
+            const value = Number(raw);
+            if (!Number.isFinite(value) || value <= 0) {
+                setToast({ text: `Invalid sale price for "${v.label}"`, ok: false });
+                return;
+            }
+            if (value >= v.regular) {
+                setToast({
+                    text: `Sale price for "${v.label}" must be below its regular price (${fmt(v.regular)})`,
+                    ok: false,
+                });
+                return;
+            }
+            items.push({ variantId: v.id, price: Math.round(value * 100) / 100 });
+        }
+        if (items.length === 0) {
+            setToast({ text: 'Enter a sale price for at least one variant', ok: false });
+            return;
+        }
+        setBusy(true);
+        try {
+            await callApi({ action: 'variant_prices', items });
+            const priced = new Map(items.map((i) => [i.variantId, i.price]));
+            const newRows = rows.map((v) => (priced.has(v.id) ? { ...v, sale: priced.get(v.id)! } : v));
+            setVariantData((prev) => ({ ...prev, [p.id]: newRows }));
+            // Mirror the server's product-row sync: cheapest charged price + badge.
+            const minCharged = Math.min(...newRows.map((v) => (v.sale != null ? v.sale : v.regular)));
+            setProducts((prev) =>
+                prev.map((row) =>
+                    row.id === p.id
+                        ? {
+                              ...row,
+                              on_sale: true,
+                              compare_at_price: regularPrice(row),
+                              price: minCharged,
+                              pausedSalePrice: null,
+                          }
+                        : row,
+                ),
+            );
+            setVariantInputs((prev) => {
+                const next = { ...prev };
+                items.forEach((i) => delete next[i.variantId]);
+                return next;
+            });
+            setToast({
+                text: `Set sale price on ${items.length} variant${items.length > 1 ? 's' : ''} of ${p.name}`,
+                ok: true,
+            });
         } catch (err: any) {
             setToast({ text: err?.message || 'Action failed', ok: false });
         } finally {
@@ -533,7 +664,8 @@ export default function AdminSalesPage() {
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
                     Fixed price applies only to products without variants and must be below the regular price.
-                    For variant products use a percentage.
+                    For variant products use a percentage, or click &quot;Variant prices&quot; on the row to set
+                    each variant&apos;s own sale price.
                 </p>
             </div>
             )}
@@ -577,7 +709,8 @@ export default function AdminSalesPage() {
                                     const sale = salePrice(p);
                                     const pct = discountPct(p);
                                     return (
-                                        <tr key={p.id} className="border-b border-gray-100 hover:bg-gray-50/70">
+                                        <Fragment key={p.id}>
+                                        <tr className="border-b border-gray-100 hover:bg-gray-50/70">
                                             <td className="p-3">
                                                 <input
                                                     type="checkbox"
@@ -630,7 +763,14 @@ export default function AdminSalesPage() {
                                                 {!salesActive ? (
                                                     <span className="text-xs text-gray-300">—</span>
                                                 ) : p.variantsCount > 0 ? (
-                                                    <span className="text-xs text-gray-400">use % off</span>
+                                                    <button
+                                                        onClick={() => toggleVariants(p)}
+                                                        disabled={busy}
+                                                        className="px-2.5 py-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-xs font-medium disabled:opacity-50 inline-flex items-center gap-1 whitespace-nowrap"
+                                                    >
+                                                        <i className={expandedId === p.id ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'}></i>
+                                                        {expandedId === p.id ? 'Hide variants' : 'Variant prices'}
+                                                    </button>
                                                 ) : (
                                                     <div className="flex items-center gap-1">
                                                         <input
@@ -664,6 +804,100 @@ export default function AdminSalesPage() {
                                                 )}
                                             </td>
                                         </tr>
+                                        {expandedId === p.id && (
+                                            <tr className="border-b border-gray-100 bg-blue-50/40">
+                                                <td className="p-0"></td>
+                                                <td colSpan={6} className="p-4">
+                                                    {variantLoading && !variantData[p.id] ? (
+                                                        <div className="text-sm text-gray-500 flex items-center gap-2">
+                                                            <i className="ri-loader-4-line animate-spin"></i>
+                                                            Loading variants…
+                                                        </div>
+                                                    ) : (
+                                                        <div className="space-y-3">
+                                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                                                <p className="text-xs text-gray-600">
+                                                                    Set a custom sale price per variant. Leave a box empty to keep that
+                                                                    variant unchanged.
+                                                                </p>
+                                                                <div className="flex items-center gap-1">
+                                                                    <input
+                                                                        type="number"
+                                                                        min={0}
+                                                                        step="0.01"
+                                                                        value={variantFillAll}
+                                                                        onChange={(e) => setVariantFillAll(e.target.value)}
+                                                                        placeholder="₵ same for all"
+                                                                        className="w-32 px-2 py-1.5 border border-gray-300 rounded-lg text-xs bg-white"
+                                                                    />
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            if (!variantFillAll.trim()) return;
+                                                                            setVariantInputs((prev) => {
+                                                                                const next = { ...prev };
+                                                                                (variantData[p.id] || []).forEach((v) => {
+                                                                                    next[v.id] = variantFillAll;
+                                                                                });
+                                                                                return next;
+                                                                            });
+                                                                        }}
+                                                                        className="px-2.5 py-1.5 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg text-xs font-medium"
+                                                                    >
+                                                                        Fill all
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                                                {(variantData[p.id] || []).map((v) => (
+                                                                    <div
+                                                                        key={v.id}
+                                                                        className="bg-white border border-gray-200 rounded-lg p-3 flex items-center justify-between gap-3"
+                                                                    >
+                                                                        <div className="min-w-0">
+                                                                            <p className="text-sm font-medium text-gray-900 truncate">{v.label}</p>
+                                                                            <p className="text-xs text-gray-500">
+                                                                                Regular {fmt(v.regular)}
+                                                                                {v.sale != null && (
+                                                                                    <span className="text-red-600 font-semibold">
+                                                                                        {' '}• Sale {fmt(v.sale)}
+                                                                                    </span>
+                                                                                )}
+                                                                            </p>
+                                                                        </div>
+                                                                        <input
+                                                                            type="number"
+                                                                            min={0}
+                                                                            step="0.01"
+                                                                            value={variantInputs[v.id] ?? ''}
+                                                                            onChange={(e) =>
+                                                                                setVariantInputs((prev) => ({
+                                                                                    ...prev,
+                                                                                    [v.id]: e.target.value,
+                                                                                }))
+                                                                            }
+                                                                            placeholder="₵ sale"
+                                                                            className="w-24 px-2 py-1.5 border border-gray-300 rounded-lg text-sm flex-shrink-0"
+                                                                        />
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+
+                                                            <div className="flex justify-end">
+                                                                <button
+                                                                    onClick={() => applyVariantPrices(p)}
+                                                                    disabled={busy}
+                                                                    className="px-4 py-2 bg-gray-900 hover:bg-black text-white rounded-lg text-xs font-semibold disabled:opacity-50"
+                                                                >
+                                                                    Apply variant prices
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        )}
+                                        </Fragment>
                                     );
                                 })}
                             </tbody>

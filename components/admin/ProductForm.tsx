@@ -15,6 +15,8 @@ interface VariantSizeRow {
     tempId: string;
     size: string;
     price: string;
+    /** Predefined sale price; empty = no sale for this variant. */
+    salePrice: string;
     stock: string;
     sku: string;
 }
@@ -119,6 +121,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
         tempId: Math.random().toString(36).slice(2),
         size: defaultSize,
         price: '',
+        salePrice: '',
         stock: '0',
         sku: ''
     });
@@ -171,10 +174,23 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
             }
 
             const sizeLabel = (v.option1 || '').trim() || (colorName ? (v.name || '').trim() : 'Default') || 'Default';
+            // Sale-aware unswap (same model as the product-level pricing):
+            // active sale → price col holds the sale price, compare_at the
+            // regular; paused → price is regular, sale stashed in metadata.
+            let rowRegular = v.price;
+            let rowSale = '';
+            const vMeta = v.metadata || {};
+            if (vMeta.paused_sale_price != null) {
+                rowSale = String(vMeta.paused_sale_price);
+            } else if (v.compare_at_price != null && Number(v.compare_at_price) > Number(v.price)) {
+                rowRegular = v.compare_at_price;
+                rowSale = String(v.price);
+            }
             group.sizes.push({
                 tempId: v.id || Math.random().toString(36).slice(2),
                 size: sizeLabel,
-                price: v.price?.toString() || '',
+                price: rowRegular?.toString() || '',
+                salePrice: rowSale,
                 stock: (v.stock ?? v.quantity ?? 0).toString(),
                 sku: v.sku || ''
             });
@@ -232,7 +248,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
         }));
     };
 
-    const bulkSetVariantField = (field: 'price' | 'stock', value: string) => {
+    const bulkSetVariantField = (field: 'price' | 'stock' | 'salePrice', value: string) => {
         setVariantGroups(prev => prev.map(g => ({
             ...g,
             sizes: g.sizes.map(s => ({ ...s, [field]: value }))
@@ -378,6 +394,33 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                 return;
             }
 
+            // Per-variant sale parsing. A row's regular price falls back to
+            // the product's base price, same as the charged-price fallback.
+            const parseRowSale = (row: VariantSizeRow) => {
+                const reg = parseFloat(row.price) || regularP || 0;
+                const sp = row.salePrice ? parseFloat(row.salePrice) : NaN;
+                const hasRowSale = Number.isFinite(sp) && sp > 0 && sp < reg;
+                return { reg, sp, hasRowSale, invalid: !!row.salePrice.trim() && !hasRowSale };
+            };
+
+            if (hasVariants) {
+                const badRow = variantGroups.flatMap(g => g.sizes.map(s => ({ g, s }))).find(({ s }) => parseRowSale(s).invalid);
+                if (badRow) {
+                    alert(`Variant "${badRow.g.name || badRow.g.colorName || 'Default'} / ${badRow.s.size || 'Default'}" has an invalid sale price. It must be lower than that variant's regular price (leave empty for no sale).`);
+                    setLoading(false);
+                    return;
+                }
+            }
+            const allRowSales = hasVariants
+                ? variantGroups.flatMap(g => g.sizes).map(parseRowSale)
+                : [];
+            const anyVariantSale = allRowSales.some(r => r.hasRowSale);
+            // The product row mirrors the cheapest charged price so storefront
+            // "From GH₵X" and the -% badge stay correct for variant products.
+            const minCharged = anyVariantSale
+                ? Math.min(...allRowSales.map(r => (r.hasRowSale ? r.sp : r.reg)))
+                : null;
+
             const metadata: Record<string, any> = {
                 ...(initialData?.metadata || {}),
                 pos_code: ensuredPosCode || null,
@@ -386,12 +429,22 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
             };
 
             let pricingFields: Record<string, any>;
-            if (hasVariants) {
-                // Variant products: untouched legacy behaviour; sale state is
-                // managed from Admin → Sales and preserved via metadata spread.
+            if (hasVariants && anyVariantSale && salesActive) {
+                delete metadata.paused_sale_price;
+                pricingFields = { price: minCharged, compare_at_price: regularP, on_sale: true };
+            } else if (hasVariants && anyVariantSale) {
+                metadata.paused_sale_price = minCharged;
                 pricingFields = {
                     price: regularP,
                     compare_at_price: comparePrice ? parseFloat(comparePrice) : null,
+                    on_sale: true,
+                };
+            } else if (hasVariants) {
+                delete metadata.paused_sale_price;
+                pricingFields = {
+                    price: regularP,
+                    compare_at_price: comparePrice ? parseFloat(comparePrice) : null,
+                    on_sale: false,
                 };
             } else if (hasSale && salesActive) {
                 delete metadata.paused_sale_price;
@@ -481,6 +534,27 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                         return group.sizes.map(sizeRow => {
                             const sizeLabel = sizeRow.size.trim() || 'Default';
                             const existingId = isUuid(sizeRow.tempId) ? sizeRow.tempId : null;
+
+                            // Sale-aware variant pricing: while sales mode is ON
+                            // the variant charges the sale price (regular kept in
+                            // compare_at_price); while OFF the sale price is
+                            // stashed in metadata.paused_sale_price for the
+                            // master switch to activate later.
+                            const { reg: rowRegular, sp: rowSale, hasRowSale } = parseRowSale(sizeRow);
+                            const variantMetadata: Record<string, any> = {
+                                // Merge with the variant's existing metadata so flags
+                                // owned by other tools survive a form save.
+                                ...(existingId ? existingVariantMetadata[existingId] || {} : {}),
+                                ...(group.colorHex && group.appearanceType === 'color'
+                                    ? { color_hex: group.colorHex }
+                                    : {})
+                            };
+                            if (hasRowSale && !salesActive) {
+                                variantMetadata.paused_sale_price = rowSale;
+                            } else {
+                                delete variantMetadata.paused_sale_price;
+                            }
+
                             return {
                                 existingId,
                                 imageUrl: group.imageUrl,
@@ -490,20 +564,13 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                     product_id: productId,
                                     name: sizeLabel,
                                     sku: sizeRow.sku || null,
-                                    price: parseFloat(sizeRow.price) || parseFloat(price) || 0,
+                                    price: hasRowSale && salesActive ? rowSale : rowRegular,
+                                    compare_at_price: hasRowSale && salesActive ? rowRegular : null,
                                     quantity: parseInt(sizeRow.stock) || 0,
                                     option1: sizeLabel,
                                     option2: option2Value,
                                     image_url: group.imageUrl || null,
-                                    // Merge with the variant's existing metadata so flags
-                                    // owned by other tools (e.g. paused_sale_price from the
-                                    // sales master switch) survive a form save.
-                                    metadata: {
-                                        ...(existingId ? existingVariantMetadata[existingId] || {} : {}),
-                                        ...(group.colorHex && group.appearanceType === 'color'
-                                            ? { color_hex: group.colorHex }
-                                            : {})
-                                    }
+                                    metadata: variantMetadata
                                 }
                             };
                         });
@@ -904,8 +971,9 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                         <i className="ri-information-line text-gray-400 text-lg mt-0.5"></i>
                                         <span>
                                             This product has variants, and customers are charged the variant price.
-                                            Put it on sale with a percentage from the <strong>Admin → Sales</strong> page,
-                                            which discounts every variant correctly.
+                                            Set each variant&apos;s sale price in the <strong>Variants</strong> tab
+                                            (there&apos;s a Sale price column next to each price), or apply a
+                                            percentage to everything from the <strong>Admin → Sales</strong> page.
                                         </span>
                                     </div>
                                 ) : (
@@ -1126,6 +1194,15 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                             >
                                                 Bulk Set Stock
                                             </button>
+                                            <button
+                                                onClick={() => {
+                                                    const val = prompt('Set SALE price for ALL sizes in all variants (leave empty to clear all sales):', '');
+                                                    if (val !== null) bulkSetVariantField('salePrice', val.trim());
+                                                }}
+                                                className="px-3 py-1.5 bg-white border border-red-300 text-red-700 rounded-lg text-xs font-medium hover:bg-red-50 transition-colors cursor-pointer"
+                                            >
+                                                Bulk Set Sale Price
+                                            </button>
                                         </div>
                                     </div>
 
@@ -1263,6 +1340,17 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                                                             />
                                                                         </div>
                                                                         <div>
+                                                                            <label className="block text-xs font-semibold text-red-500 mb-1">Sale price (GH₵)</label>
+                                                                            <input
+                                                                                type="number"
+                                                                                value={sizeRow.salePrice}
+                                                                                onChange={(e) => updateSize(group.tempId, sizeRow.tempId, 'salePrice', e.target.value)}
+                                                                                step="0.01"
+                                                                                placeholder="No sale"
+                                                                                className="w-full px-3 py-3 border border-red-200 rounded-lg text-base font-medium focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                                                                            />
+                                                                        </div>
+                                                                        <div>
                                                                             <label className="block text-xs font-semibold text-gray-500 mb-1">Stock</label>
                                                                             <input
                                                                                 type="number"
@@ -1296,6 +1384,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                                                 <tr className="text-left text-xs uppercase tracking-wide text-gray-500 border-b border-gray-100">
                                                                     <th className="py-2 pr-3 font-semibold">Size</th>
                                                                     <th className="py-2 px-3 font-semibold">Price (GH₵)</th>
+                                                                    <th className="py-2 px-3 font-semibold text-red-500">Sale price</th>
                                                                     <th className="py-2 px-3 font-semibold">Stock</th>
                                                                     <th className="py-2 px-3 font-semibold">SKU</th>
                                                                     <th className="py-2 pl-3 pr-0"></th>
@@ -1321,6 +1410,16 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                                                                 step="0.01"
                                                                                 placeholder={price?.toString() || '0.00'}
                                                                                 className="w-full min-w-[90px] px-3 py-2.5 border border-gray-200 rounded-lg text-sm font-medium focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                                            />
+                                                                        </td>
+                                                                        <td className="py-2 px-3">
+                                                                            <input
+                                                                                type="number"
+                                                                                value={sizeRow.salePrice}
+                                                                                onChange={(e) => updateSize(group.tempId, sizeRow.tempId, 'salePrice', e.target.value)}
+                                                                                step="0.01"
+                                                                                placeholder="No sale"
+                                                                                className="w-full min-w-[90px] px-3 py-2.5 border border-red-200 rounded-lg text-sm font-medium focus:ring-1 focus:ring-red-500 focus:border-red-500"
                                                                             />
                                                                         </td>
                                                                         <td className="py-2 px-3">

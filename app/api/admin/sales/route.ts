@@ -9,6 +9,7 @@ import { verifyAuth } from '@/lib/auth';
  *   { action: 'apply',  mode: 'percentage', value: <1-99>,  productIds: string[] }
  *   { action: 'apply',  mode: 'fixed',      value: <price>, productIds: string[] }
  *   { action: 'remove',                                     productIds: string[] }
+ *   { action: 'variant_prices', items: [{ variantId, price }] }  // per-variant fixed sale prices
  *   { action: 'set_active', active: boolean }   // master on/off for ALL sales
  *
  * All price math runs server-side in SQL functions (apply_sale_percentage /
@@ -79,6 +80,62 @@ export async function POST(request: Request) {
             console.error('[admin/sales] set_active error:', err?.message || err);
             return NextResponse.json(
                 { error: err?.message || 'Failed to toggle sales' },
+                { status: 500 },
+            );
+        }
+    }
+
+    // Per-variant fixed sale prices (variant products). Validated here, price
+    // math + regular-price derivation done in SQL (apply_sale_variant_prices)
+    // so a sale price can never exceed the variant's authoritative regular price.
+    if (action === 'variant_prices') {
+        const rawItems: unknown = body?.items;
+        if (!Array.isArray(rawItems) || rawItems.length === 0) {
+            return NextResponse.json({ error: 'No variant prices provided' }, { status: 400 });
+        }
+        if (rawItems.length > MAX_IDS) {
+            return NextResponse.json(
+                { error: `Too many variants in one request (max ${MAX_IDS}).` },
+                { status: 400 },
+            );
+        }
+        const items = rawItems
+            .map((it: any) => ({
+                variant_id: it?.variantId,
+                price: Math.round(Number(it?.price) * 100) / 100,
+            }))
+            .filter((it) => isUuid(it.variant_id) && Number.isFinite(it.price) && it.price > 0);
+        if (items.length === 0) {
+            return NextResponse.json({ error: 'No valid variant prices' }, { status: 400 });
+        }
+
+        if (!(await salesAreActive())) {
+            return NextResponse.json(
+                { error: 'Sales are turned off. Turn sales on before editing individual product sales.' },
+                { status: 409 },
+            );
+        }
+
+        try {
+            const { data, error } = await supabaseAdmin.rpc('apply_sale_variant_prices', {
+                p_items: items,
+            });
+            if (error) throw error;
+            const updated = (data as any)?.variants_updated ?? 0;
+            return NextResponse.json({
+                success: true,
+                action,
+                result: data,
+                skipped: items.length - updated,
+                note:
+                    updated < items.length
+                        ? 'Some variants were skipped: a sale price must be lower than the variant\'s regular price.'
+                        : undefined,
+            });
+        } catch (err: any) {
+            console.error('[admin/sales] variant_prices error:', err?.message || err);
+            return NextResponse.json(
+                { error: err?.message || 'Failed to set variant sale prices' },
                 { status: 500 },
             );
         }
