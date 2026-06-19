@@ -381,6 +381,89 @@ export default function ProductsPage() {
     }
   };
 
+  const handleExportCsv = async () => {
+    if (printing) return;
+    setPrinting(true);
+    try {
+      const rows = filteredProducts;
+      const ids = rows.map((p) => p.id);
+
+      const variantMap = new Map<string, any[]>();
+      if (ids.length > 0) {
+        const idSet = new Set(ids);
+        const allVariants = await fetchAllPaged<any>(() =>
+          supabase
+            .from('product_variants')
+            .select('product_id, name, sku, option1, option2, option3, quantity, price')
+            .order('option2', { ascending: true })
+            .order('option1', { ascending: true }),
+        );
+        for (const v of allVariants) {
+          if (!idSet.has(v.product_id)) continue;
+          const list = variantMap.get(v.product_id) || [];
+          list.push(v);
+          variantMap.set(v.product_id, list);
+        }
+      }
+
+      const variantLabel = (v: any) =>
+        [v.option2, v.option1, v.option3].filter(Boolean).join(' / ') ||
+        (v.name && v.name !== 'Default' ? v.name : '') ||
+        'Default';
+
+      // Quote every field so commas, quotes and newlines in names are safe.
+      const cell = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+      const lines: string[] = [
+        ['Product', 'Product SKU', 'Category', 'Status', 'Variant', 'Variant SKU', 'Price (GHS)', 'Stock', 'Stock status'].join(','),
+      ];
+
+      const stockStatus = (q: number, threshold: number) =>
+        q === 0 ? 'Out of stock' : q <= threshold ? 'Low stock' : 'In stock';
+
+      for (const p of rows) {
+        const variants = variantMap.get(p.id) || [];
+        const threshold = p.metadata?.low_stock_threshold || 5;
+        const category = p.category || 'Uncategorized';
+        if (variants.length > 0) {
+          for (const v of variants) {
+            const q = v.quantity || 0;
+            lines.push([
+              cell(p.name), cell(p.sku || ''), cell(category), cell(p.status),
+              cell(variantLabel(v)), cell(v.sku || ''),
+              cell(Number(v.price ?? p.price ?? 0).toFixed(2)),
+              cell(q), cell(stockStatus(q, threshold)),
+            ].join(','));
+          }
+        } else {
+          const q = p.stock ?? p.quantity ?? 0;
+          lines.push([
+            cell(p.name), cell(p.sku || ''), cell(category), cell(p.status),
+            cell(''), cell(''),
+            cell(Number(p.price ?? 0).toFixed(2)),
+            cell(q), cell(stockStatus(q, threshold)),
+          ].join(','));
+        }
+      }
+
+      // Prepend BOM so Excel reads UTF-8 (GH₵, accents) correctly.
+      const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const stamp = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `stock-list-${stamp}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error('Export CSV error:', err);
+      alert('Could not export the stock list: ' + (err?.message || 'unknown error'));
+    } finally {
+      setPrinting(false);
+    }
+  };
+
   const handleSelectAll = () => {
     if (selectedProducts.length === products.length) {
       setSelectedProducts([]);
@@ -494,6 +577,15 @@ export default function ProductsPage() {
           <p className="text-gray-600 mt-1">Manage your product catalog and inventory</p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={handleExportCsv}
+            disabled={printing || loading}
+            className="px-5 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer flex items-center justify-center hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Download an Excel/CSV spreadsheet of all products, variants and current stock"
+          >
+            <i className="ri-file-excel-2-line mr-2"></i>
+            Export CSV
+          </button>
           <button
             onClick={handlePrintStockList}
             disabled={printing || loading}
