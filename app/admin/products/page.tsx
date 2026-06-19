@@ -194,7 +194,7 @@ export default function ProductsPage() {
         const allVariants = await fetchAllPaged<any>(() =>
           supabase
             .from('product_variants')
-            .select('product_id, name, sku, option1, option2, option3, quantity')
+            .select('product_id, name, sku, option1, option2, option3, quantity, image_url')
             .order('option2', { ascending: true })
             .order('option1', { ascending: true }),
         );
@@ -210,6 +210,11 @@ export default function ProductsPage() {
         [v.option2, v.option1, v.option3].filter(Boolean).join(' / ') ||
         (v.name && v.name !== 'Default' ? v.name : '') ||
         'Default';
+
+      const thumb = (src: string) =>
+        src
+          ? `<img class="thumb" src="${esc(src)}" alt="" />`
+          : '<div class="thumb noimg"></div>';
 
       let totalUnits = 0;
       let lowCount = 0;
@@ -229,6 +234,7 @@ export default function ProductsPage() {
 
             const head = `
               <tr class="prow group-head">
+                <td class="imgcell">${thumb(p.image)}</td>
                 <td class="pname">${esc(p.name)}</td>
                 <td class="sku">${esc(p.sku || '—')}</td>
                 <td>${category}</td>
@@ -243,8 +249,10 @@ export default function ProductsPage() {
                 const flag = q === 0 ? ' out' : q <= threshold ? ' low' : '';
                 return `
                   <tr class="vrow${flag}">
-                    <td class="indent" colspan="2"></td>
+                    <td class="imgcell indent">${thumb(v.image_url || p.image)}</td>
+                    <td></td>
                     <td class="sku">${esc(v.sku || '—')}</td>
+                    <td></td>
                     <td class="variant">${esc(variantLabel(v))}</td>
                     <td class="num">${q}${q === 0 ? ' <span class="tag out">OUT</span>' : q <= threshold ? ' <span class="tag low">LOW</span>' : ''}</td>
                   </tr>`;
@@ -260,6 +268,7 @@ export default function ProductsPage() {
           const flag = q === 0 ? ' out' : q <= threshold ? ' low' : '';
           return `
             <tr class="prow${flag}">
+              <td class="imgcell">${thumb(p.image)}</td>
               <td class="pname">${esc(p.name)}</td>
               <td class="sku">${esc(p.sku || '—')}</td>
               <td>${category}</td>
@@ -304,6 +313,12 @@ export default function ProductsPage() {
   th { text-align: left; background: #f3f4f6; border-bottom: 2px solid #d1d5db; padding: 7px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; color: #374151; }
   td { padding: 6px 8px; border-bottom: 1px solid #eef0f2; vertical-align: top; }
   th.num, td.num { text-align: right; white-space: nowrap; }
+  td.imgcell, th.imgcell { width: 46px; padding: 4px 8px; }
+  .thumb { width: 38px; height: 38px; object-fit: cover; border-radius: 5px; border: 1px solid #e5e7eb; background: #f3f4f6; display: block; }
+  .thumb.noimg { background: repeating-linear-gradient(45deg, #f3f4f6, #f3f4f6 4px, #e9ebee 4px, #e9ebee 8px); }
+  td.imgcell.indent { padding-left: 22px; }
+  td.imgcell.indent .thumb { width: 30px; height: 30px; }
+  img { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .prow.group-head td { border-bottom: none; padding-top: 9px; }
   .prow td { font-weight: 600; }
   .vrow td { color: #4b5563; font-weight: 400; }
@@ -328,8 +343,30 @@ export default function ProductsPage() {
 </head>
 <body>
   <div class="toolbar noprint">
-    <button class="btn" onclick="window.print()">Print / Save as PDF</button>
+    <button class="btn" id="printBtn" onclick="printWhenReady()">Print / Save as PDF</button>
+    <span id="loadNote" style="margin-left:10px;color:#6b7280;font-size:12px"></span>
   </div>
+  <script>
+    function printWhenReady() {
+      var btn = document.getElementById('printBtn');
+      var note = document.getElementById('loadNote');
+      var imgs = Array.prototype.slice.call(document.images);
+      var pending = imgs.filter(function (i) { return !i.complete; });
+      if (pending.length === 0) { window.print(); return; }
+      btn.disabled = true;
+      note.textContent = 'Loading images… (' + pending.length + ' left)';
+      var left = pending.length;
+      function done() {
+        left -= 1;
+        note.textContent = left > 0 ? 'Loading images… (' + left + ' left)' : '';
+        if (left <= 0) { btn.disabled = false; window.print(); }
+      }
+      pending.forEach(function (i) {
+        i.addEventListener('load', done);
+        i.addEventListener('error', done);
+      });
+    }
+  </script>
   <h1>Product &amp; Stock List</h1>
   <div class="meta">
     Discount Discovery Zone &nbsp;•&nbsp; Generated <strong>${esc(generatedAt)}</strong>
@@ -345,6 +382,7 @@ export default function ProductsPage() {
   <table>
     <thead>
       <tr>
+        <th class="imgcell"></th>
         <th>Product</th>
         <th>SKU</th>
         <th>Category</th>
@@ -353,7 +391,7 @@ export default function ProductsPage() {
       </tr>
     </thead>
     <tbody>
-      ${bodyRows || '<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:24px">No products match the current filters.</td></tr>'}
+      ${bodyRows || '<tr><td colspan="6" style="text-align:center;color:#9ca3af;padding:24px">No products match the current filters.</td></tr>'}
     </tbody>
   </table>
   <div class="footer">
