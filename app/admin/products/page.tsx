@@ -21,6 +21,7 @@ export default function ProductsPage() {
   const [bulkStatus, setBulkStatus] = useState('draft');
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [printing, setPrinting] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
   const pendingScrollRestoreRef = useRef<number | null>(null);
 
@@ -162,6 +163,224 @@ export default function ProductsPage() {
     }
   };
 
+  const handlePrintStockList = async () => {
+    if (printing) return;
+    setPrinting(true);
+
+    // Open the print window synchronously (before any await) so popup
+    // blockers don't kill it. Show a placeholder until the report is ready.
+    const win = window.open('', '_blank');
+    if (win) {
+      win.document.write('<!doctype html><title>Stock list</title><body style="font-family:sans-serif;padding:40px;color:#374151">Generating stock list…</body>');
+    }
+
+    try {
+      const esc = (v: any) =>
+        String(v ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+
+      // The list on screen is already filtered/sorted; print exactly that set.
+      const rows = filteredProducts;
+      const ids = rows.map((p) => p.id);
+
+      // Pull every variant for the products being printed. Fetch all variants
+      // in pages and group locally — far cheaper than a giant `.in(...)` URL.
+      const variantMap = new Map<string, any[]>();
+      if (ids.length > 0) {
+        const idSet = new Set(ids);
+        const allVariants = await fetchAllPaged<any>(() =>
+          supabase
+            .from('product_variants')
+            .select('product_id, name, sku, option1, option2, option3, quantity')
+            .order('option2', { ascending: true })
+            .order('option1', { ascending: true }),
+        );
+        for (const v of allVariants) {
+          if (!idSet.has(v.product_id)) continue;
+          const list = variantMap.get(v.product_id) || [];
+          list.push(v);
+          variantMap.set(v.product_id, list);
+        }
+      }
+
+      const variantLabel = (v: any) =>
+        [v.option2, v.option1, v.option3].filter(Boolean).join(' / ') ||
+        (v.name && v.name !== 'Default' ? v.name : '') ||
+        'Default';
+
+      let totalUnits = 0;
+      let lowCount = 0;
+      let outCount = 0;
+      let variantLineCount = 0;
+
+      const bodyRows = rows
+        .map((p) => {
+          const variants = variantMap.get(p.id) || [];
+          const threshold = p.metadata?.low_stock_threshold || 5;
+          const category = esc(p.category || 'Uncategorized');
+
+          if (variants.length > 0) {
+            const productTotal = variants.reduce((s, v) => s + (v.quantity || 0), 0);
+            totalUnits += productTotal;
+            variantLineCount += variants.length;
+
+            const head = `
+              <tr class="prow group-head">
+                <td class="pname">${esc(p.name)}</td>
+                <td class="sku">${esc(p.sku || '—')}</td>
+                <td>${category}</td>
+                <td class="variant muted">${variants.length} variant${variants.length !== 1 ? 's' : ''}</td>
+                <td class="num total">${productTotal}</td>
+              </tr>`;
+            const sub = variants
+              .map((v) => {
+                const q = v.quantity || 0;
+                if (q === 0) outCount += 1;
+                else if (q <= threshold) lowCount += 1;
+                const flag = q === 0 ? ' out' : q <= threshold ? ' low' : '';
+                return `
+                  <tr class="vrow${flag}">
+                    <td class="indent" colspan="2"></td>
+                    <td class="sku">${esc(v.sku || '—')}</td>
+                    <td class="variant">${esc(variantLabel(v))}</td>
+                    <td class="num">${q}${q === 0 ? ' <span class="tag out">OUT</span>' : q <= threshold ? ' <span class="tag low">LOW</span>' : ''}</td>
+                  </tr>`;
+              })
+              .join('');
+            return head + sub;
+          }
+
+          const q = p.stock ?? p.quantity ?? 0;
+          totalUnits += q;
+          if (q === 0) outCount += 1;
+          else if (q <= threshold) lowCount += 1;
+          const flag = q === 0 ? ' out' : q <= threshold ? ' low' : '';
+          return `
+            <tr class="prow${flag}">
+              <td class="pname">${esc(p.name)}</td>
+              <td class="sku">${esc(p.sku || '—')}</td>
+              <td>${category}</td>
+              <td class="variant muted">—</td>
+              <td class="num total">${q}${q === 0 ? ' <span class="tag out">OUT</span>' : q <= threshold ? ' <span class="tag low">LOW</span>' : ''}</td>
+            </tr>`;
+        })
+        .join('');
+
+      const appliedFilters = [
+        categoryFilter && `Category: ${categoryFilter}`,
+        statusFilter && `Status: ${statusFilter}`,
+        variantFilter === 'with' ? 'With variants' : variantFilter === 'without' ? 'Without variants' : '',
+        stockFilter === 'low' ? 'Low stock only' : stockFilter === 'out' ? 'Out of stock only' : '',
+        searchQuery && `Search: "${searchQuery}"`,
+      ].filter(Boolean) as string[];
+
+      const generatedAt = new Date().toLocaleString('en-GB', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      });
+
+      const html = `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Product & Stock List — Discount Discovery Zone</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #111827; margin: 0; padding: 28px 32px; }
+  h1 { font-size: 20px; margin: 0 0 2px; }
+  .meta { color: #6b7280; font-size: 12px; margin-bottom: 16px; }
+  .meta strong { color: #374151; }
+  .summary { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+  .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 14px; min-width: 110px; }
+  .card .label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .03em; }
+  .card .value { font-size: 18px; font-weight: 700; }
+  .card.low .value { color: #b45309; }
+  .card.out .value { color: #b91c1c; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead { display: table-header-group; }
+  th { text-align: left; background: #f3f4f6; border-bottom: 2px solid #d1d5db; padding: 7px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; color: #374151; }
+  td { padding: 6px 8px; border-bottom: 1px solid #eef0f2; vertical-align: top; }
+  th.num, td.num { text-align: right; white-space: nowrap; }
+  .prow.group-head td { border-bottom: none; padding-top: 9px; }
+  .prow td { font-weight: 600; }
+  .vrow td { color: #4b5563; font-weight: 400; }
+  .vrow .variant { font-weight: 500; color: #111827; }
+  .pname { max-width: 320px; }
+  .sku { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: #6b7280; }
+  .muted { color: #9ca3af; }
+  .total { font-weight: 700; }
+  .tag { font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 4px; vertical-align: middle; }
+  .tag.low { background: #fef3c7; color: #b45309; }
+  .tag.out { background: #fee2e2; color: #b91c1c; }
+  tr { break-inside: avoid; }
+  .footer { margin-top: 18px; color: #9ca3af; font-size: 11px; }
+  @media print {
+    body { padding: 0; }
+    .noprint { display: none; }
+    @page { margin: 14mm 12mm; }
+  }
+  .toolbar { position: sticky; top: 0; background: #fff; padding-bottom: 12px; margin-bottom: 8px; }
+  .btn { background: #1d4ed8; color: #fff; border: none; padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+</style>
+</head>
+<body>
+  <div class="toolbar noprint">
+    <button class="btn" onclick="window.print()">Print / Save as PDF</button>
+  </div>
+  <h1>Product &amp; Stock List</h1>
+  <div class="meta">
+    Discount Discovery Zone &nbsp;•&nbsp; Generated <strong>${esc(generatedAt)}</strong>
+    ${appliedFilters.length ? `&nbsp;•&nbsp; Filters: ${esc(appliedFilters.join(' · '))}` : ''}
+  </div>
+  <div class="summary">
+    <div class="card"><div class="label">Products</div><div class="value">${rows.length}</div></div>
+    <div class="card"><div class="label">Variant lines</div><div class="value">${variantLineCount}</div></div>
+    <div class="card"><div class="label">Total units</div><div class="value">${totalUnits}</div></div>
+    <div class="card low"><div class="label">Low stock</div><div class="value">${lowCount}</div></div>
+    <div class="card out"><div class="label">Out of stock</div><div class="value">${outCount}</div></div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Product</th>
+        <th>SKU</th>
+        <th>Category</th>
+        <th>Variant</th>
+        <th class="num">Stock</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${bodyRows || '<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:24px">No products match the current filters.</td></tr>'}
+    </tbody>
+  </table>
+  <div class="footer">
+    ${rows.length} product${rows.length !== 1 ? 's' : ''} listed.
+    Low/out-of-stock flags and counts use each product's low-stock threshold (default 5),
+    counted per variant for products that have variants and per product otherwise.
+  </div>
+</body>
+</html>`;
+
+      if (win) {
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+        win.focus();
+      } else {
+        alert('Could not open the print window. Please allow pop-ups for this site and try again.');
+      }
+    } catch (err: any) {
+      console.error('Print stock list error:', err);
+      if (win) win.close();
+      alert('Could not generate the stock list: ' + (err?.message || 'unknown error'));
+    } finally {
+      setPrinting(false);
+    }
+  };
+
   const handleSelectAll = () => {
     if (selectedProducts.length === products.length) {
       setSelectedProducts([]);
@@ -274,13 +493,24 @@ export default function ProductsPage() {
           <h1 className="text-3xl font-bold text-gray-900">Products</h1>
           <p className="text-gray-600 mt-1">Manage your product catalog and inventory</p>
         </div>
-        <Link
-          href="/admin/products/new"
-          className="px-6 py-3 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer flex items-center justify-center md:items-start"
-        >
-          <i className="ri-add-line mr-2"></i>
-          Add Product
-        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handlePrintStockList}
+            disabled={printing || loading}
+            className="px-5 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer flex items-center justify-center hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Generate a printable PDF of all products, variants and current stock"
+          >
+            <i className={`mr-2 ${printing ? 'ri-loader-4-line animate-spin' : 'ri-printer-line'}`}></i>
+            {printing ? 'Preparing…' : 'Print stock list'}
+          </button>
+          <Link
+            href="/admin/products/new"
+            className="px-6 py-3 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer flex items-center justify-center md:items-start"
+          >
+            <i className="ri-add-line mr-2"></i>
+            Add Product
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
