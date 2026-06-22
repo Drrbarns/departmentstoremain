@@ -14,7 +14,7 @@ export const PUBLIC_CONTACT_PHONE_WHATSAPP = '233248615775';
 
 export const PUBLIC_SITE_DOMAIN = 'www.discountdiscoveryzone.com';
 
-const LEGACY_PHONE_DIGITS = new Set(['233209597443', '0209597443']);
+const LEGACY_PHONE_DIGITS = new Set(['233209597443', '0209597443', '233244477805', '0244477805']);
 
 /**
  * If site_settings still has old placeholder data, show canonical contact info anyway.
@@ -32,7 +32,7 @@ export function effectiveContactPhone(stored: string): string {
   const t = (stored || '').trim();
   if (!t) return PUBLIC_CONTACT_PHONE;
   const digits = t.replace(/\D/g, '');
-  if (LEGACY_PHONE_DIGITS.has(digits) || digits.endsWith('209597443')) {
+  if (LEGACY_PHONE_DIGITS.has(digits) || digits.endsWith('209597443') || digits.endsWith('244477805')) {
     return PUBLIC_CONTACT_PHONE;
   }
   return t;
