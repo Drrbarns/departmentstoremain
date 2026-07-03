@@ -69,7 +69,7 @@ export default function AuthCallbackPage() {
         <p className="text-gray-800 mb-6">{message}</p>
         <Link
           href="/auth/login"
-          className="text-blue-700 font-semibold hover:text-blue-900"
+          className="text-emerald-700 font-semibold hover:text-emerald-900"
         >
           Back to sign in
         </Link>

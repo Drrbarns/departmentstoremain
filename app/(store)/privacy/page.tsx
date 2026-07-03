@@ -7,7 +7,7 @@ import {
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-white">
-      <div className="bg-gradient-to-br from-blue-50 via-white to-amber-50 py-16">
+      <div className="bg-gradient-to-br from-emerald-50 via-white to-amber-50 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-5xl font-bold text-gray-900 mb-6">Privacy Policy</h1>
@@ -30,19 +30,19 @@ export default function PrivacyPage() {
             </p>
             <ul className="space-y-2 text-gray-600 mb-6">
               <li className="flex items-start gap-2">
-                <i className="ri-checkbox-circle-line text-blue-700 mt-1"></i>
+                <i className="ri-checkbox-circle-line text-emerald-700 mt-1"></i>
                 <span><strong>Personal Details:</strong> Name, email address, phone number, date of birth</span>
               </li>
               <li className="flex items-start gap-2">
-                <i className="ri-checkbox-circle-line text-blue-700 mt-1"></i>
+                <i className="ri-checkbox-circle-line text-emerald-700 mt-1"></i>
                 <span><strong>Delivery Information:</strong> Shipping and billing addresses</span>
               </li>
               <li className="flex items-start gap-2">
-                <i className="ri-checkbox-circle-line text-blue-700 mt-1"></i>
+                <i className="ri-checkbox-circle-line text-emerald-700 mt-1"></i>
                 <span><strong>Payment Details:</strong> Payment method information (securely processed by third-party providers)</span>
               </li>
               <li className="flex items-start gap-2">
-                <i className="ri-checkbox-circle-line text-blue-700 mt-1"></i>
+                <i className="ri-checkbox-circle-line text-emerald-700 mt-1"></i>
                 <span><strong>Communications:</strong> Messages, reviews, and feedback you submit</span>
               </li>
             </ul>
@@ -53,15 +53,15 @@ export default function PrivacyPage() {
             </p>
             <ul className="space-y-2 text-gray-600 mb-6">
               <li className="flex items-start gap-2">
-                <i className="ri-checkbox-circle-line text-blue-700 mt-1"></i>
+                <i className="ri-checkbox-circle-line text-emerald-700 mt-1"></i>
                 <span><strong>Device Information:</strong> IP address, browser type, operating system, device identifiers</span>
               </li>
               <li className="flex items-start gap-2">
-                <i className="ri-checkbox-circle-line text-blue-700 mt-1"></i>
+                <i className="ri-checkbox-circle-line text-emerald-700 mt-1"></i>
                 <span><strong>Usage Data:</strong> Pages viewed, products browsed, search queries, time spent on site</span>
               </li>
               <li className="flex items-start gap-2">
-                <i className="ri-checkbox-circle-line text-blue-700 mt-1"></i>
+                <i className="ri-checkbox-circle-line text-emerald-700 mt-1"></i>
                 <span><strong>Cookies:</strong> Small data files stored on your device to improve your experience</span>
               </li>
             </ul>
@@ -76,7 +76,7 @@ export default function PrivacyPage() {
             <div className="space-y-6">
               <div className="bg-gray-50 p-6 rounded-xl">
                 <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <i className="ri-shopping-bag-line text-blue-700"></i>
+                  <i className="ri-shopping-bag-line text-emerald-700"></i>
                   Order Processing & Fulfilment
                 </h3>
                 <p className="text-gray-600 text-sm leading-relaxed">
@@ -86,7 +86,7 @@ export default function PrivacyPage() {
 
               <div className="bg-gray-50 p-6 rounded-xl">
                 <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <i className="ri-line-chart-line text-blue-700"></i>
+                  <i className="ri-line-chart-line text-emerald-700"></i>
                   Service Improvement
                 </h3>
                 <p className="text-gray-600 text-sm leading-relaxed">
@@ -96,7 +96,7 @@ export default function PrivacyPage() {
 
               <div className="bg-gray-50 p-6 rounded-xl">
                 <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <i className="ri-mail-line text-blue-700"></i>
+                  <i className="ri-mail-line text-emerald-700"></i>
                   Marketing & Communication
                 </h3>
                 <p className="text-gray-600 text-sm leading-relaxed">
@@ -106,7 +106,7 @@ export default function PrivacyPage() {
 
               <div className="bg-gray-50 p-6 rounded-xl">
                 <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <i className="ri-shield-check-line text-blue-700"></i>
+                  <i className="ri-shield-check-line text-emerald-700"></i>
                   Security & Fraud Prevention
                 </h3>
                 <p className="text-gray-600 text-sm leading-relaxed">
@@ -116,7 +116,7 @@ export default function PrivacyPage() {
 
               <div className="bg-gray-50 p-6 rounded-xl">
                 <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <i className="ri-scales-line text-blue-700"></i>
+                  <i className="ri-scales-line text-emerald-700"></i>
                   Legal Compliance
                 </h3>
                 <p className="text-gray-600 text-sm leading-relaxed">
@@ -133,28 +133,28 @@ export default function PrivacyPage() {
             </p>
 
             <div className="space-y-4">
-              <div className="border-l-4 border-blue-700 pl-6">
+              <div className="border-l-4 border-emerald-700 pl-6">
                 <h3 className="font-bold text-gray-900 mb-2">Service Providers</h3>
                 <p className="text-gray-600 text-sm leading-relaxed">
                   Trusted third parties who help us operate our business (payment processors, delivery partners, email service providers, analytics tools). They are contractually bound to protect your data.
                 </p>
               </div>
 
-              <div className="border-l-4 border-blue-700 pl-6">
+              <div className="border-l-4 border-emerald-700 pl-6">
                 <h3 className="font-bold text-gray-900 mb-2">Business Transfers</h3>
                 <p className="text-gray-600 text-sm leading-relaxed">
                   If we merge with or are acquired by another company, your information may be transferred as part of the transaction. We will notify you of any such change.
                 </p>
               </div>
 
-              <div className="border-l-4 border-blue-700 pl-6">
+              <div className="border-l-4 border-emerald-700 pl-6">
                 <h3 className="font-bold text-gray-900 mb-2">Legal Requirements</h3>
                 <p className="text-gray-600 text-sm leading-relaxed">
                   When required by law or to protect our rights, property, or safety, or that of our customers or others.
                 </p>
               </div>
 
-              <div className="border-l-4 border-blue-700 pl-6">
+              <div className="border-l-4 border-emerald-700 pl-6">
                 <h3 className="font-bold text-gray-900 mb-2">With Your Consent</h3>
                 <p className="text-gray-600 text-sm leading-relaxed">
                   Any other disclosures will be made only with your explicit consent.
@@ -170,8 +170,8 @@ export default function PrivacyPage() {
             </p>
 
             <div className="grid md:grid-cols-2 gap-6">
-              <div className="bg-blue-50 border border-blue-200 p-6 rounded-xl">
-                <div className="w-10 h-10 bg-blue-700 rounded-full flex items-center justify-center mb-4">
+              <div className="bg-emerald-50 border border-emerald-200 p-6 rounded-xl">
+                <div className="w-10 h-10 bg-emerald-700 rounded-full flex items-center justify-center mb-4">
                   <i className="ri-lock-line text-white text-lg"></i>
                 </div>
                 <h3 className="font-bold text-gray-900 mb-2">Encryption</h3>
@@ -180,8 +180,8 @@ export default function PrivacyPage() {
                 </p>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 p-6 rounded-xl">
-                <div className="w-10 h-10 bg-blue-700 rounded-full flex items-center justify-center mb-4">
+              <div className="bg-emerald-50 border border-emerald-200 p-6 rounded-xl">
+                <div className="w-10 h-10 bg-emerald-700 rounded-full flex items-center justify-center mb-4">
                   <i className="ri-shield-check-line text-white text-lg"></i>
                 </div>
                 <h3 className="font-bold text-gray-900 mb-2">Secure Storage</h3>
@@ -190,8 +190,8 @@ export default function PrivacyPage() {
                 </p>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 p-6 rounded-xl">
-                <div className="w-10 h-10 bg-blue-700 rounded-full flex items-center justify-center mb-4">
+              <div className="bg-emerald-50 border border-emerald-200 p-6 rounded-xl">
+                <div className="w-10 h-10 bg-emerald-700 rounded-full flex items-center justify-center mb-4">
                   <i className="ri-bank-card-line text-white text-lg"></i>
                 </div>
                 <h3 className="font-bold text-gray-900 mb-2">Payment Security</h3>
@@ -200,8 +200,8 @@ export default function PrivacyPage() {
                 </p>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 p-6 rounded-xl">
-                <div className="w-10 h-10 bg-blue-700 rounded-full flex items-center justify-center mb-4">
+              <div className="bg-emerald-50 border border-emerald-200 p-6 rounded-xl">
+                <div className="w-10 h-10 bg-emerald-700 rounded-full flex items-center justify-center mb-4">
                   <i className="ri-user-lock-line text-white text-lg"></i>
                 </div>
                 <h3 className="font-bold text-gray-900 mb-2">Access Controls</h3>
@@ -226,8 +226,8 @@ export default function PrivacyPage() {
 
             <div className="space-y-4 mb-6">
               <div className="flex items-start gap-4">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  <i className="ri-eye-line text-blue-700"></i>
+                <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                  <i className="ri-eye-line text-emerald-700"></i>
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900 mb-1">Access</h3>
@@ -236,8 +236,8 @@ export default function PrivacyPage() {
               </div>
 
               <div className="flex items-start gap-4">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  <i className="ri-pencil-line text-blue-700"></i>
+                <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                  <i className="ri-pencil-line text-emerald-700"></i>
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900 mb-1">Correction</h3>
@@ -246,8 +246,8 @@ export default function PrivacyPage() {
               </div>
 
               <div className="flex items-start gap-4">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  <i className="ri-delete-bin-line text-blue-700"></i>
+                <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                  <i className="ri-delete-bin-line text-emerald-700"></i>
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900 mb-1">Deletion</h3>
@@ -256,8 +256,8 @@ export default function PrivacyPage() {
               </div>
 
               <div className="flex items-start gap-4">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  <i className="ri-mail-close-line text-blue-700"></i>
+                <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                  <i className="ri-mail-close-line text-emerald-700"></i>
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900 mb-1">Marketing Opt-Out</h3>
@@ -266,8 +266,8 @@ export default function PrivacyPage() {
               </div>
 
               <div className="flex items-start gap-4">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  <i className="ri-download-line text-blue-700"></i>
+                <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                  <i className="ri-download-line text-emerald-700"></i>
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900 mb-1">Data Portability</h3>
@@ -276,8 +276,8 @@ export default function PrivacyPage() {
               </div>
 
               <div className="flex items-start gap-4">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  <i className="ri-hand-coin-line text-blue-700"></i>
+                <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                  <i className="ri-hand-coin-line text-emerald-700"></i>
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900 mb-1">Object to Processing</h3>
@@ -287,7 +287,7 @@ export default function PrivacyPage() {
             </div>
 
             <p className="text-gray-600 leading-relaxed">
-              To exercise any of these rights, please contact us at <a href={`mailto:${PUBLIC_CONTACT_EMAIL}`} className="text-blue-700 font-medium hover:underline">{PUBLIC_CONTACT_EMAIL}</a> or through your account settings. We will respond within 30 days.
+              To exercise any of these rights, please contact us at <a href={`mailto:${PUBLIC_CONTACT_EMAIL}`} className="text-emerald-700 font-medium hover:underline">{PUBLIC_CONTACT_EMAIL}</a> or through your account settings. We will respond within 30 days.
             </p>
           </section>
 
@@ -353,19 +353,19 @@ export default function PrivacyPage() {
             </p>
             <ul className="space-y-2 text-gray-600">
               <li className="flex items-start gap-2">
-                <i className="ri-arrow-right-s-line text-blue-700 mt-1"></i>
+                <i className="ri-arrow-right-s-line text-emerald-700 mt-1"></i>
                 <span><strong>Account Information:</strong> Until you request deletion or close your account</span>
               </li>
               <li className="flex items-start gap-2">
-                <i className="ri-arrow-right-s-line text-blue-700 mt-1"></i>
+                <i className="ri-arrow-right-s-line text-emerald-700 mt-1"></i>
                 <span><strong>Order History:</strong> 7 years for tax and accounting purposes</span>
               </li>
               <li className="flex items-start gap-2">
-                <i className="ri-arrow-right-s-line text-blue-700 mt-1"></i>
+                <i className="ri-arrow-right-s-line text-emerald-700 mt-1"></i>
                 <span><strong>Marketing Data:</strong> Until you unsubscribe or request deletion</span>
               </li>
               <li className="flex items-start gap-2">
-                <i className="ri-arrow-right-s-line text-blue-700 mt-1"></i>
+                <i className="ri-arrow-right-s-line text-emerald-700 mt-1"></i>
                 <span><strong>Analytics Data:</strong> Typically 26 months</span>
               </li>
             </ul>
@@ -387,23 +387,23 @@ export default function PrivacyPage() {
             <div className="bg-gray-50 border border-gray-200 p-8 rounded-xl">
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
-                  <i className="ri-mail-line text-blue-700 text-xl mt-1"></i>
+                  <i className="ri-mail-line text-emerald-700 text-xl mt-1"></i>
                   <div>
                     <p className="font-medium text-gray-900">Email</p>
-                    <a href={`mailto:${PUBLIC_CONTACT_EMAIL}`} className="text-blue-700 hover:underline">{PUBLIC_CONTACT_EMAIL}</a>
+                    <a href={`mailto:${PUBLIC_CONTACT_EMAIL}`} className="text-emerald-700 hover:underline">{PUBLIC_CONTACT_EMAIL}</a>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <i className="ri-phone-line text-blue-700 text-xl mt-1"></i>
+                  <i className="ri-phone-line text-emerald-700 text-xl mt-1"></i>
                   <div>
                     <p className="font-medium text-gray-900">Phone</p>
-                    <a href={`tel:${PUBLIC_CONTACT_PHONE}`} className="text-blue-700 hover:underline">{PUBLIC_CONTACT_PHONE_DISPLAY}</a>
+                    <a href={`tel:${PUBLIC_CONTACT_PHONE}`} className="text-emerald-700 hover:underline">{PUBLIC_CONTACT_PHONE_DISPLAY}</a>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <i className="ri-map-pin-line text-blue-700 text-xl mt-1"></i>
+                  <i className="ri-map-pin-line text-emerald-700 text-xl mt-1"></i>
                   <div>
                     <p className="font-medium text-gray-900">Address</p>
                     <p className="text-gray-600">Discount Discovery Zone<br />Accra, Ghana</p>

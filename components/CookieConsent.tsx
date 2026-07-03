@@ -62,20 +62,20 @@ export default function CookieConsent() {
     <>
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998]" onClick={() => !showPreferences && rejectAll()} />
       
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t-4 border-blue-700 shadow-2xl z-[9999] animate-slide-up">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t-4 border-emerald-700 shadow-2xl z-[9999] animate-slide-up">
         <div className="max-w-7xl mx-auto px-4 py-6">
           {!showPreferences ? (
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="flex items-start space-x-4 flex-1">
-                <div className="w-12 h-12 flex items-center justify-center bg-blue-100 rounded-lg flex-shrink-0">
-                  <i className="ri-cookie-line text-2xl text-blue-700"></i>
+                <div className="w-12 h-12 flex items-center justify-center bg-emerald-100 rounded-lg flex-shrink-0">
+                  <i className="ri-cookie-line text-2xl text-emerald-700"></i>
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-gray-900 mb-2">We Value Your Privacy</h3>
                   <p className="text-sm text-gray-600 leading-relaxed mb-3">
                     We use cookies to enhance your browsing experience, serve personalized content, and analyze our traffic. 
                     By clicking "Accept All", you consent to our use of cookies. 
-                    <Link href="/privacy" className="text-blue-700 hover:text-blue-900 font-medium ml-1 whitespace-nowrap">
+                    <Link href="/privacy" className="text-emerald-700 hover:text-emerald-900 font-medium ml-1 whitespace-nowrap">
                       Read our Privacy Policy
                     </Link>
                   </p>
@@ -84,15 +84,15 @@ export default function CookieConsent() {
                       type="checkbox"
                       checked={acceptedTerms}
                       onChange={(e) => setAcceptedTerms(e.target.checked)}
-                      className="w-4 h-4 mt-0.5 text-blue-700 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                      className="w-4 h-4 mt-0.5 text-emerald-700 border-gray-300 rounded focus:ring-emerald-500 cursor-pointer"
                     />
                     <span className="text-xs text-gray-600 group-hover:text-gray-900">
                       I agree to the{' '}
-                      <Link href="/terms" className="text-blue-700 hover:text-blue-900 font-medium">
+                      <Link href="/terms" className="text-emerald-700 hover:text-emerald-900 font-medium">
                         Terms & Conditions
                       </Link>
                       {' '}and{' '}
-                      <Link href="/privacy" className="text-blue-700 hover:text-blue-900 font-medium">
+                      <Link href="/privacy" className="text-emerald-700 hover:text-emerald-900 font-medium">
                         Privacy Policy
                       </Link>
                     </span>
@@ -118,7 +118,7 @@ export default function CookieConsent() {
                   disabled={!acceptedTerms}
                   className={`px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap ${
                     acceptedTerms
-                      ? 'bg-blue-700 hover:bg-blue-800 text-white cursor-pointer'
+                      ? 'bg-emerald-700 hover:bg-emerald-800 text-white cursor-pointer'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   }`}
                   title={!acceptedTerms ? 'Please accept Terms & Conditions first' : ''}
@@ -165,7 +165,7 @@ export default function CookieConsent() {
                   <button
                     onClick={() => setPreferences({ ...preferences, analytics: !preferences.analytics })}
                     className={`w-12 h-6 rounded-full flex items-center px-1 transition-colors cursor-pointer ${
-                      preferences.analytics ? 'bg-blue-700' : 'bg-gray-300'
+                      preferences.analytics ? 'bg-emerald-700' : 'bg-gray-300'
                     }`}
                   >
                     <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${
@@ -184,7 +184,7 @@ export default function CookieConsent() {
                   <button
                     onClick={() => setPreferences({ ...preferences, marketing: !preferences.marketing })}
                     className={`w-12 h-6 rounded-full flex items-center px-1 transition-colors cursor-pointer ${
-                      preferences.marketing ? 'bg-blue-700' : 'bg-gray-300'
+                      preferences.marketing ? 'bg-emerald-700' : 'bg-gray-300'
                     }`}
                   >
                     <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${
@@ -203,7 +203,7 @@ export default function CookieConsent() {
                   <button
                     onClick={() => setPreferences({ ...preferences, functional: !preferences.functional })}
                     className={`w-12 h-6 rounded-full flex items-center px-1 transition-colors cursor-pointer ${
-                      preferences.functional ? 'bg-blue-700' : 'bg-gray-300'
+                      preferences.functional ? 'bg-emerald-700' : 'bg-gray-300'
                     }`}
                   >
                     <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${
@@ -218,15 +218,15 @@ export default function CookieConsent() {
                   type="checkbox"
                   checked={acceptedTerms}
                   onChange={(e) => setAcceptedTerms(e.target.checked)}
-                  className="w-4 h-4 mt-0.5 text-blue-700 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                  className="w-4 h-4 mt-0.5 text-emerald-700 border-gray-300 rounded focus:ring-emerald-500 cursor-pointer"
                 />
                 <span className="text-sm text-gray-600 group-hover:text-gray-900">
                   I agree to the{' '}
-                  <Link href="/terms" className="text-blue-700 hover:text-blue-900 font-medium">
+                  <Link href="/terms" className="text-emerald-700 hover:text-emerald-900 font-medium">
                     Terms & Conditions
                   </Link>
                   {' '}and{' '}
-                  <Link href="/privacy" className="text-blue-700 hover:text-blue-900 font-medium">
+                  <Link href="/privacy" className="text-emerald-700 hover:text-emerald-900 font-medium">
                     Privacy Policy
                   </Link>
                 </span>
@@ -244,7 +244,7 @@ export default function CookieConsent() {
                   disabled={!acceptedTerms}
                   className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap ${
                     acceptedTerms
-                      ? 'bg-blue-700 hover:bg-blue-800 text-white cursor-pointer'
+                      ? 'bg-emerald-700 hover:bg-emerald-800 text-white cursor-pointer'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   }`}
                 >
@@ -255,7 +255,7 @@ export default function CookieConsent() {
                   disabled={!acceptedTerms}
                   className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap ${
                     acceptedTerms
-                      ? 'bg-gray-900 hover:bg-blue-700 text-white cursor-pointer'
+                      ? 'bg-gray-900 hover:bg-emerald-700 text-white cursor-pointer'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   }`}
                 >

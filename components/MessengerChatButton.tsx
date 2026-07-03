@@ -46,7 +46,7 @@ export default function MessengerChatButton() {
     <>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-full shadow-2xl hover:scale-110 transition-transform z-50 flex items-center justify-center"
+        className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-br from-emerald-500 to-purple-600 text-white rounded-full shadow-2xl hover:scale-110 transition-transform z-50 flex items-center justify-center"
       >
         {isOpen ? (
           <i className="ri-close-line text-2xl"></i>
@@ -57,7 +57,7 @@ export default function MessengerChatButton() {
 
       {isOpen && (
         <div className="fixed bottom-24 right-6 w-96 h-[600px] bg-white rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden border border-gray-200">
-          <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4">
+          <div className="bg-gradient-to-r from-emerald-500 to-purple-600 text-white p-4">
             <div className="flex items-center gap-3">
               <div className="relative">
                 <div className="w-12 h-12 flex items-center justify-center bg-white text-purple-600 rounded-full font-bold text-xl">
@@ -67,7 +67,7 @@ export default function MessengerChatButton() {
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold">Customer Support</h3>
-                <p className="text-sm text-blue-100">Typically replies instantly</p>
+                <p className="text-sm text-emerald-100">Typically replies instantly</p>
               </div>
               <button
                 onClick={() => setIsOpen(false)}
@@ -87,7 +87,7 @@ export default function MessengerChatButton() {
                 <div className={`max-w-[75%] ${msg.sender === 'user' ? 'order-2' : 'order-1'}`}>
                   <div className={`px-4 py-2 rounded-2xl ${
                     msg.sender === 'user'
-                      ? 'bg-blue-500 text-white rounded-br-sm'
+                      ? 'bg-emerald-500 text-white rounded-br-sm'
                       : 'bg-white text-gray-900 rounded-bl-sm shadow-sm'
                   }`}>
                     <p className="text-sm">{msg.text}</p>
@@ -124,11 +124,11 @@ export default function MessengerChatButton() {
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                 placeholder="Type a message..."
-                className="flex-1 px-4 py-2 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-4 py-2 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
               <button
                 onClick={handleSendMessage}
-                className="w-9 h-9 flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white rounded-full transition-colors"
+                className="w-9 h-9 flex items-center justify-center bg-emerald-500 hover:bg-emerald-600 text-white rounded-full transition-colors"
               >
                 <i className="ri-send-plane-fill"></i>
               </button>

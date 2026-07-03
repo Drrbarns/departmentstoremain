@@ -82,7 +82,7 @@ export default function QuickViewModal({ product, isOpen, onClose }: QuickViewMo
                         key={index}
                         onClick={() => setSelectedImage(index)}
                         className={`relative aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 transition-colors ${
-                          selectedImage === index ? 'border-blue-700' : 'border-transparent hover:border-gray-300'
+                          selectedImage === index ? 'border-emerald-700' : 'border-transparent hover:border-gray-300'
                         }`}
                       >
                         <Image src={image} alt="" fill className="object-cover object-top" sizes="12vw" quality={50} />
@@ -96,7 +96,7 @@ export default function QuickViewModal({ product, isOpen, onClose }: QuickViewMo
                 <div className="mb-2">
                   <Link 
                     href={`/categories?category=${product.category}`}
-                    className="text-sm text-blue-700 hover:text-blue-800 font-medium whitespace-nowrap"
+                    className="text-sm text-emerald-700 hover:text-emerald-800 font-medium whitespace-nowrap"
                   >
                     {product.category}
                   </Link>
@@ -146,7 +146,7 @@ export default function QuickViewModal({ product, isOpen, onClose }: QuickViewMo
                           onClick={() => setSelectedColor(color)}
                           className={`px-4 py-2 border-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
                             selectedColor === color
-                              ? 'border-blue-700 bg-blue-50 text-blue-700'
+                              ? 'border-emerald-700 bg-emerald-50 text-emerald-700'
                               : 'border-gray-300 hover:border-gray-400 text-gray-700'
                           }`}
                         >
@@ -169,7 +169,7 @@ export default function QuickViewModal({ product, isOpen, onClose }: QuickViewMo
                           onClick={() => setSelectedSize(size)}
                           className={`px-4 py-2 border-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
                             selectedSize === size
-                              ? 'border-blue-700 bg-blue-50 text-blue-700'
+                              ? 'border-emerald-700 bg-emerald-50 text-emerald-700'
                               : 'border-gray-300 hover:border-gray-400 text-gray-700'
                           }`}
                         >
@@ -217,7 +217,7 @@ export default function QuickViewModal({ product, isOpen, onClose }: QuickViewMo
                       addedToCart
                         ? 'bg-green-600 text-white'
                         : product.inStock
-                        ? 'bg-blue-700 hover:bg-blue-800 text-white'
+                        ? 'bg-emerald-700 hover:bg-emerald-800 text-white'
                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
                   >

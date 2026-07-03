@@ -55,7 +55,7 @@ export default function UpdatePrompt() {
   return (
     <div className="fixed bottom-20 left-4 right-4 md:left-auto md:right-4 md:max-w-sm z-[9998] pwa-update-toast">
       <div className="bg-gray-900 text-white rounded-2xl p-4 shadow-2xl flex items-center gap-4">
-        <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
+        <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0">
           <i className="ri-refresh-line text-xl" />
         </div>
         <div className="flex-1 min-w-0">
@@ -64,7 +64,7 @@ export default function UpdatePrompt() {
         </div>
         <button
           onClick={handleUpdate}
-          className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex-shrink-0 active:scale-95"
+          className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex-shrink-0 active:scale-95"
         >
           Update
         </button>

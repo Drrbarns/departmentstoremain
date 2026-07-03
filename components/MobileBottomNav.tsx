@@ -98,14 +98,14 @@ export default function MobileBottomNav() {
                   key={item.href}
                   href={item.href}
                   className={`flex flex-col items-center justify-center py-2 transition-all duration-200 relative group active:scale-90 ${
-                    active ? 'text-blue-700' : 'text-gray-400'
+                    active ? 'text-emerald-700' : 'text-gray-400'
                   }`}
                   aria-label={item.label}
                   aria-current={active ? 'page' : undefined}
                 >
                   {/* Active indicator pill */}
                   {active && (
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-blue-600 rounded-full transition-all duration-300" />
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-emerald-600 rounded-full transition-all duration-300" />
                   )}
                   
                   <div className="relative w-7 h-7 flex items-center justify-center">
@@ -117,7 +117,7 @@ export default function MobileBottomNav() {
                     
                     {/* Badge */}
                     {item.badge !== undefined && item.badge > 0 && (
-                      <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] bg-blue-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 shadow-sm animate-scale-in">
+                      <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] bg-emerald-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 shadow-sm animate-scale-in">
                         {item.badge > 99 ? '99+' : item.badge}
                       </span>
                     )}

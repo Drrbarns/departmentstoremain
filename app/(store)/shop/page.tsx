@@ -368,7 +368,7 @@ function ShopContent() {
                             setIsFilterOpen(false);
                           }}
                           className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${selectedCategory === 'all'
-                            ? 'bg-blue-100 text-blue-700 font-medium'
+                            ? 'bg-emerald-100 text-emerald-700 font-medium'
                             : 'text-gray-700 hover:bg-gray-100'
                             }`}
                         >
@@ -391,7 +391,7 @@ function ShopContent() {
                                   // Don't close filter immediately if exploring hierarchy
                                 }}
                                 className={`w-full text-left px-4 py-2 rounded-lg transition-colors flex justify-between items-center ${isSelected
-                                  ? 'bg-blue-50 text-blue-700 font-medium'
+                                  ? 'bg-emerald-50 text-emerald-700 font-medium'
                                   : 'text-gray-700 hover:bg-gray-100'
                                   }`}
                               >
@@ -410,7 +410,7 @@ function ShopContent() {
                                         setIsFilterOpen(false);
                                       }}
                                       className={`w-full text-left px-4 py-1.5 rounded-lg text-sm transition-colors ${selectedCategory === child.slug
-                                        ? 'text-blue-700 font-medium bg-blue-50'
+                                        ? 'text-emerald-700 font-medium bg-emerald-50'
                                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                                         }`}
                                     >
@@ -439,7 +439,7 @@ function ShopContent() {
                             setPriceRange([0, parseInt(e.target.value)]);
                             resetPageInUrl();
                           }}
-                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-700"
+                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-700"
                         />
                         <div className="flex items-center justify-between text-sm text-gray-600">
                           <span>GH₵0</span>
@@ -460,7 +460,7 @@ function ShopContent() {
                               resetPageInUrl();
                             }}
                             className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${selectedRating === rating
-                              ? 'bg-blue-100 text-blue-700'
+                              ? 'bg-emerald-100 text-emerald-700'
                               : 'text-gray-700 hover:bg-gray-100'
                               }`}
                           >
@@ -483,7 +483,7 @@ function ShopContent() {
                         // Re-fetch handled by effect dependencies
                         setIsFilterOpen(false);
                       }}
-                      className="w-full bg-gray-900 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors whitespace-nowrap"
+                      className="w-full bg-gray-900 hover:bg-emerald-700 text-white py-3 rounded-lg font-medium transition-colors whitespace-nowrap"
                     >
                       Show Results
                     </button>
@@ -506,7 +506,7 @@ function ShopContent() {
                       setSortBy(e.target.value);
                       resetPageInUrl();
                     }}
-                    className="px-4 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white cursor-pointer"
+                    className="px-4 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm bg-white cursor-pointer"
                   >
                     <option value="popular">Most Popular</option>
                     <option value="new">Newest</option>
@@ -545,7 +545,7 @@ function ShopContent() {
                           setSelectedRating(0);
                           resetPageInUrl();
                         }}
-                        className="inline-flex items-center bg-gray-900 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors whitespace-nowrap"
+                        className="inline-flex items-center bg-gray-900 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg font-medium transition-colors whitespace-nowrap"
                       >
                         Clear All Filters
                       </button>
@@ -591,7 +591,7 @@ function ShopContent() {
 
 export default function ShopPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-12 h-12 border-4 border-blue-700 border-t-transparent rounded-full animate-spin"></div></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-12 h-12 border-4 border-emerald-700 border-t-transparent rounded-full animate-spin"></div></div>}>
       <ShopContent />
     </Suspense>
   );

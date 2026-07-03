@@ -110,32 +110,37 @@ export default function ProductCard({
     window.dispatchEvent(new Event('wishlistUpdated'));
   };
 
+  const roundedRating = Math.max(0, Math.min(5, Math.round(rating)));
+
   return (
-    <div className="group relative h-full flex flex-col">
+    <div className="group relative flex h-full flex-col transition-transform duration-300 ease-out will-change-transform hover:-translate-y-1">
       <Link href={`/product/${slug}`} className="block">
-        <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-[#ecfdf5] shadow-sm transition-shadow duration-300 group-hover:shadow-xl">
+        <div className="relative aspect-[3/4] overflow-hidden rounded-[1.25rem] bg-gradient-to-br from-[#ecfdf5] via-white to-[#d1fae5]/50 shadow-sm ring-1 ring-black/[0.04] transition-all duration-300 group-hover:shadow-[0_20px_40px_-18px_rgba(4,120,87,0.35)] group-hover:ring-emerald-200/70">
           <LazyImage
             src={image}
             alt={name}
-            className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105"
+            className="w-full h-full object-cover object-top transition-transform duration-[900ms] ease-out group-hover:scale-[1.07]"
           />
+
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/15 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
           <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5">
             {onSale && (
-              <span className="rounded-full bg-red-600 px-2.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-white shadow-sm">
+              <span className="rounded-full bg-gradient-to-r from-red-500 to-red-600 px-2.5 py-1 text-[0.62rem] font-bold uppercase tracking-wide text-white shadow-md shadow-red-600/25">
                 -{discount}%
               </span>
             )}
             {badge && (
-              <span className="rounded-full bg-[#0B1B3A] px-2.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-white shadow-sm">
+              <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-emerald-600 to-emerald-700 px-2.5 py-1 text-[0.62rem] font-bold uppercase tracking-wide text-white shadow-md shadow-emerald-700/25">
+                <i className="ri-sparkling-fill text-[0.7rem]" aria-hidden></i>
                 {badge}
               </span>
             )}
           </div>
 
           {!inStock && (
-            <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-[2px]">
-              <span className="rounded-lg bg-[#0B1B3A] px-4 py-2 text-sm font-medium text-white">Out of Stock</span>
+            <div className="absolute inset-0 flex items-center justify-center bg-white/55 backdrop-blur-[2px]">
+              <span className="rounded-full bg-[#0B1B3A]/90 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-white shadow-lg">Out of Stock</span>
             </div>
           )}
         </div>
@@ -143,26 +148,37 @@ export default function ProductCard({
 
       <button
         onClick={toggleWishlist}
-        className={`absolute top-3 right-3 z-10 flex size-9 items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm transition-all hover:scale-110 ${
-          wished ? 'text-emerald-700' : 'text-[#0B1B3A]'
+        className={`absolute top-3 right-3 z-10 flex size-9 items-center justify-center rounded-full bg-white/95 shadow-md ring-1 ring-black/[0.04] backdrop-blur-sm transition-all duration-200 hover:scale-110 hover:shadow-lg ${
+          wished ? 'text-emerald-600' : 'text-[#0B1B3A] hover:text-emerald-600'
         }`}
         aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'}
       >
-        <i className={`${wished ? 'ri-heart-fill' : 'ri-heart-line'} text-base`}></i>
+        <i className={`${wished ? 'ri-heart-fill' : 'ri-heart-line'} text-base transition-transform duration-200 group-hover:scale-105`}></i>
       </button>
 
-      <div className="mt-3.5 flex flex-1 flex-col space-y-1.5 px-0.5">
+      <div className="mt-3.5 flex flex-1 flex-col px-0.5">
         <Link href={`/product/${slug}`} className="block">
           {categoryName && (
-            <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400">{categoryName}</p>
+            <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-emerald-600/80">{categoryName}</p>
           )}
-          <h3 className="mt-0.5 font-serif text-base font-semibold leading-tight text-[#0B1B3A] transition-colors line-clamp-2 group-hover:text-emerald-700">
+          <h3 className="mt-1 font-serif text-[15px] font-semibold leading-snug text-[#0B1B3A] transition-colors line-clamp-2 group-hover:text-emerald-700">
             {name}
           </h3>
         </Link>
 
+        {reviewCount > 0 && (
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <div className="flex items-center text-[13px] leading-none text-amber-400">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <i key={i} className={i < roundedRating ? 'ri-star-fill' : 'ri-star-line text-gray-300'}></i>
+              ))}
+            </div>
+            <span className="text-[11px] font-medium text-gray-400">({reviewCount})</span>
+          </div>
+        )}
+
         {colorVariants.length > 0 && (
-          <div className="flex items-center gap-1.5">
+          <div className="mt-2 flex items-center gap-1.5">
             {colorVariants.slice(0, MAX_SWATCHES).map((color) => (
               <button
                 key={color.name}
@@ -171,11 +187,11 @@ export default function ProductCard({
                   e.preventDefault();
                   setActiveColor(activeColor === color.name ? null : color.name);
                 }}
-                className={`w-4 h-4 rounded-full border transition-all duration-200 flex-shrink-0 ${
+                className={`h-[18px] w-[18px] rounded-full border transition-all duration-200 flex-shrink-0 ${
                   activeColor === color.name
                     ? 'ring-2 ring-offset-1 ring-emerald-500 scale-110'
                     : 'hover:scale-110'
-                } ${color.hex === '#FFFFFF' ? 'border-gray-300' : 'border-transparent'}`}
+                } ${color.hex === '#FFFFFF' ? 'border-gray-300' : 'border-black/5'}`}
                 style={{ backgroundColor: color.hex }}
               />
             ))}
@@ -185,22 +201,25 @@ export default function ProductCard({
           </div>
         )}
 
-        <div className="flex items-baseline gap-2">
+        <div className="mt-2 flex items-baseline gap-2">
           {hasVariants && minVariantPrice ? (
-            <span className="font-semibold text-[#0B1B3A]">From {formatPrice(minVariantPrice)}</span>
+            <span className="text-[17px] font-bold text-[#0B1B3A]">
+              <span className="text-[11px] font-medium text-gray-400">From </span>
+              {formatPrice(minVariantPrice)}
+            </span>
           ) : (
-            <span className={`font-semibold ${onSale ? 'text-emerald-700' : 'text-[#0B1B3A]'}`}>{formatPrice(price)}</span>
+            <span className={`text-[17px] font-bold ${onSale ? 'text-emerald-700' : 'text-[#0B1B3A]'}`}>{formatPrice(price)}</span>
           )}
           {originalPrice && (
-            <span className="text-sm text-gray-400 line-through">{formatPrice(originalPrice)}</span>
+            <span className="text-[13px] text-gray-400 line-through">{formatPrice(originalPrice)}</span>
           )}
         </div>
 
-        <div className="mt-auto pt-2">
+        <div className="mt-auto pt-3">
           {hasVariants ? (
             <Link
               href={`/product/${slug}`}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#d1fae5] bg-white py-2.5 text-sm font-medium text-[#0B1B3A] transition-all hover:border-emerald-400 hover:bg-[#ecfdf5] hover:text-emerald-700"
+              className="flex w-full items-center justify-center gap-2 rounded-full border border-emerald-600/80 bg-white py-2.5 text-sm font-semibold text-emerald-700 shadow-sm transition-all duration-200 hover:bg-emerald-600 hover:text-white hover:shadow-md hover:shadow-emerald-600/20"
             >
               <i className="ri-list-check text-sm"></i>
               <span>Select Options</span>
@@ -212,7 +231,7 @@ export default function ProductCard({
                 addToCart({ id, name, price, image, quantity: moq, slug, maxStock, moq });
               }}
               disabled={!inStock}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#d1fae5] bg-white py-2.5 text-sm font-medium text-[#0B1B3A] transition-all hover:border-emerald-400 hover:bg-[#ecfdf5] hover:text-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex w-full items-center justify-center gap-2 rounded-full border border-emerald-600/80 bg-white py-2.5 text-sm font-semibold text-emerald-700 shadow-sm transition-all duration-200 hover:bg-emerald-600 hover:text-white hover:shadow-md hover:shadow-emerald-600/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-emerald-700"
             >
               <i className="ri-shopping-bag-line text-sm"></i>
               <span>{moq > 1 ? `Add ${moq} to Bag` : 'Add to Bag'}</span>

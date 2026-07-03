@@ -47,9 +47,9 @@ export default function MyTicketsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'open': return 'bg-blue-100 text-blue-700';
+      case 'open': return 'bg-emerald-100 text-emerald-700';
       case 'in_progress': return 'bg-amber-100 text-amber-700';
-      case 'resolved': return 'bg-blue-100 text-blue-700';
+      case 'resolved': return 'bg-emerald-100 text-emerald-700';
       default: return 'bg-gray-100 text-gray-700';
     }
   };
@@ -57,7 +57,7 @@ export default function MyTicketsPage() {
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high': return 'text-red-700';
-      case 'normal': return 'text-blue-700';
+      case 'normal': return 'text-emerald-700';
       case 'low': return 'text-gray-700';
       default: return 'text-gray-700';
     }
@@ -75,7 +75,7 @@ export default function MyTicketsPage() {
             </div>
             <Link
               href="/support/ticket"
-              className="bg-blue-700 hover:bg-blue-800 text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap"
+              className="bg-emerald-700 hover:bg-emerald-800 text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap"
             >
               <i className="ri-add-line mr-2"></i>
               New Ticket
@@ -88,7 +88,7 @@ export default function MyTicketsPage() {
                 onClick={() => setSelectedFilter('all')}
                 className={`px-6 py-4 font-semibold whitespace-nowrap border-b-2 transition-colors ${
                   selectedFilter === 'all'
-                    ? 'border-blue-700 text-blue-700'
+                    ? 'border-emerald-700 text-emerald-700'
                     : 'border-transparent text-gray-600 hover:text-gray-900'
                 }`}
               >
@@ -98,7 +98,7 @@ export default function MyTicketsPage() {
                 onClick={() => setSelectedFilter('open')}
                 className={`px-6 py-4 font-semibold whitespace-nowrap border-b-2 transition-colors ${
                   selectedFilter === 'open'
-                    ? 'border-blue-700 text-blue-700'
+                    ? 'border-emerald-700 text-emerald-700'
                     : 'border-transparent text-gray-600 hover:text-gray-900'
                 }`}
               >
@@ -108,7 +108,7 @@ export default function MyTicketsPage() {
                 onClick={() => setSelectedFilter('in_progress')}
                 className={`px-6 py-4 font-semibold whitespace-nowrap border-b-2 transition-colors ${
                   selectedFilter === 'in_progress'
-                    ? 'border-blue-700 text-blue-700'
+                    ? 'border-emerald-700 text-emerald-700'
                     : 'border-transparent text-gray-600 hover:text-gray-900'
                 }`}
               >
@@ -118,7 +118,7 @@ export default function MyTicketsPage() {
                 onClick={() => setSelectedFilter('resolved')}
                 className={`px-6 py-4 font-semibold whitespace-nowrap border-b-2 transition-colors ${
                   selectedFilter === 'resolved'
-                    ? 'border-blue-700 text-blue-700'
+                    ? 'border-emerald-700 text-emerald-700'
                     : 'border-transparent text-gray-600 hover:text-gray-900'
                 }`}
               >
@@ -136,7 +136,7 @@ export default function MyTicketsPage() {
               <p className="text-gray-600 mb-6">You don't have any support tickets yet</p>
               <Link
                 href="/support/ticket"
-                className="inline-block bg-blue-700 hover:bg-blue-800 text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap"
+                className="inline-block bg-emerald-700 hover:bg-emerald-800 text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap"
               >
                 Create Your First Ticket
               </Link>
@@ -147,7 +147,7 @@ export default function MyTicketsPage() {
                 <Link
                   key={ticket.id}
                   href={`/support/tickets/${ticket.id}`}
-                  className="block bg-white rounded-xl shadow-sm p-6 hover:shadow-lg transition-all border-2 border-transparent hover:border-blue-700"
+                  className="block bg-white rounded-xl shadow-sm p-6 hover:shadow-lg transition-all border-2 border-transparent hover:border-emerald-700"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
@@ -188,20 +188,20 @@ export default function MyTicketsPage() {
 
           <div className="mt-8 grid md:grid-cols-3 gap-6">
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="w-12 h-12 flex items-center justify-center bg-blue-100 rounded-lg mb-4">
-                <i className="ri-time-line text-2xl text-blue-700"></i>
+              <div className="w-12 h-12 flex items-center justify-center bg-emerald-100 rounded-lg mb-4">
+                <i className="ri-time-line text-2xl text-emerald-700"></i>
               </div>
               <h3 className="font-bold text-gray-900 mb-2">Response Time</h3>
-              <p className="text-2xl font-bold text-blue-700 mb-1">24 hours</p>
+              <p className="text-2xl font-bold text-emerald-700 mb-1">24 hours</p>
               <p className="text-sm text-gray-600">Average response time</p>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="w-12 h-12 flex items-center justify-center bg-blue-100 rounded-lg mb-4">
-                <i className="ri-checkbox-circle-line text-2xl text-blue-700"></i>
+              <div className="w-12 h-12 flex items-center justify-center bg-emerald-100 rounded-lg mb-4">
+                <i className="ri-checkbox-circle-line text-2xl text-emerald-700"></i>
               </div>
               <h3 className="font-bold text-gray-900 mb-2">Resolution Rate</h3>
-              <p className="text-2xl font-bold text-blue-700 mb-1">95%</p>
+              <p className="text-2xl font-bold text-emerald-700 mb-1">95%</p>
               <p className="text-sm text-gray-600">First contact resolution</p>
             </div>
 

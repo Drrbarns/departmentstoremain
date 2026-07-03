@@ -56,7 +56,7 @@ export default function PWAPrompt() {
           <div className="px-6 pb-8">
             {/* App icon and info */}
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg flex-shrink-0 bg-blue-50 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg flex-shrink-0 bg-emerald-50 flex items-center justify-center">
                 <img
                   src={logoUrl}
                   alt="Discount Discovery Zone"
@@ -86,8 +86,8 @@ export default function PWAPrompt() {
                   key={feature.label}
                   className="bg-gray-50 rounded-xl p-3 text-center"
                 >
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <i className={`${feature.icon} text-blue-700 text-lg`} />
+                  <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <i className={`${feature.icon} text-emerald-700 text-lg`} />
                   </div>
                   <span className="text-xs font-medium text-gray-600">{feature.label}</span>
                 </div>
@@ -97,7 +97,7 @@ export default function PWAPrompt() {
             {/* CTA */}
             <button
               onClick={handleInstall}
-              className="w-full bg-blue-700 hover:bg-blue-800 text-white py-4 px-6 rounded-2xl font-semibold text-base transition-all active:scale-[0.98] shadow-lg shadow-blue-700/20 flex items-center justify-center gap-2"
+              className="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-4 px-6 rounded-2xl font-semibold text-base transition-all active:scale-[0.98] shadow-lg shadow-emerald-700/20 flex items-center justify-center gap-2"
             >
               <i className="ri-download-2-line text-xl" />
               Add to Home Screen

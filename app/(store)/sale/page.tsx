@@ -219,7 +219,7 @@ function SaleContent() {
                             <select
                                 value={sortBy}
                                 onChange={(e) => setParam({ sort: e.target.value, page: null }, false)}
-                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500"
                             >
                                 <option value="newest">Newest</option>
                                 <option value="price-low">Price: Low to High</option>
@@ -283,7 +283,7 @@ export default function SalePage() {
         <Suspense
             fallback={
                 <div className="min-h-screen flex items-center justify-center">
-                    <div className="w-12 h-12 border-4 border-blue-700 border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-12 h-12 border-4 border-emerald-700 border-t-transparent rounded-full animate-spin"></div>
                 </div>
             }
         >

@@ -28,7 +28,7 @@ export default function HeroClassic() {
   return (
     <>
       {activeBanners.length > 0 && (
-        <div className="bg-blue-900 text-white py-2 overflow-hidden relative">
+        <div className="bg-emerald-900 text-white py-2 overflow-hidden relative">
           <div className="flex animate-marquee whitespace-nowrap">
             {activeBanners.concat(activeBanners).map((banner, index) => (
               <span key={index} className="mx-8 text-sm font-medium tracking-wide flex items-center">
@@ -112,11 +112,11 @@ export default function HeroClassic() {
 
         {/* Floating "Exclusive Offer" Card (Bottom Left) */}
         <div className="absolute bottom-8 left-8 md:bottom-12 md:left-12 z-20 bg-white rounded-xl p-6 shadow-2xl max-w-[280px] animate-fade-in hidden lg:block">
-          <p className="font-serif text-blue-800 text-lg italic mb-0.5">Exclusive Offer</p>
+          <p className="font-serif text-emerald-800 text-lg italic mb-0.5">Exclusive Offer</p>
           <h3 className="text-3xl font-bold text-gray-900 mb-1">25% Off</h3>
           <p className="text-xs text-gray-500 font-medium leading-relaxed">
             On your first order. <br />
-            <Link href="/shop" className="underline text-blue-700 hover:text-blue-900 mt-1 inline-block">Shop now</Link>
+            <Link href="/shop" className="underline text-emerald-700 hover:text-emerald-900 mt-1 inline-block">Shop now</Link>
           </p>
         </div>
       </section>

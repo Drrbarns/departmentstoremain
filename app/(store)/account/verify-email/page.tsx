@@ -136,9 +136,9 @@ export default function VerifyEmailPage() {
           </div>
 
           <div className="mt-8 pt-6 border-t">
-            <div className="bg-blue-50 rounded-lg p-4">
+            <div className="bg-emerald-50 rounded-lg p-4">
               <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                <i className="ri-information-line text-blue-600"></i>
+                <i className="ri-information-line text-emerald-600"></i>
                 Didn't receive the code?
               </h3>
               <ul className="text-xs text-gray-600 space-y-1">

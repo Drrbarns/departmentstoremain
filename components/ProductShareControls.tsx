@@ -72,7 +72,7 @@ export default function ProductShareControls({ url, title }: ProductShareControl
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label="Share product"
-        className="w-12 h-12 flex items-center justify-center border-2 border-gray-200 hover:border-blue-700 rounded-full transition-colors cursor-pointer"
+        className="w-12 h-12 flex items-center justify-center border-2 border-gray-200 hover:border-emerald-700 rounded-full transition-colors cursor-pointer"
       >
         <i className="ri-share-line text-gray-700 text-xl" aria-hidden />
       </button>
@@ -84,7 +84,7 @@ export default function ProductShareControls({ url, title }: ProductShareControl
         >
           {typeof navigator !== 'undefined' && typeof navigator.share === 'function' && (
             <button type="button" role="menuitem" className={itemClass} onClick={nativeShare}>
-              <i className="ri-share-forward-line text-lg text-blue-700" aria-hidden />
+              <i className="ri-share-forward-line text-lg text-emerald-700" aria-hidden />
               Share…
             </button>
           )}

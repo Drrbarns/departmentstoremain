@@ -102,7 +102,7 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
         <div className="flex items-center space-x-2">
           <h3 className="text-lg font-bold text-gray-900">Filters</h3>
           {activeFilterCount > 0 && (
-            <span className="bg-blue-700 text-white text-xs font-bold px-2 py-1 rounded-full">
+            <span className="bg-emerald-700 text-white text-xs font-bold px-2 py-1 rounded-full">
               {activeFilterCount}
             </span>
           )}
@@ -111,7 +111,7 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
           {activeFilterCount > 0 && (
             <button
               onClick={clearAllFilters}
-              className="text-sm text-blue-700 hover:text-blue-900 font-medium whitespace-nowrap"
+              className="text-sm text-emerald-700 hover:text-emerald-900 font-medium whitespace-nowrap"
             >
               Clear All
             </button>
@@ -135,7 +135,7 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
                   type="number"
                   value={priceRange[0]}
                   onChange={(e) => handlePriceChange(0, Number(e.target.value))}
-                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-200"
+                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:border-emerald-700 focus:ring-2 focus:ring-emerald-200"
                   placeholder="Min"
                 />
                 <span className="text-gray-400">-</span>
@@ -143,7 +143,7 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
                   type="number"
                   value={priceRange[1]}
                   onChange={(e) => handlePriceChange(1, Number(e.target.value))}
-                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-200"
+                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:border-emerald-700 focus:ring-2 focus:ring-emerald-200"
                   placeholder="Max"
                 />
               </div>
@@ -153,7 +153,7 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
                 max="1000"
                 value={priceRange[1]}
                 onChange={(e) => handlePriceChange(1, Number(e.target.value))}
-                className="w-full accent-blue-700"
+                className="w-full accent-emerald-700"
               />
               <p className="text-sm text-gray-600">
                 GH₵{priceRange[0]} - GH₵{priceRange[1]}
@@ -170,7 +170,7 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
                     type="checkbox"
                     checked={selectedCategories.includes(category)}
                     onChange={() => handleCategoryToggle(category)}
-                    className="w-5 h-5 text-blue-700 border-gray-300 rounded focus:ring-blue-500"
+                    className="w-5 h-5 text-emerald-700 border-gray-300 rounded focus:ring-emerald-500"
                   />
                   <span className="text-gray-700 group-hover:text-gray-900">{category}</span>
                 </label>
@@ -187,7 +187,7 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
                     type="checkbox"
                     checked={selectedBrands.includes(brand)}
                     onChange={() => handleBrandToggle(brand)}
-                    className="w-5 h-5 text-blue-700 border-gray-300 rounded focus:ring-blue-500"
+                    className="w-5 h-5 text-emerald-700 border-gray-300 rounded focus:ring-emerald-500"
                   />
                   <span className="text-gray-700 group-hover:text-gray-900">{brand}</span>
                 </label>
@@ -204,7 +204,7 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
                     type="checkbox"
                     checked={selectedRatings.includes(rating)}
                     onChange={() => handleRatingToggle(rating)}
-                    className="w-5 h-5 text-blue-700 border-gray-300 rounded focus:ring-blue-500"
+                    className="w-5 h-5 text-emerald-700 border-gray-300 rounded focus:ring-emerald-500"
                   />
                   <div className="flex items-center space-x-2">
                     <div className="flex">
@@ -233,7 +233,7 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
                   setInStock(e.target.checked);
                   applyFilters({ inStock: e.target.checked });
                 }}
-                className="w-5 h-5 text-blue-700 border-gray-300 rounded focus:ring-blue-500"
+                className="w-5 h-5 text-emerald-700 border-gray-300 rounded focus:ring-emerald-500"
               />
               <span className="text-gray-700 group-hover:text-gray-900">In Stock Only</span>
             </label>
@@ -245,7 +245,7 @@ export default function ProductFilters({ onFilterChange }: ProductFiltersProps) 
                   setOnSale(e.target.checked);
                   applyFilters({ onSale: e.target.checked });
                 }}
-                className="w-5 h-5 text-blue-700 border-gray-300 rounded focus:ring-blue-500"
+                className="w-5 h-5 text-emerald-700 border-gray-300 rounded focus:ring-emerald-500"
               />
               <span className="text-gray-700 group-hover:text-gray-900">On Sale</span>
             </label>

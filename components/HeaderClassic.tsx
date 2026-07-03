@@ -83,7 +83,7 @@ export default function HeaderClassic() {
                   {getSetting('site_logo') ? (
                     <img src={getSetting('site_logo')} alt={siteName} className="h-9 md:h-11 w-auto object-contain" />
                   ) : (
-                    <span className="text-xl font-bold text-blue-700 tracking-tight">{siteName}</span>
+                    <span className="text-xl font-bold text-emerald-700 tracking-tight">{siteName}</span>
                   )}
                 </Link>
               </div>
@@ -195,12 +195,12 @@ export default function HeaderClassic() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search name, SKU, barcode, or store code (e.g. 042)..."
-                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
+                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-base"
                     autoFocus
                   />
                   <button
                     type="submit"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-blue-700 hover:text-blue-900"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-emerald-700 hover:text-emerald-900"
                   >
                     <i className="ri-search-line text-xl"></i>
                   </button>
@@ -226,7 +226,7 @@ export default function HeaderClassic() {
                 {getSetting('site_logo') ? (
                     <img src={getSetting('site_logo')} alt={siteName} className="h-8 w-auto object-contain" />
                   ) : (
-                    <span className="text-lg font-bold text-blue-700 tracking-tight">{siteName}</span>
+                    <span className="text-lg font-bold text-emerald-700 tracking-tight">{siteName}</span>
                   )}
               </Link>
               <button
@@ -253,7 +253,7 @@ export default function HeaderClassic() {
                   className={`block px-4 py-3 text-lg font-medium rounded-lg transition-colors ${
                     link.label === 'Sale'
                       ? 'text-red-600 hover:bg-red-50 hover:text-red-700'
-                      : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                      : 'text-gray-700 hover:bg-emerald-50 hover:text-emerald-700'
                   }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >

@@ -62,7 +62,7 @@ export default function MobileSearchOverlay({ isOpen, onClose }: MobileSearchOve
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search products..."
-              className="w-full pl-10 pr-10 py-3 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-10 py-3 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
               autoFocus
             />
             <div className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center">
@@ -89,7 +89,7 @@ export default function MobileSearchOverlay({ isOpen, onClose }: MobileSearchOve
                   <h3 className="text-sm font-semibold text-gray-900">Recent Searches</h3>
                   <button 
                     onClick={() => setRecentSearches([])}
-                    className="text-xs text-blue-700 font-medium whitespace-nowrap"
+                    className="text-xs text-emerald-700 font-medium whitespace-nowrap"
                   >
                     Clear All
                   </button>
@@ -121,7 +121,7 @@ export default function MobileSearchOverlay({ isOpen, onClose }: MobileSearchOve
                 {popularSearches.map((search, index) => (
                   <button
                     key={index}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded-full hover:bg-blue-50 hover:text-blue-700 transition-colors whitespace-nowrap"
+                    className="px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded-full hover:bg-emerald-50 hover:text-emerald-700 transition-colors whitespace-nowrap"
                   >
                     {search}
                   </button>
@@ -151,7 +151,7 @@ export default function MobileSearchOverlay({ isOpen, onClose }: MobileSearchOve
                   <div className="flex-1 min-w-0">
                     <h4 className="text-sm font-medium text-gray-900 truncate">{product.name}</h4>
                     <p className="text-xs text-gray-500 mt-0.5">{product.category}</p>
-                    <p className="text-sm font-semibold text-blue-700 mt-1">{product.price}</p>
+                    <p className="text-sm font-semibold text-emerald-700 mt-1">{product.price}</p>
                   </div>
                 </Link>
               ))}

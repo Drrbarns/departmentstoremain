@@ -90,13 +90,13 @@ export default function ReturnsPortalPage() {
               {[1, 2, 3].map((i) => (
                 <div key={i} className="flex items-center flex-1">
                   <div className={`w-10 h-10 flex items-center justify-center rounded-full font-bold ${
-                    i <= step ? 'bg-blue-700 text-white' : 'bg-gray-200 text-gray-500'
+                    i <= step ? 'bg-emerald-700 text-white' : 'bg-gray-200 text-gray-500'
                   }`}>
                     {i < step ? <i className="ri-check-line"></i> : i}
                   </div>
                   {i < 3 && (
                     <div className={`flex-1 h-1 mx-4 ${
-                      i < step ? 'bg-blue-700' : 'bg-gray-200'
+                      i < step ? 'bg-emerald-700' : 'bg-gray-200'
                     }`}></div>
                   )}
                 </div>
@@ -121,7 +121,7 @@ export default function ReturnsPortalPage() {
                     type="text"
                     value={orderNumber}
                     onChange={(e) => setOrderNumber(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     placeholder="ORD-2024-156"
                     required
                   />
@@ -135,7 +135,7 @@ export default function ReturnsPortalPage() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     placeholder="you@example.com"
                     required
                   />
@@ -144,16 +144,16 @@ export default function ReturnsPortalPage() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-blue-700 hover:bg-blue-800 text-white py-4 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  className="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-4 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                 >
                   {isLoading ? 'Finding Order...' : 'Find Order'}
                 </button>
               </form>
 
-              <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="mt-8 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
                 <div className="flex items-start space-x-3">
-                  <i className="ri-information-line text-xl text-blue-700 mt-0.5"></i>
-                  <div className="text-sm text-blue-700">
+                  <i className="ri-information-line text-xl text-emerald-700 mt-0.5"></i>
+                  <div className="text-sm text-emerald-700">
                     <p className="font-semibold mb-1">Return Policy Highlights</p>
                     <ul className="space-y-1">
                       <li>• Returns accepted for eligible delivered items</li>
@@ -185,7 +185,7 @@ export default function ReturnsPortalPage() {
                         type="checkbox"
                         checked={selectedItems.includes(item.id)}
                         onChange={() => toggleItemSelection(item.id)}
-                        className="mt-1 w-5 h-5 text-blue-700 rounded border-gray-300 focus:ring-blue-500"
+                        className="mt-1 w-5 h-5 text-emerald-700 rounded border-gray-300 focus:ring-emerald-500"
                       />
                       <div className="w-20 h-20 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
                         <img src={item.image} alt={item.name} className="w-full h-full object-cover object-top" />
@@ -205,7 +205,7 @@ export default function ReturnsPortalPage() {
                                 ...returnReasons,
                                 [item.id]: e.target.value
                               })}
-                              className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-8"
+                              className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 pr-8"
                               required
                             >
                               <option value="">Select a reason</option>
@@ -231,11 +231,11 @@ export default function ReturnsPortalPage() {
                     onClick={() => setReturnType('refund')}
                     className={`p-4 rounded-lg border-2 text-left transition-all ${
                       returnType === 'refund'
-                        ? 'border-blue-700 bg-blue-50'
+                        ? 'border-emerald-700 bg-emerald-50'
                         : 'border-gray-300 hover:border-gray-400'
                     }`}
                   >
-                    <i className="ri-refund-line text-2xl text-blue-700 mb-2"></i>
+                    <i className="ri-refund-line text-2xl text-emerald-700 mb-2"></i>
                     <p className="font-semibold text-gray-900">Get a Refund</p>
                     <p className="text-sm text-gray-600 mt-1">Money back to original payment</p>
                   </button>
@@ -245,11 +245,11 @@ export default function ReturnsPortalPage() {
                     onClick={() => setReturnType('exchange')}
                     className={`p-4 rounded-lg border-2 text-left transition-all ${
                       returnType === 'exchange'
-                        ? 'border-blue-700 bg-blue-50'
+                        ? 'border-emerald-700 bg-emerald-50'
                         : 'border-gray-300 hover:border-gray-400'
                     }`}
                   >
-                    <i className="ri-exchange-line text-2xl text-blue-700 mb-2"></i>
+                    <i className="ri-exchange-line text-2xl text-emerald-700 mb-2"></i>
                     <p className="font-semibold text-gray-900">Exchange Item</p>
                     <p className="text-sm text-gray-600 mt-1">Get a different size or color</p>
                   </button>
@@ -266,7 +266,7 @@ export default function ReturnsPortalPage() {
                 <button
                   onClick={() => setStep(3)}
                   disabled={selectedItems.length === 0 || !selectedItems.every(id => returnReasons[id])}
-                  className="flex-1 py-4 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  className="flex-1 py-4 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                 >
                   Continue
                 </button>
@@ -295,7 +295,7 @@ export default function ReturnsPortalPage() {
                 </div>
               </div>
 
-              <div className="mb-8 p-6 border-2 border-blue-200 bg-blue-50 rounded-lg">
+              <div className="mb-8 p-6 border-2 border-emerald-200 bg-emerald-50 rounded-lg">
                 <h3 className="font-semibold text-gray-900 mb-4">Next Steps</h3>
                 <ol className="space-y-2 text-sm text-gray-700">
                   <li className="flex items-start space-x-2">
@@ -327,7 +327,7 @@ export default function ReturnsPortalPage() {
                 <button
                   onClick={handleSubmitReturn}
                   disabled={isLoading}
-                  className="flex-1 py-4 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  className="flex-1 py-4 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                 >
                   {isLoading ? 'Submitting...' : 'Submit Return Request'}
                 </button>

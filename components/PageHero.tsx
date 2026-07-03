@@ -7,7 +7,7 @@ interface PageHeroProps {
 
 export default function PageHero({ title, subtitle }: PageHeroProps) {
     return (
-        <div className="relative bg-blue-900 overflow-hidden">
+        <div className="relative bg-emerald-900 overflow-hidden">
             <div className="absolute inset-0 opacity-20">
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
             </div>
@@ -16,7 +16,7 @@ export default function PageHero({ title, subtitle }: PageHeroProps) {
                     {title}
                 </h1>
                 {subtitle && (
-                    <p className="text-xl md:text-2xl text-blue-100 max-w-3xl mx-auto leading-relaxed animate-in slide-in-from-bottom-5 duration-700 delay-100">
+                    <p className="text-xl md:text-2xl text-emerald-100 max-w-3xl mx-auto leading-relaxed animate-in slide-in-from-bottom-5 duration-700 delay-100">
                         {subtitle}
                     </p>
                 )}

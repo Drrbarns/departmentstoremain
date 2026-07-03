@@ -77,7 +77,7 @@ export default function UpdatePasswordPage() {
       <main className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
         <div className="max-w-md w-full bg-white rounded-xl shadow-sm p-8 text-center">
           <p className="text-red-700 mb-6">{error}</p>
-          <Link href="/auth/forgot-password" className="text-blue-700 font-semibold">
+          <Link href="/auth/forgot-password" className="text-emerald-700 font-semibold">
             Request new link
           </Link>
         </div>
@@ -107,7 +107,7 @@ export default function UpdatePasswordPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                 placeholder="At least 8 characters"
                 autoComplete="new-password"
               />
@@ -120,20 +120,20 @@ export default function UpdatePasswordPage() {
                 type="password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                 autoComplete="new-password"
               />
             </div>
             <button
               type="submit"
               disabled={isLoading || !ready}
-              className="w-full bg-blue-700 hover:bg-blue-800 text-white py-4 rounded-lg font-semibold disabled:opacity-50"
+              className="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-4 rounded-lg font-semibold disabled:opacity-50"
             >
               {isLoading ? 'Saving…' : 'Update password'}
             </button>
           </form>
           <p className="mt-6 text-center text-sm text-gray-600">
-            <Link href="/auth/login" className="text-blue-700 font-medium">
+            <Link href="/auth/login" className="text-emerald-700 font-medium">
               Back to sign in
             </Link>
           </p>

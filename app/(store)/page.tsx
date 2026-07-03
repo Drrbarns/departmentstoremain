@@ -82,7 +82,7 @@ export default function Home() {
               <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl text-gray-900 mb-4">Shop by Category</h2>
               <p className="text-gray-600 text-lg max-w-md">From dresses to electronics, bags to shoes</p>
             </div>
-            <Link href="/categories" className="hidden md:flex items-center text-blue-800 font-medium hover:text-blue-900 transition-colors">
+            <Link href="/categories" className="hidden md:flex items-center text-emerald-800 font-medium hover:text-emerald-900 transition-colors">
               View All <i className="ri-arrow-right-line ml-2"></i>
             </Link>
           </AnimatedSection>
@@ -126,7 +126,7 @@ export default function Home() {
           </AnimatedGrid>
 
           <div className="mt-8 text-center md:hidden">
-            <Link href="/categories" className="inline-flex items-center text-blue-800 font-medium hover:text-blue-900 transition-colors">
+            <Link href="/categories" className="inline-flex items-center text-emerald-800 font-medium hover:text-emerald-900 transition-colors">
               View All <i className="ri-arrow-right-line ml-2"></i>
             </Link>
           </div>
@@ -198,7 +198,7 @@ export default function Home() {
           <div className="text-center mt-16">
             <Link
               href="/shop"
-              className="inline-flex items-center justify-center bg-gray-900 text-white px-10 py-4 rounded-full font-medium hover:bg-blue-800 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 btn-animate"
+              className="inline-flex items-center justify-center bg-gray-900 text-white px-10 py-4 rounded-full font-medium hover:bg-emerald-800 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 btn-animate"
             >
               View All Products
             </Link>

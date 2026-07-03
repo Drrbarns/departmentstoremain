@@ -122,7 +122,7 @@ export default function ArticlePage() {
         <div className="max-w-4xl mx-auto px-4">
           <Link
             href="/help"
-            className="inline-flex items-center text-blue-700 hover:text-blue-900 font-semibold mb-6 whitespace-nowrap"
+            className="inline-flex items-center text-emerald-700 hover:text-emerald-900 font-semibold mb-6 whitespace-nowrap"
           >
             <i className="ri-arrow-left-line mr-2"></i>
             Back to Help Center
@@ -131,7 +131,7 @@ export default function ArticlePage() {
           <div className="bg-white rounded-xl shadow-sm p-8 mb-6">
             <div className="mb-6 pb-6 border-b border-gray-200">
               <div className="flex items-center space-x-3 mb-4">
-                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold whitespace-nowrap">
+                <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-semibold whitespace-nowrap">
                   {article.category}
                 </span>
                 <span className="text-sm text-gray-500">
@@ -166,7 +166,7 @@ export default function ArticlePage() {
               <div className="flex space-x-4">
                 <button
                   onClick={() => handleHelpful(true)}
-                  className="flex-1 py-3 px-6 border-2 border-blue-700 text-blue-700 hover:bg-blue-700 hover:text-white rounded-lg font-semibold transition-colors whitespace-nowrap"
+                  className="flex-1 py-3 px-6 border-2 border-emerald-700 text-emerald-700 hover:bg-emerald-700 hover:text-white rounded-lg font-semibold transition-colors whitespace-nowrap"
                 >
                   <i className="ri-thumb-up-line mr-2"></i>
                   Yes, it was helpful
@@ -183,8 +183,8 @@ export default function ArticlePage() {
               <div className="text-center">
                 {wasHelpful ? (
                   <>
-                    <div className="w-16 h-16 flex items-center justify-center bg-blue-100 rounded-full mx-auto mb-4">
-                      <i className="ri-check-line text-3xl text-blue-700"></i>
+                    <div className="w-16 h-16 flex items-center justify-center bg-emerald-100 rounded-full mx-auto mb-4">
+                      <i className="ri-check-line text-3xl text-emerald-700"></i>
                     </div>
                     <p className="text-lg font-semibold text-gray-900 mb-2">
                       Thank you for your feedback!
@@ -195,8 +195,8 @@ export default function ArticlePage() {
                   </>
                 ) : (
                   <>
-                    <div className="w-16 h-16 flex items-center justify-center bg-blue-100 rounded-full mx-auto mb-4">
-                      <i className="ri-customer-service-line text-3xl text-blue-700"></i>
+                    <div className="w-16 h-16 flex items-center justify-center bg-emerald-100 rounded-full mx-auto mb-4">
+                      <i className="ri-customer-service-line text-3xl text-emerald-700"></i>
                     </div>
                     <p className="text-lg font-semibold text-gray-900 mb-2">
                       Sorry we couldn't help
@@ -206,7 +206,7 @@ export default function ArticlePage() {
                     </p>
                     <Link
                       href="/support/ticket"
-                      className="inline-block bg-blue-700 hover:bg-blue-800 text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap"
+                      className="inline-block bg-emerald-700 hover:bg-emerald-800 text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap"
                     >
                       Contact Support
                     </Link>
@@ -226,7 +226,7 @@ export default function ArticlePage() {
                   className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-lg transition-colors"
                 >
                   <div className="flex items-center space-x-3">
-                    <i className="ri-file-text-line text-xl text-blue-700"></i>
+                    <i className="ri-file-text-line text-xl text-emerald-700"></i>
                     <div>
                       <p className="font-semibold text-gray-900">{related.title}</p>
                       <p className="text-sm text-gray-600">{related.category}</p>

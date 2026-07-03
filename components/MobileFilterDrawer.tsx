@@ -96,7 +96,7 @@ export default function MobileFilterDrawer({ isOpen, onClose }: MobileFilterDraw
               <span className="text-sm text-gray-600">{getActiveFiltersCount()} filters active</span>
               <button
                 onClick={clearAll}
-                className="text-sm text-blue-700 font-medium whitespace-nowrap"
+                className="text-sm text-emerald-700 font-medium whitespace-nowrap"
               >
                 Clear All
               </button>
@@ -114,7 +114,7 @@ export default function MobileFilterDrawer({ isOpen, onClose }: MobileFilterDraw
                     type="checkbox"
                     checked={selectedCategories.includes(category)}
                     onChange={() => toggleCategory(category)}
-                    className="w-5 h-5 text-blue-700 border-gray-300 rounded focus:ring-blue-500"
+                    className="w-5 h-5 text-emerald-700 border-gray-300 rounded focus:ring-emerald-500"
                   />
                   <span className="text-sm text-gray-700">{category}</span>
                 </label>
@@ -132,7 +132,7 @@ export default function MobileFilterDrawer({ isOpen, onClose }: MobileFilterDraw
                 step="10"
                 value={priceRange[1]}
                 onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-700"
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-700"
               />
               <div className="flex items-center justify-between text-sm text-gray-700">
                 <span>GH₵{priceRange[0]}</span>
@@ -150,8 +150,8 @@ export default function MobileFilterDrawer({ isOpen, onClose }: MobileFilterDraw
                   onClick={() => toggleSize(size)}
                   className={`px-4 py-2 text-sm rounded-lg border transition-colors whitespace-nowrap ${
                     selectedSizes.includes(size)
-                      ? 'bg-blue-700 text-white border-blue-700'
-                      : 'bg-white text-gray-700 border-gray-300 hover:border-blue-700'
+                      ? 'bg-emerald-700 text-white border-emerald-700'
+                      : 'bg-white text-gray-700 border-gray-300 hover:border-emerald-700'
                   }`}
                 >
                   {size}
@@ -169,7 +169,7 @@ export default function MobileFilterDrawer({ isOpen, onClose }: MobileFilterDraw
                   onClick={() => toggleColor(color.name)}
                   className={`relative w-10 h-10 rounded-full border-2 transition-all ${
                     selectedColors.includes(color.name)
-                      ? 'border-blue-700 scale-110'
+                      ? 'border-emerald-700 scale-110'
                       : 'border-gray-300'
                   }`}
                   style={{ backgroundColor: color.hex }}
@@ -194,7 +194,7 @@ export default function MobileFilterDrawer({ isOpen, onClose }: MobileFilterDraw
                     name="rating"
                     checked={selectedRating === rating}
                     onChange={() => setSelectedRating(rating)}
-                    className="w-5 h-5 text-blue-700 border-gray-300 focus:ring-blue-500"
+                    className="w-5 h-5 text-emerald-700 border-gray-300 focus:ring-emerald-500"
                   />
                   <div className="flex items-center space-x-1">
                     {[...Array(5)].map((_, i) => (
@@ -213,7 +213,7 @@ export default function MobileFilterDrawer({ isOpen, onClose }: MobileFilterDraw
         <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4">
           <button
             onClick={onClose}
-            className="w-full bg-blue-700 text-white py-3 rounded-lg font-medium hover:bg-blue-800 transition-colors whitespace-nowrap"
+            className="w-full bg-emerald-700 text-white py-3 rounded-lg font-medium hover:bg-emerald-800 transition-colors whitespace-nowrap"
           >
             Show Results ({234})
           </button>

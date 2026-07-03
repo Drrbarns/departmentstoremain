@@ -68,7 +68,7 @@ export default function InstallInstructions() {
     <>
       <button
         onClick={() => setShowModal(true)}
-        className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors whitespace-nowrap"
+        className="flex items-center gap-2 px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors whitespace-nowrap"
       >
         <i className="ri-information-line"></i>
         <span className="font-medium">How to Install</span>
@@ -90,12 +90,12 @@ export default function InstallInstructions() {
             <div className="space-y-4 mb-6">
               {instructions.steps.map((step, index) => (
                 <div key={index} className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <i className={`${step.icon} text-blue-700`}></i>
+                  <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <i className={`${step.icon} text-emerald-700`}></i>
                   </div>
                   <div className="flex-1 pt-2">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="w-6 h-6 bg-blue-700 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                      <span className="w-6 h-6 bg-emerald-700 text-white rounded-full flex items-center justify-center text-xs font-bold">
                         {index + 1}
                       </span>
                       <span className="font-medium text-gray-900">{step.text}</span>
@@ -132,7 +132,7 @@ export default function InstallInstructions() {
 
             <button
               onClick={() => setShowModal(false)}
-              className="w-full bg-blue-700 hover:bg-blue-800 text-white py-3 rounded-lg font-semibold transition-colors whitespace-nowrap"
+              className="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded-lg font-semibold transition-colors whitespace-nowrap"
             >
               Got It!
             </button>

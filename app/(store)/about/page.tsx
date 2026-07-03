@@ -1,165 +1,192 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
 import { useCMS } from '@/context/CMSContext';
-import PageHero from '@/components/PageHero';
 import { usePageTitle } from '@/hooks/usePageTitle';
+
+const values = [
+  {
+    icon: 'ri-verified-badge-line',
+    title: 'Verified Quality',
+    description:
+      'Every product is personally inspected before it reaches you — sourced locally or imported, quality always comes first.',
+  },
+  {
+    icon: 'ri-price-tag-3-line',
+    title: 'Unbeatable Prices',
+    description:
+      'We source directly from manufacturers and local suppliers, cutting out the middleman and passing the savings to you.',
+  },
+  {
+    icon: 'ri-global-line',
+    title: 'Local & Imported',
+    description:
+      'The best of both worlds — handpicked local products alongside carefully selected imports from trusted suppliers.',
+  },
+  {
+    icon: 'ri-user-heart-line',
+    title: 'Customer First',
+    description:
+      'From your first order to every restock, friendly guidance and honest service are at the heart of what we do.',
+  },
+];
+
+const trustPoints = [
+  {
+    icon: 'ri-award-line',
+    title: 'Curated Selection',
+    description: 'Dresses, electronics, bags, shoes and more — every item chosen with care.',
+  },
+  {
+    icon: 'ri-truck-line',
+    title: 'Nationwide Delivery',
+    description: 'Fast, reliable delivery from Accra to every region across Ghana.',
+  },
+  {
+    icon: 'ri-secure-payment-line',
+    title: 'Secure Payments',
+    description: 'Safe, trusted checkout with mobile money and card options.',
+  },
+  {
+    icon: 'ri-customer-service-2-line',
+    title: 'Personal Support',
+    description: 'Friendly product guidance and order support whenever you need it.',
+  },
+];
 
 export default function AboutPage() {
   usePageTitle('Our Story');
   const { getSetting } = useCMS();
-  const [activeTab, setActiveTab] = useState('story');
-
   const siteName = getSetting('site_name') || 'Discount Discovery Zone';
 
-  const values = [
-    {
-      icon: 'ri-verified-badge-line',
-      title: 'Verified Quality',
-      description: 'Every product is personally inspected before it reaches you. Whether sourced locally or imported from China, quality comes first.'
-    },
-    {
-      icon: 'ri-money-dollar-circle-line',
-      title: 'Unbeatable Prices',
-      description: 'By sourcing directly from manufacturers and local suppliers, we cut out the middleman and pass the savings to you.'
-    },
-    {
-      icon: 'ri-global-line',
-      title: 'Local & Imported',
-      description: 'The best of both worlds — handpicked local products alongside carefully selected imports from trusted Chinese suppliers.'
-    },
-    {
-      icon: 'ri-truck-line',
-      title: 'Nationwide Delivery',
-      description: 'Fast and reliable delivery across Ghana. Based in Accra, we ship to every region with care and speed.'
-    }
-  ];
-
   return (
-    <div className="min-h-screen bg-white">
-      <PageHero
-        title="More Than Just A Brand"
-        subtitle="From Accra to your doorstep — quality dresses, electronics, bags, shoes and more at prices that make sense."
-      />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="flex border-b border-gray-200 mb-12 justify-center">
-          <button
-            onClick={() => setActiveTab('story')}
-            className={`px-4 py-2 sm:px-8 sm:py-4 font-medium transition-colors text-lg cursor-pointer ${activeTab === 'story'
-              ? 'text-blue-700 border-b-4 border-blue-700 font-bold'
-              : 'text-gray-500 hover:text-gray-700'
-              }`}
-          >
-            Our Story
-          </button>
-          <button
-            onClick={() => setActiveTab('mission')}
-            className={`px-4 py-2 sm:px-8 sm:py-4 font-medium transition-colors text-lg cursor-pointer ${activeTab === 'mission'
-              ? 'text-blue-700 border-b-4 border-blue-700 font-bold'
-              : 'text-gray-500 hover:text-gray-700'
-              }`}
-          >
-            Our Mission
-          </button>
+    <div className="bg-white">
+      {/* Hero */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#ecfdf5] to-white py-20 sm:py-24 lg:py-28">
+        <div className="mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600">Our Story</p>
+            <h1 className="mt-4 font-serif text-4xl font-semibold tracking-tight text-[#0B1B3A] sm:text-5xl lg:text-6xl">
+              More Than Just
+              <br />
+              <span className="text-emerald-700">A Department Store</span>
+            </h1>
+            <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-gray-600">
+              Born from a passion for smart shopping, we make quality dresses, electronics, bags,
+              shoes and more accessible to everyone — from Accra to your doorstep.
+            </p>
+          </div>
         </div>
+      </section>
 
-        {activeTab === 'story' && (
-          <div className="grid md:grid-cols-2 gap-16 items-center animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-6">How It All Started</h2>
-              <div className="space-y-6 text-lg text-gray-600 leading-relaxed">
-                <p>
-                  <strong>Discount Discovery Zone</strong> started with a simple idea: bring quality products to Ghanaians at fair prices. We saw how people were paying too much for items that could be sourced smarter — so we built a bridge between trusted Chinese manufacturers, local suppliers, and everyday shoppers.
-                </p>
-                <p>
-                  What began as a small operation in Accra has grown into a full online store offering everything from trendy dresses and stylish bags to the latest electronics and durable shoes. We handpick every product, test it for quality, and price it fairly.
-                </p>
-                <p>
-                  Whether you are shopping for yourself, stocking your boutique, or looking for the perfect gift, <strong>Discount Discovery Zone</strong> has you covered. We combine local sourcing with direct imports to give you the widest selection at the best value.
-                </p>
-              </div>
-            </div>
-            <div className="relative">
-              <div className="aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl bg-gray-100 relative flex items-center justify-center">
+      {/* Brand Story */}
+      <section className="py-20 sm:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
+            <div className="animate-in fade-in slide-in-from-left-6 duration-700">
+              <div className="aspect-[4/5] overflow-hidden rounded-3xl shadow-xl ring-1 ring-black/5">
                 <img
-                  src="/logo.png"
-                  alt="Discount Discovery Zone"
-                  className="w-2/3 h-auto object-contain opacity-80"
+                  src="/hero-1.png"
+                  alt={`${siteName} storefront`}
+                  className="h-full w-full object-cover object-center"
                 />
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-8">
-                  <p className="text-white font-bold text-xl">Discount Discovery Zone</p>
-                  <p className="text-blue-200">Founder & CEO</p>
-                </div>
               </div>
-              {/* Decorative Element */}
-              <div className="absolute -z-10 top-10 -right-10 w-full h-full border-4 border-blue-100 rounded-2xl hidden md:block"></div>
             </div>
-          </div>
-        )}
 
-        {activeTab === 'mission' && (
-          <div className="grid md:grid-cols-2 gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="bg-blue-50 p-10 rounded-3xl border border-blue-100">
-              <div className="w-16 h-16 bg-blue-700 rounded-2xl flex items-center justify-center mb-8 shadow-lg">
-                <i className="ri-store-2-line text-3xl text-white"></i>
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-6 duration-700">
+              <h2 className="font-serif text-3xl font-semibold text-[#0B1B3A] sm:text-4xl">The Beginning</h2>
+              <div className="space-y-4 leading-relaxed text-gray-600">
+                <p>
+                  <strong className="text-[#0B1B3A]">{siteName}</strong> started with a simple idea:
+                  bring quality products to Ghanaians at fair prices. We saw how people were paying too
+                  much for items that could be sourced smarter — so we built a bridge between trusted
+                  manufacturers, local suppliers, and everyday shoppers.
+                </p>
+                <p>
+                  What began as a small operation in Accra grew into a full online store offering
+                  everything from trendy dresses and stylish bags to the latest electronics and durable
+                  shoes. We handpick every product, test it for quality, and price it fairly.
+                </p>
+                <p>
+                  Whether you are shopping for yourself, stocking your boutique, or looking for the
+                  perfect gift, we combine local sourcing with direct imports to give you the widest
+                  selection at the best value.
+                </p>
               </div>
-              <h3 className="text-3xl font-bold text-gray-900 mb-4">Everything in One Place</h3>
-              <p className="text-gray-600 text-lg leading-relaxed">
-                From fashion to electronics, bags to shoes — we aim to be the only store you need. Our catalogue is constantly expanding with new arrivals sourced from trusted local and international suppliers.
-              </p>
-            </div>
-            <div className="bg-amber-50 p-10 rounded-3xl border border-amber-100">
-              <div className="w-16 h-16 bg-amber-600 rounded-2xl flex items-center justify-center mb-8 shadow-lg">
-                <i className="ri-hand-heart-line text-3xl text-white"></i>
-              </div>
-              <h3 className="text-3xl font-bold text-gray-900 mb-4">Empowering Resellers</h3>
-              <p className="text-gray-600 text-lg leading-relaxed">
-                We support small businesses and resellers with competitive bulk pricing. Many of our products are available at wholesale rates, helping entrepreneurs across Ghana grow their own ventures.
-              </p>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      </section>
 
-      {/* Values Section */}
-      <div className="bg-gray-50 py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Why Shop With Us?</h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">Trusted by hundreds of customers and resellers across Ghana.</p>
+      <div className="mx-auto max-w-5xl border-t border-gray-200" />
+
+      {/* Values */}
+      <section className="py-20 sm:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="font-serif text-3xl font-semibold text-[#0B1B3A] sm:text-4xl">What We Stand For</h2>
+            <p className="mt-4 text-gray-600">
+              The principles that guide every decision we make — from sourcing to delivery.
+            </p>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {values.map((value, index) => (
-              <div key={index} className="bg-white p-8 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-                <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mb-6">
-                  <i className={`${value.icon} text-2xl text-blue-700`}></i>
+
+          <div className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            {values.map((value) => (
+              <div key={value.title} className="group text-center">
+                <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-[#ecfdf5] transition-colors group-hover:bg-emerald-100">
+                  <i className={`${value.icon} text-3xl text-emerald-700`}></i>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">{value.title}</h3>
-                <p className="text-gray-600 leading-relaxed">{value.description}</p>
+                <h3 className="mt-5 font-serif text-lg font-semibold text-[#0B1B3A]">{value.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-gray-600">{value.description}</p>
               </div>
             ))}
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* Why Choose Us */}
+      <section className="bg-gradient-to-b from-[#ecfdf5]/50 to-white py-20 sm:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="font-serif text-3xl font-semibold text-[#0B1B3A] sm:text-4xl">
+              Why Shop With {siteName === 'Discount Discovery Zone' ? 'DDZ' : 'Us'}
+            </h2>
+            <p className="mt-4 text-gray-600">More than just a store — a commitment to excellence.</p>
+          </div>
+
+          <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {trustPoints.map((point) => (
+              <div
+                key={point.title}
+                className="rounded-2xl border border-[#d1fae5] bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+              >
+                <i className={`${point.icon} text-2xl text-emerald-700`}></i>
+                <h3 className="mt-4 font-serif text-base font-semibold text-[#0B1B3A]">{point.title}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-gray-600">{point.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* CTA */}
-      <div className="bg-blue-900 py-24">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-white">
-          <h2 className="text-4xl md:text-5xl font-bold mb-8">Ready to shop smarter?</h2>
-          <p className="text-xl text-blue-100 mb-10 leading-relaxed max-w-2xl mx-auto">
-            Browse our collection of dresses, electronics, bags, shoes and more. New stock arrives weekly.
+      <section className="py-20 sm:py-24">
+        <div className="mx-auto max-w-xl px-4 text-center sm:px-6 lg:px-8">
+          <h2 className="font-serif text-3xl font-semibold text-[#0B1B3A] sm:text-4xl">
+            Ready to Shop Smarter?
+          </h2>
+          <p className="mt-4 text-gray-600">
+            Discover our collection of dresses, electronics, bags, shoes and more — new stock arrives weekly.
           </p>
           <Link
             href="/shop"
-            className="inline-flex items-center gap-3 bg-white text-blue-900 px-10 py-5 rounded-full font-bold text-lg hover:bg-blue-50 transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all"
+            className="mt-8 inline-flex items-center gap-2 rounded-full bg-emerald-600 px-8 py-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-emerald-700 hover:shadow-md hover:shadow-emerald-600/20"
           >
-            Start Shopping
+            Explore Categories
             <i className="ri-arrow-right-line"></i>
           </Link>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

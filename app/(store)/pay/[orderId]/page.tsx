@@ -135,7 +135,7 @@ export default function PaymentPage() {
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-700 rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-700 rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading order details...</p>
         </div>
       </main>
@@ -153,7 +153,7 @@ export default function PaymentPage() {
           <p className="text-gray-600 mb-6">{error}</p>
           <Link
             href="/"
-            className="inline-flex items-center px-6 py-3 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-semibold transition-colors"
+            className="inline-flex items-center px-6 py-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg font-semibold transition-colors"
           >
             <i className="ri-home-line mr-2"></i>
             Go to Homepage
@@ -172,7 +172,7 @@ export default function PaymentPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-block mb-6">
-            <span className="text-2xl font-['Pacifico'] text-blue-700">DDZ</span>
+            <span className="text-2xl font-['Pacifico'] text-emerald-700">DDZ</span>
           </Link>
           <h1 className="text-2xl font-bold text-gray-900">Complete Your Payment</h1>
           <p className="text-gray-600 mt-2">Hi {customerName}, your order is waiting for payment.</p>
@@ -193,7 +193,7 @@ export default function PaymentPage() {
             {order?.shipping_method === 'pickup' ? (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Store Pickup</span>
-                <span className="text-blue-700 font-semibold">Free</span>
+                <span className="text-emerald-700 font-semibold">Free</span>
               </div>
             ) : (
               <div>
@@ -216,18 +216,18 @@ export default function PaymentPage() {
 
           <div className="flex justify-between items-center pt-4 border-t border-gray-200">
             <span className="text-lg font-semibold text-gray-900">Total</span>
-            <span className="text-2xl font-bold text-blue-700">GH₵ {order?.total?.toFixed(2)}</span>
+            <span className="text-2xl font-bold text-emerald-700">GH₵ {order?.total?.toFixed(2)}</span>
           </div>
         </div>
 
         {/* Payment Status */}
         {initFailed && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-6">
             <div className="flex items-start space-x-3">
-              <i className="ri-information-line text-xl text-blue-600 mt-0.5"></i>
+              <i className="ri-information-line text-xl text-emerald-600 mt-0.5"></i>
               <div>
-                <p className="text-sm font-semibold text-blue-800">Order saved successfully</p>
-                <p className="text-sm text-blue-700 mt-1">
+                <p className="text-sm font-semibold text-emerald-800">Order saved successfully</p>
+                <p className="text-sm text-emerald-700 mt-1">
                   We could not open the payment gateway from checkout. Tap the button below to continue payment.
                 </p>
               </div>
@@ -310,18 +310,18 @@ export default function PaymentPage() {
         )}
 
         {removedNotice && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-6">
             <div className="flex items-start space-x-3">
-              <i className="ri-check-line text-xl text-blue-600 mt-0.5 flex-shrink-0"></i>
+              <i className="ri-check-line text-xl text-emerald-600 mt-0.5 flex-shrink-0"></i>
               <div>
-                <p className="text-sm font-semibold text-blue-800 mb-1">Order updated</p>
-                <p className="text-sm text-blue-700 mb-2">
+                <p className="text-sm font-semibold text-emerald-800 mb-1">Order updated</p>
+                <p className="text-sm text-emerald-700 mb-2">
                   Out-of-stock item(s) were removed and your new total is <strong>GH₵ {removedNotice.newTotal.toFixed(2)}</strong>. Redirecting you to payment…
                 </p>
-                <ul className="text-sm text-blue-800 space-y-1">
+                <ul className="text-sm text-emerald-800 space-y-1">
                   {removedNotice.items.map((it, i) => (
                     <li key={i} className="flex items-center space-x-1">
-                      <i className="ri-close-circle-line text-blue-400"></i>
+                      <i className="ri-close-circle-line text-emerald-400"></i>
                       <span>{it.name}{it.variant ? ` — ${it.variant}` : ''}</span>
                     </li>
                   ))}
@@ -341,7 +341,7 @@ export default function PaymentPage() {
         <button
           onClick={handlePayNow}
           disabled={processing || allOutOfStock}
-          className={`w-full py-4 rounded-xl font-semibold text-lg transition-colors disabled:opacity-70 flex items-center justify-center cursor-pointer ${allOutOfStock ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-blue-700 hover:bg-blue-800 text-white'}`}
+          className={`w-full py-4 rounded-xl font-semibold text-lg transition-colors disabled:opacity-70 flex items-center justify-center cursor-pointer ${allOutOfStock ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-emerald-700 hover:bg-emerald-800 text-white'}`}
         >
           {processing ? (
             <>
@@ -370,7 +370,7 @@ export default function PaymentPage() {
         {/* Help Link */}
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-600">
-            Having issues? <Link href="/contact" className="text-blue-700 hover:underline">Contact Support</Link>
+            Having issues? <Link href="/contact" className="text-emerald-700 hover:underline">Contact Support</Link>
           </p>
         </div>
       </div>

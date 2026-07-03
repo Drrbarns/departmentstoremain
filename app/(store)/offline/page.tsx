@@ -40,17 +40,17 @@ export default function OfflinePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center px-6">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-50 flex items-center justify-center px-6">
       <div className="max-w-md w-full text-center">
         {/* Animated illustration */}
         <div className="relative mb-8">
           <div className="w-32 h-32 mx-auto relative">
             {/* Outer ring */}
-            <div className="absolute inset-0 rounded-full border-4 border-blue-100 animate-pulse" />
+            <div className="absolute inset-0 rounded-full border-4 border-emerald-100 animate-pulse" />
             {/* Inner circle */}
-            <div className="absolute inset-3 rounded-full bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
+            <div className="absolute inset-3 rounded-full bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center">
               <div className="relative">
-                <i className="ri-wifi-off-line text-5xl text-blue-600" />
+                <i className="ri-wifi-off-line text-5xl text-emerald-600" />
                 {/* Animated dots */}
                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
               </div>
@@ -72,7 +72,7 @@ export default function OfflinePage() {
           <button
             onClick={handleRetry}
             disabled={retrying}
-            className="w-full bg-blue-700 hover:bg-blue-800 disabled:bg-blue-400 text-white py-4 px-6 rounded-2xl font-semibold transition-all active:scale-[0.98] shadow-lg shadow-blue-700/20 flex items-center justify-center gap-2"
+            className="w-full bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-400 text-white py-4 px-6 rounded-2xl font-semibold transition-all active:scale-[0.98] shadow-lg shadow-emerald-700/20 flex items-center justify-center gap-2"
           >
             {retrying ? (
               <>
@@ -113,7 +113,7 @@ export default function OfflinePage() {
                 key={tip.text}
                 className="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 rounded-lg p-2"
               >
-                <i className={`${tip.icon} text-blue-600 text-sm`} />
+                <i className={`${tip.icon} text-emerald-600 text-sm`} />
                 <span>{tip.text}</span>
               </div>
             ))}
@@ -122,7 +122,7 @@ export default function OfflinePage() {
 
         {/* Status indicator */}
         <div className="mt-6 flex items-center justify-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-blue-500' : 'bg-red-400'} ${!isOnline && 'animate-pulse'}`} />
+          <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-red-400'} ${!isOnline && 'animate-pulse'}`} />
           <span className="text-xs text-gray-400 font-medium">
             {isOnline ? 'Connected' : 'No connection'}
           </span>

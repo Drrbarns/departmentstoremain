@@ -29,7 +29,7 @@ export default function StorefrontError({
                 <div className="flex gap-3 justify-center">
                     <button
                         onClick={() => reset()}
-                        className="px-5 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-sm font-medium"
+                        className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-sm font-medium"
                     >
                         Try again
                     </button>

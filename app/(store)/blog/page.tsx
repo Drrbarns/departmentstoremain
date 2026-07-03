@@ -56,7 +56,7 @@ export default function BlogPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="bg-gradient-to-br from-blue-50 via-white to-amber-50 py-16">
+      <div className="bg-gradient-to-br from-emerald-50 via-white to-amber-50 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-5xl font-bold text-gray-900 mb-6">Our Blog</h1>
@@ -78,7 +78,7 @@ export default function BlogPage() {
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute top-6 left-6">
-                  <span className="bg-blue-700 text-white px-4 py-2 rounded-full text-sm font-medium">
+                  <span className="bg-emerald-700 text-white px-4 py-2 rounded-full text-sm font-medium">
                     Featured
                   </span>
                 </div>
@@ -101,8 +101,8 @@ export default function BlogPage() {
                   {featuredPost.excerpt}
                 </p>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <i className="ri-user-line text-blue-700"></i>
+                  <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                    <i className="ri-user-line text-emerald-700"></i>
                   </div>
                   <span className="text-gray-900 font-medium">{featuredPost.author}</span>
                 </div>
@@ -163,7 +163,7 @@ export default function BlogPage() {
                 <button className="w-10 h-10 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
                   <i className="ri-arrow-left-s-line text-gray-600"></i>
                 </button>
-                <button className="w-10 h-10 flex items-center justify-center bg-blue-700 text-white rounded-lg cursor-pointer">
+                <button className="w-10 h-10 flex items-center justify-center bg-emerald-700 text-white rounded-lg cursor-pointer">
                   1
                 </button>
                 <button className="w-10 h-10 flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
@@ -189,7 +189,7 @@ export default function BlogPage() {
                     className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
-                      <i className={`${category.icon} text-blue-700`}></i>
+                      <i className={`${category.icon} text-emerald-700`}></i>
                       <span className="text-gray-900 font-medium">{category.name}</span>
                     </div>
                     <span className="text-sm text-gray-500">{category.count}</span>
@@ -206,11 +206,11 @@ export default function BlogPage() {
                   <input
                     type="email"
                     placeholder="Your email address"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
                   />
                   <button
                     type="submit"
-                    className="w-full bg-blue-700 text-white py-3 rounded-xl font-medium hover:bg-blue-800 transition-colors whitespace-nowrap"
+                    className="w-full bg-emerald-700 text-white py-3 rounded-xl font-medium hover:bg-emerald-800 transition-colors whitespace-nowrap"
                   >
                     Subscribe
                   </button>
@@ -223,7 +223,7 @@ export default function BlogPage() {
                   {['Shopping', 'Quality', 'Reviews', 'Ghana', 'Delivery', 'Tips', 'Home', 'Style'].map((tag, index) => (
                     <button
                       key={index}
-                      className="px-4 py-2 bg-white border border-gray-200 rounded-full text-sm text-gray-700 hover:border-blue-500 hover:text-blue-700 transition-colors cursor-pointer whitespace-nowrap"
+                      className="px-4 py-2 bg-white border border-gray-200 rounded-full text-sm text-gray-700 hover:border-emerald-500 hover:text-emerald-700 transition-colors cursor-pointer whitespace-nowrap"
                     >
                       #{tag}
                     </button>
@@ -235,15 +235,15 @@ export default function BlogPage() {
         </div>
       </div>
 
-      <div className="bg-gradient-to-br from-blue-700 to-blue-900 py-16">
+      <div className="bg-gradient-to-br from-emerald-700 to-emerald-900 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-4xl font-bold text-white mb-4">Ready to Start Shopping?</h2>
-          <p className="text-xl text-blue-100 mb-8 leading-relaxed">
+          <p className="text-xl text-emerald-100 mb-8 leading-relaxed">
             Browse our range of dresses, electronics, bags, shoes and more
           </p>
           <Link
             href="/shop"
-            className="inline-flex items-center gap-2 bg-white text-blue-700 px-8 py-4 rounded-full font-medium hover:bg-blue-50 transition-colors whitespace-nowrap"
+            className="inline-flex items-center gap-2 bg-white text-emerald-700 px-8 py-4 rounded-full font-medium hover:bg-emerald-50 transition-colors whitespace-nowrap"
           >
             Explore Products
             <i className="ri-arrow-right-line"></i>
