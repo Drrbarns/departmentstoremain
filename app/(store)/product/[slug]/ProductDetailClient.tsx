@@ -113,6 +113,13 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
           return;
         }
 
+        // Draft / unpublished products are not shoppable — treat as not found.
+        if (productData.status !== 'active') {
+          setProduct(null);
+          setLoading(false);
+          return;
+        }
+
         // Transform product data
         const rawVariants = (productData.product_variants || []).map((v: any) => ({
           ...v,
@@ -193,6 +200,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
               .from('products')
               .select('*, product_images(url, position), product_variants(id, name, price, quantity)')
               .eq('category_id', productData.category_id)
+              .eq('status', 'active')
               .neq('id', productData.id)
               .limit(4)) as any,
             5 * 60 * 1000
@@ -217,7 +225,8 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                 maxStock: effectiveStock || 50,
                 moq: p.moq || 1,
                 hasVariants,
-                minVariantPrice
+                minVariantPrice,
+                categoryName: productData.categories?.name || undefined,
               };
             }));
           }
@@ -281,7 +290,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
     return (
       <div className="min-h-screen bg-white py-12 flex justify-center items-center">
         <div className="text-center">
-          <i className="ri-loader-4-line text-4xl text-blue-700 animate-spin mb-4 block"></i>
+          <i className="ri-loader-4-line text-4xl text-emerald-600 animate-spin mb-4 block"></i>
           <p className="text-gray-500">Loading product...</p>
         </div>
       </div>
@@ -292,8 +301,8 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
     return (
       <div className="min-h-screen bg-white py-20 flex justify-center items-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Product Not Found</h2>
-          <Link href={shopReturnHref} className="text-blue-700 hover:underline">Return to Shop</Link>
+          <h2 className="font-serif text-2xl font-semibold text-[#0B1B3A] mb-4">Product Not Found</h2>
+          <Link href={shopReturnHref} className="text-emerald-700 hover:underline">Return to Shop</Link>
         </div>
       </div>
     );
@@ -333,16 +342,16 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
       <StructuredData data={breadcrumbSchema} />
 
       <main className="min-h-screen bg-white">
-        <section className="py-8 bg-gray-50 border-b border-gray-200">
+        <section className="py-6 bg-[#ecfdf5]/60 border-b border-[#d1fae5]/50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <nav className="flex items-center space-x-2 text-sm flex-wrap gap-y-2">
-              <Link href="/" className="text-gray-600 hover:text-blue-700 transition-colors">Home</Link>
+            <nav className="flex items-center gap-1.5 text-sm text-gray-500 flex-wrap gap-y-2">
+              <Link href="/" className="hover:text-[#0B1B3A] transition-colors">Home</Link>
               <i className="ri-arrow-right-s-line text-gray-400"></i>
-              <Link href={shopReturnHref} className="text-gray-600 hover:text-blue-700 transition-colors">Shop</Link>
+              <Link href={shopReturnHref} className="hover:text-[#0B1B3A] transition-colors">Shop</Link>
               <i className="ri-arrow-right-s-line text-gray-400"></i>
-              <Link href="#" className="text-gray-600 hover:text-blue-700 transition-colors">{product.category}</Link>
+              <Link href="#" className="hover:text-[#0B1B3A] transition-colors">{product.category}</Link>
               <i className="ri-arrow-right-s-line text-gray-400"></i>
-              <span className="text-gray-900 font-medium truncate max-w-[200px]">{product.name}</span>
+              <span className="text-[#0B1B3A] font-medium truncate max-w-[200px]">{product.name}</span>
             </nav>
           </div>
         </section>
@@ -351,7 +360,7 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
             <div className="grid lg:grid-cols-2 gap-12">
               <div>
-                <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 mb-4 shadow-lg border border-gray-100">
+                <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-[#ecfdf5] mb-4">
                   <LazyImage
                     src={displayImages[selectedImage] || displayImages[0] || ''}
                     alt={product.name}
@@ -360,19 +369,19 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                     priority
                   />
                   {discount > 0 && (
-                    <span className="absolute top-6 right-6 bg-red-600 text-white text-sm font-semibold px-4 py-2 rounded-full">
-                      Save {discount}%
+                    <span className="absolute top-4 left-4 rounded-full bg-red-600 px-2.5 py-0.5 text-[0.7rem] font-semibold uppercase tracking-wide text-white shadow-sm">
+                      -{discount}%
                     </span>
                   )}
                 </div>
 
                 {displayImages.length > 1 && (
-                  <div className="grid grid-cols-4 gap-4">
+                  <div className="flex flex-wrap gap-3">
                     {displayImages.map((image: string, index: number) => (
                       <button
                         key={index}
                         onClick={() => setSelectedImage(index)}
-                        className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${selectedImage === index ? 'border-blue-700 shadow-md' : 'border-gray-200 hover:border-gray-300'
+                        className={`relative aspect-square w-20 sm:w-24 rounded-xl overflow-hidden transition-all cursor-pointer ${selectedImage === index ? 'ring-2 ring-emerald-600 ring-offset-2' : 'opacity-60 hover:opacity-100'
                           }`}
                       >
                         <LazyImage
@@ -390,8 +399,8 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
               <div>
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <p className="text-sm text-blue-700 font-semibold mb-2">{product.category}</p>
-                    <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3">{product.name}</h1>
+                    <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">{product.category}</p>
+                    <h1 className="font-serif text-2xl md:text-3xl font-semibold tracking-tight text-[#0B1B3A]">{product.name}</h1>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
                     {productShareUrl ? (
@@ -399,51 +408,51 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                     ) : null}
                     <button
                       onClick={() => setIsWishlisted(!isWishlisted)}
-                      className="w-12 h-12 flex items-center justify-center border-2 border-gray-200 hover:border-blue-700 rounded-full transition-colors cursor-pointer"
+                      className="w-11 h-11 flex items-center justify-center border border-[#d1fae5] hover:border-emerald-400 rounded-full transition-colors cursor-pointer bg-white"
                       aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
                     >
-                      <i className={`${isWishlisted ? 'ri-heart-fill text-red-600' : 'ri-heart-line text-gray-700'} text-xl`}></i>
+                      <i className={`${isWishlisted ? 'ri-heart-fill text-emerald-700' : 'ri-heart-line text-[#0B1B3A]'} text-lg`}></i>
                     </button>
                   </div>
                 </div>
 
-                <div className="flex items-center mb-6">
-                  <div className="flex items-center space-x-1 mr-3">
+                <div className="flex items-center gap-2 mb-5">
+                  <div className="flex items-center gap-0.5">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <i
                         key={star}
-                        className={`${star <= Math.round(product.rating) ? 'ri-star-fill text-amber-400' : 'ri-star-line text-gray-300'} text-lg`}
+                        className={`${star <= Math.round(product.rating) ? 'ri-star-fill text-amber-400' : 'ri-star-line text-gray-300'} text-sm`}
                       ></i>
                     ))}
                   </div>
-                  <span className="text-gray-700 font-medium">{Number(product.rating).toFixed(1)}</span>
+                  <span className="text-sm text-gray-500">{Number(product.rating).toFixed(1)}</span>
                 </div>
 
-                <div className="flex items-baseline space-x-4 mb-6">
+                <div className="flex items-baseline gap-3 mb-5">
                   {hasVariants && !selectedVariant ? (
-                    <span className="text-3xl lg:text-4xl font-bold text-gray-900">
+                    <span className="text-2xl md:text-3xl font-semibold text-[#0B1B3A]">
                       From GH₵{m(minVariantPrice).toFixed(2)}
                     </span>
                   ) : (
-                    <span className="text-3xl lg:text-4xl font-bold text-gray-900">GH₵{m(activePrice).toFixed(2)}</span>
+                    <span className={`text-2xl md:text-3xl font-semibold ${product.compare_at_price && product.compare_at_price > activePrice ? 'text-emerald-700' : 'text-[#0B1B3A]'}`}>GH₵{m(activePrice).toFixed(2)}</span>
                   )}
                   {product.compare_at_price && product.compare_at_price > activePrice && (
-                    <span className="text-xl text-gray-400 line-through">GH₵{m(product.compare_at_price).toFixed(2)}</span>
+                    <span className="text-lg text-gray-400 line-through">GH₵{m(product.compare_at_price).toFixed(2)}</span>
                   )}
                 </div>
 
-                <p className="text-gray-700 leading-relaxed mb-8 text-lg">{product.description}</p>
+                <p className="text-gray-600 leading-relaxed mb-8">{product.description}</p>
 
                 {/* Variant Selector — one button per variant row */}
                 {hasVariants && (
                   <div className="mb-6">
-                    <label className="block font-semibold text-gray-900 mb-3">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-[#0B1B3A] mb-3">
                       {selectedVariant ? (
                         <span>
-                          Variant: <span className="text-blue-700 font-normal">{selectedVariant.name || selectedVariant.color} — GH₵{m(selectedVariant.price || product.price).toFixed(2)}</span>
+                          Variant: <span className="text-emerald-700 font-normal normal-case tracking-normal">{selectedVariant.name || selectedVariant.color} — GH₵{m(selectedVariant.price || product.price).toFixed(2)}</span>
                         </span>
                       ) : (
-                        <span>Variant: <span className="text-red-500 font-normal text-sm">Please select</span></span>
+                        <span>Variant: <span className="text-emerald-600 font-normal normal-case tracking-normal text-sm">Please select</span></span>
                       )}
                     </label>
                     <div className="flex flex-wrap gap-3">
@@ -471,11 +480,11 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                               title={label}
                               className={`relative flex flex-col items-center gap-1.5 cursor-pointer transition-all ${isOutOfStock ? 'opacity-40 cursor-not-allowed' : ''}`}
                             >
-                              <div className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${isSelected ? 'border-blue-700 ring-2 ring-blue-400 ring-offset-1' : 'border-gray-200 hover:border-gray-400'}`}>
+                              <div className={`w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${isSelected ? 'border-emerald-600 ring-2 ring-emerald-300 ring-offset-1' : 'border-gray-200 hover:border-gray-400'}`}>
                                 <img src={getOptimizedImageUrl(variantThumb, { width: 160 })} alt={label} className="w-full h-full object-cover" loading="lazy" />
                               </div>
-                              <span className={`text-xs font-medium max-w-[64px] truncate text-center ${isSelected ? 'text-blue-700' : 'text-gray-600'}`}>{label}</span>
-                              {isSelected && <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-700 rounded-full flex items-center justify-center"><i className="ri-check-line text-white text-[9px]"></i></span>}
+                              <span className={`text-xs font-medium max-w-[64px] truncate text-center ${isSelected ? 'text-emerald-700' : 'text-gray-600'}`}>{label}</span>
+                              {isSelected && <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-600 rounded-full flex items-center justify-center"><i className="ri-check-line text-white text-[9px]"></i></span>}
                             </button>
                           );
                         }
@@ -486,18 +495,18 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                             key={variant.id}
                             onClick={handleSelect}
                             disabled={isOutOfStock}
-                            className={`px-4 py-2.5 rounded-full border-2 font-medium transition-all whitespace-nowrap cursor-pointer flex items-center gap-2 ${isSelected
-                              ? 'border-blue-700 bg-blue-50 text-blue-700 shadow-sm'
+                            className={`px-4 py-2.5 rounded-full border font-medium transition-all whitespace-nowrap cursor-pointer flex items-center gap-2 ${isSelected
+                              ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm'
                               : isOutOfStock
                                 ? 'border-gray-200 text-gray-300 cursor-not-allowed bg-gray-50'
-                                : 'border-gray-300 text-gray-700 hover:border-gray-400'
+                                : 'border-[#d1fae5] text-[#0B1B3A] hover:border-emerald-400'
                               }`}
                           >
                             {colorHex && colorHex !== '#d1d5db' && (
                               <span className="w-4 h-4 rounded-full border border-gray-300 flex-shrink-0" style={{ backgroundColor: colorHex }}></span>
                             )}
                             <span>{label}</span>
-                            <span className={`text-xs ${isSelected ? 'text-blue-500' : 'text-gray-400'}`}>GH₵{m(variant.price || product.price).toFixed(2)}</span>
+                            <span className={`text-xs ${isSelected ? 'text-white/70' : 'text-gray-400'}`}>GH₵{m(variant.price || product.price).toFixed(2)}</span>
                           </button>
                         );
                       })}
@@ -505,50 +514,50 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                   </div>
                 )}
 
-                <div className="mb-8">
-                  <label className="block font-semibold text-gray-900 mb-3">Quantity</label>
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center border-2 border-gray-300 rounded-lg">
+                <div className="mb-6">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-[#0B1B3A] mb-3">Quantity</label>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center rounded-full border border-[#d1fae5]">
                       <button
                         onClick={() => setQuantity(Math.max(product.moq || 1, quantity - 1))}
-                        className="w-12 h-12 flex items-center justify-center text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+                        className="w-11 h-11 flex items-center justify-center text-[#0B1B3A] hover:text-emerald-700 transition-colors cursor-pointer disabled:opacity-40"
                         disabled={activeStock === 0 || quantity <= (product.moq || 1)}
                       >
-                        <i className="ri-subtract-line text-xl"></i>
+                        <i className="ri-subtract-line text-lg"></i>
                       </button>
                       <input
                         type="number"
                         value={quantity}
                         onChange={(e) => setQuantity(Math.max(product.moq || 1, Math.min(activeStock, parseInt(e.target.value) || (product.moq || 1))))}
-                        className="w-16 h-12 text-center border-x-2 border-gray-300 focus:outline-none text-lg font-semibold"
+                        className="w-12 h-11 text-center bg-transparent focus:outline-none text-base font-semibold text-[#0B1B3A]"
                         min={product.moq || 1}
                         max={activeStock}
                         disabled={activeStock === 0}
                       />
                       <button
                         onClick={() => setQuantity(Math.min(activeStock, quantity + 1))}
-                        className="w-12 h-12 flex items-center justify-center text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+                        className="w-11 h-11 flex items-center justify-center text-[#0B1B3A] hover:text-emerald-700 transition-colors cursor-pointer disabled:opacity-40"
                         disabled={activeStock === 0}
                       >
-                        <i className="ri-add-line text-xl"></i>
+                        <i className="ri-add-line text-lg"></i>
                       </button>
                     </div>
-                    <div className="flex flex-col">
+                    <div className="flex flex-col gap-0.5">
                       {product.moq > 1 && (
-                        <span className="text-blue-700 font-medium text-sm">
+                        <span className="text-[#0B1B3A]/70 font-medium text-sm">
                           <i className="ri-information-line mr-1"></i>
                           Min. order: {product.moq} units
                         </span>
                       )}
                       {activeStock > 0 && (
-                        <span className="text-gray-600 font-medium text-sm">
-                          <i className="ri-checkbox-circle-line mr-1 text-blue-600"></i>
-                          In stock
+                        <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-600">
+                          <span className="size-2 rounded-full bg-emerald-500"></span>
+                          In Stock
                         </span>
                       )}
                       {activeStock === 0 && (
-                        <span className="text-red-600 font-medium">
-                          <i className="ri-close-circle-line mr-1"></i>
+                        <span className="flex items-center gap-1.5 text-sm font-medium text-red-600">
+                          <span className="size-2 rounded-full bg-red-500"></span>
                           Out of Stock
                         </span>
                       )}
@@ -556,46 +565,69 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-4 mb-8">
+                <div className="space-y-3 mb-4">
                   <button
                     disabled={activeStock === 0 || needsVariantSelection}
-                    className={`flex-1 bg-gray-900 hover:bg-blue-700 text-white py-4 rounded-lg font-semibold transition-colors flex items-center justify-center space-x-2 text-lg whitespace-nowrap cursor-pointer ${(activeStock === 0 || needsVariantSelection) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`flex w-full items-center justify-center gap-2.5 rounded-full bg-emerald-600 py-4 text-sm font-semibold text-white transition-all hover:bg-emerald-700 ${(activeStock === 0 || needsVariantSelection) ? 'opacity-50 cursor-not-allowed' : ''}`}
                     onClick={handleAddToCart}
                   >
-                    <i className="ri-shopping-cart-line text-xl"></i>
-                    <span>{activeStock === 0 ? 'Out of Stock' : needsVariantSelection ? 'Select a Variant' : 'Add to Cart'}</span>
+                    <i className="ri-shopping-bag-line text-lg"></i>
+                    <span>
+                      {activeStock === 0
+                        ? 'Out of Stock'
+                        : needsVariantSelection
+                          ? 'Select a Variant'
+                          : `Add ${quantity} to Bag • GH₵${m(activePrice * quantity).toFixed(2)}`}
+                    </span>
                   </button>
-                  {activeStock > 0 && !needsVariantSelection && (
-                    <button
-                      onClick={handleBuyNow}
-                      className="sm:w-auto bg-blue-700 hover:bg-blue-800 text-white px-8 py-4 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer"
-                    >
-                      Buy Now
-                    </button>
-                  )}
+                  <button
+                    onClick={handleBuyNow}
+                    disabled={activeStock === 0 || needsVariantSelection}
+                    className="flex w-full items-center justify-center rounded-full border border-[#d1fae5] py-3.5 text-sm font-medium text-[#0B1B3A] transition-all hover:border-emerald-400 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Buy Now
+                  </button>
                 </div>
 
-                {/* Delivery notice */}
-                <div className="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4 flex gap-3">
-                  <i className="ri-truck-line text-xl text-blue-700 flex-shrink-0 mt-0.5"></i>
-                  <div className="text-sm text-blue-900">
-                    <p className="font-semibold mb-1">Expected Delivery</p>
-                    <p>Orders are delivered within <strong>24 – 72 hours</strong> after payment is confirmed. For faster or urgent deliveries, <a href="https://wa.me/233248615775" target="_blank" rel="noopener noreferrer" className="underline font-semibold hover:text-blue-800">contact our customer care team</a>.</p>
+                <p className="mb-6 text-xs text-gray-400">Secure checkout. No hidden charges at checkout.</p>
+
+                {/* Delivery / authenticity chips */}
+                <div className="mb-6 grid gap-2 sm:grid-cols-2">
+                  <div className="flex items-center gap-2 rounded-xl border border-[#d1fae5]/50 bg-[#ecfdf5]/50 px-3 py-2.5">
+                    <i className="ri-truck-line text-lg text-[#0B1B3A]/65 shrink-0"></i>
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-[#0B1B3A]/70">Delivery</p>
+                      <p className="text-xs text-[#0B1B3A]">24 – 72 hours</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-xl border border-[#d1fae5]/50 bg-[#ecfdf5]/50 px-3 py-2.5">
+                    <i className="ri-shield-check-line text-lg text-[#0B1B3A]/65 shrink-0"></i>
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-[#0B1B3A]/70">Authentic</p>
+                      <p className="text-xs text-[#0B1B3A]">Verified quality</p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="border-t border-gray-200 pt-6 space-y-4">
-                  <div className="flex items-center text-gray-700">
-                    <i className="ri-store-2-line text-xl text-blue-700 mr-3"></i>
+                <div className="mb-6 rounded-xl bg-[#ecfdf5]/60 border border-[#d1fae5]/40 p-4 flex gap-3">
+                  <i className="ri-information-line text-lg text-[#0B1B3A]/70 flex-shrink-0 mt-0.5"></i>
+                  <div className="text-sm text-[#0B1B3A]/80">
+                    <p>For faster or urgent deliveries, <a href="https://wa.me/233248615775" target="_blank" rel="noopener noreferrer" className="underline font-semibold hover:text-emerald-700">contact our customer care team</a>.</p>
+                  </div>
+                </div>
+
+                <div className="border-t border-[#d1fae5]/40 pt-6 space-y-3">
+                  <div className="flex items-center text-[#0B1B3A]/80">
+                    <i className="ri-store-2-line text-lg text-[#0B1B3A]/60 mr-3"></i>
                     <span>Free store pickup available</span>
                   </div>
-                  <div className="flex items-center text-gray-700">
-                    <i className="ri-shield-check-line text-xl text-blue-700 mr-3"></i>
+                  <div className="flex items-center text-[#0B1B3A]/80">
+                    <i className="ri-shield-check-line text-lg text-[#0B1B3A]/60 mr-3"></i>
                     <span>Secure payment & buyer protection</span>
                   </div>
                   {product.sku && (
-                    <div className="flex items-center text-gray-700">
-                      <i className="ri-barcode-line text-xl text-blue-700 mr-3"></i>
+                    <div className="flex items-center text-[#0B1B3A]/80">
+                      <i className="ri-barcode-line text-lg text-[#0B1B3A]/60 mr-3"></i>
                       <span>Product Code: <span className="font-mono font-semibold">{product.sku}</span></span>
                     </div>
                   )}
@@ -605,17 +637,17 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
           </div>
         </section>
 
-        <section className="py-16 bg-gray-50">
+        <section className="py-16 bg-[#ecfdf5]/40">
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <div className="border-b border-gray-300 mb-8">
+            <div className="border-b border-[#d1fae5]/50 mb-8">
               <div className="flex space-x-4 sm:space-x-8 overflow-x-auto">
                 {['description', 'features', 'care', 'reviews'].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
                     className={`pb-4 font-semibold transition-colors relative whitespace-nowrap cursor-pointer ${activeTab === tab
-                      ? 'text-blue-700 border-b-2 border-blue-700'
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'text-emerald-700 border-b-2 border-emerald-600'
+                      : 'text-gray-500 hover:text-[#0B1B3A]'
                       }`}
                   >
                     {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -626,18 +658,18 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
             {activeTab === 'description' && (
               <div className="prose max-w-none">
-                <p className="text-gray-700 text-lg leading-relaxed">{product.description}</p>
+                <p className="text-gray-600 leading-relaxed">{product.description}</p>
               </div>
             )}
 
             {activeTab === 'features' && (
               <div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-6">Key Features</h3>
+                <h3 className="font-serif text-2xl font-semibold text-[#0B1B3A] mb-6">Key Features</h3>
                 <ul className="grid md:grid-cols-2 gap-4">
                   {product.features.map((feature: string, index: number) => (
                     <li key={index} className="flex items-start">
-                      <i className="ri-checkbox-circle-fill text-blue-700 text-xl mr-3 mt-1"></i>
-                      <span className="text-gray-700 text-lg">{feature}</span>
+                      <i className="ri-checkbox-circle-fill text-emerald-600 text-xl mr-3 mt-0.5"></i>
+                      <span className="text-gray-600">{feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -646,8 +678,8 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
 
             {activeTab === 'care' && (
               <div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-6">Care Instructions</h3>
-                <p className="text-gray-700 text-lg leading-relaxed">{product.care}</p>
+                <h3 className="font-serif text-2xl font-semibold text-[#0B1B3A] mb-6">Care Instructions</h3>
+                <p className="text-gray-600 leading-relaxed">{product.care}</p>
               </div>
             )}
 
@@ -663,8 +695,8 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
           <section className="py-20 bg-white" data-product-shop>
             <div className="max-w-7xl mx-auto px-4 sm:px-6">
               <div className="text-center mb-12">
-                <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">You May Also Like</h2>
-                <p className="text-lg text-gray-600">Curated recommendations based on this product</p>
+                <h2 className="font-serif text-3xl lg:text-4xl font-semibold text-[#0B1B3A] mb-3">You May Also Like</h2>
+                <p className="text-gray-500">Curated recommendations based on this product</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">

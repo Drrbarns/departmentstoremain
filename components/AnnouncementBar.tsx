@@ -74,8 +74,12 @@ export default function AnnouncementBar() {
     if (visibleBanners.length === 0) {
         // Show default banner if no custom banners
         return (
-            <div className="bg-blue-800 text-white py-2 text-center text-sm">
-                <p>Free Store Pickup Available | Order Online, Pick Up Today</p>
+            <div className="relative z-[60] shrink-0 border-b border-[#d1fae5]/60 bg-[#ecfdf5]">
+                <div className="relative flex items-center justify-center px-10 py-2.5">
+                    <p className="max-w-[min(100%,52rem)] text-center text-xs font-light tracking-wide text-slate-700 sm:text-sm">
+                        Free delivery on qualifying orders · Authentic products · Delivered across Ghana
+                    </p>
+                </div>
             </div>
         );
     }

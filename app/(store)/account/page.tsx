@@ -122,8 +122,8 @@ function AccountContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <i className="ri-loader-4-line animate-spin text-4xl text-blue-700"></i>
+      <div className="min-h-screen flex items-center justify-center bg-[#ecfdf5]/50">
+        <i className="ri-loader-4-line animate-spin text-4xl text-emerald-600"></i>
       </div>
     );
   }
@@ -160,272 +160,228 @@ function AccountContent() {
     }
   ];
 
+  const tabs = [
+    { id: 'profile', icon: 'ri-user-line', label: 'Profile' },
+    { id: 'orders', icon: 'ri-shopping-bag-line', label: 'Orders' },
+    { id: 'addresses', icon: 'ri-map-pin-line', label: 'Addresses' },
+    { id: 'affiliate', icon: 'ri-user-star-line', label: 'Affiliate' },
+    { id: 'security', icon: 'ri-shield-keyhole-line', label: 'Security' },
+  ];
+
+  const inputCls =
+    'w-full h-11 px-4 rounded-xl border border-[#d1fae5] bg-white text-[#0B1B3A] transition-all focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200/50 focus:outline-none';
+
   return (
-    <>
-      <div className="min-h-screen bg-gray-50 py-8 lg:py-12 pb-24 lg:pb-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-b from-[#ecfdf5]/60 to-white py-10 lg:py-14 pb-24 lg:pb-16">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
-          {/* Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 md:mb-8">
-            <div className="flex items-center gap-3 md:gap-4 w-full md:w-auto">
-              <div className="w-12 h-12 md:w-16 md:h-16 flex-shrink-0 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xl md:text-2xl font-bold shadow-inner border-2 border-white">
-                {profileData.firstName?.[0] || user?.email?.[0]?.toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate pr-2">{profileData.firstName ? `Hello, ${profileData.firstName}!` : 'Welcome Back'}</h1>
-                <p className="text-gray-500 text-sm font-medium truncate">{user?.email}</p>
-              </div>
-            </div>
-            <button
-              onClick={handleSignOut}
-              className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 hover:text-red-600 hover:border-red-200 transition-all font-medium shadow-sm w-full md:w-auto justify-center md:justify-start"
-            >
-              <i className="ri-logout-box-r-line"></i>
-              Sign Out
-            </button>
+        {/* Heading */}
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div>
+            <h1 className="font-serif text-3xl md:text-4xl font-semibold tracking-tight text-[#0B1B3A]">My Account</h1>
+            <p className="mt-2 text-gray-500">Manage your profile, orders, and delivery addresses.</p>
           </div>
+          <button
+            onClick={handleSignOut}
+            className="inline-flex items-center gap-2 rounded-full border border-[#d1fae5] bg-white px-5 py-2.5 text-sm font-medium text-[#0B1B3A] transition-all hover:border-emerald-300 hover:text-emerald-700"
+          >
+            <i className="ri-logout-box-r-line"></i>
+            Sign Out
+          </button>
+        </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            {/* Desktop Sidebar Navigation */}
-            <div className="hidden lg:block lg:col-span-1">
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-24">
-                <nav className="p-2 space-y-1">
-                  {[
-                    { id: 'profile', icon: 'ri-user-settings-line', label: 'Profile Settings' },
-                    { id: 'orders', icon: 'ri-shopping-bag-3-line', label: 'Order History' },
-                    { id: 'addresses', icon: 'ri-map-pin-2-line', label: 'Addresses' },
-                    { id: 'affiliate', icon: 'ri-user-star-line', label: 'Affiliate' },
-                    { id: 'security', icon: 'ri-shield-keyhole-line', label: 'Security' }
-                  ].map(tab => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all text-left group ${activeTab === tab.id
-                        ? 'bg-blue-50 text-blue-700 shadow-sm'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                        }`}
-                    >
-                      <i className={`${tab.icon} text-xl transition-colors ${activeTab === tab.id ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-600'}`}></i>
-                      <span>{tab.label}</span>
-                    </button>
-                  ))}
-                </nav>
+        {/* Pill tabs */}
+        <div className="mt-8 mb-8">
+          <div className="flex w-full flex-nowrap gap-1 overflow-x-auto rounded-2xl bg-white p-1.5 shadow-sm ring-1 ring-[#d1fae5]/50 scrollbar-hide sm:w-fit sm:flex-wrap">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
+                  activeTab === tab.id
+                    ? 'border border-emerald-200 bg-[#ecfdf5] text-emerald-700'
+                    : 'border border-transparent text-gray-500 hover:text-[#0B1B3A]'
+                }`}
+              >
+                <i className={`${tab.icon} text-base`}></i>
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Content */}
+        <div>
+          {activeTab === 'profile' && (
+            <div className="max-w-2xl space-y-8">
+              <div>
+                <h3 className="font-serif text-xl font-semibold text-[#0B1B3A]">Personal Information</h3>
+                <p className="mt-1 text-sm text-gray-500">Update your personal details and preferences.</p>
+              </div>
+
+              {profileMessage.text && (
+                <div className={`p-4 rounded-xl flex items-start gap-3 ${profileMessage.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                  <i className={`text-xl mt-0.5 ${profileMessage.type === 'success' ? 'ri-checkbox-circle-line' : 'ri-error-warning-line'}`}></i>
+                  <div>{profileMessage.text}</div>
+                </div>
+              )}
+
+              <form onSubmit={handleUpdateProfile} className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-[#0B1B3A]">First Name</label>
+                    <input
+                      type="text"
+                      value={profileData.firstName}
+                      onChange={e => setProfileData({ ...profileData, firstName: e.target.value })}
+                      className={inputCls}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-[#0B1B3A]">Last Name</label>
+                    <input
+                      type="text"
+                      value={profileData.lastName}
+                      onChange={e => setProfileData({ ...profileData, lastName: e.target.value })}
+                      className={inputCls}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-[#0B1B3A]">Email Address</label>
+                    <div className="relative">
+                      <input
+                        type="email"
+                        value={profileData.email}
+                        disabled
+                        className="w-full h-11 pl-4 pr-24 rounded-xl border border-[#d1fae5] bg-[#ecfdf5]/50 text-gray-500 cursor-not-allowed"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold bg-gray-100 text-gray-500 px-2 py-1 rounded">Read Only</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-[#0B1B3A]">Phone Number</label>
+                    <input
+                      type="tel"
+                      value={profileData.phone}
+                      onChange={e => setProfileData({ ...profileData, phone: e.target.value })}
+                      placeholder="+233 XX XXX XXXX"
+                      className={inputCls}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={profileLoading}
+                  className="rounded-full bg-emerald-600 px-8 py-3 text-sm font-semibold text-white transition-all hover:bg-emerald-700 active:scale-95 disabled:opacity-50"
+                >
+                  {profileLoading ? 'Saving…' : 'Save Changes'}
+                </button>
+              </form>
+
+              <div className="mt-4 pt-8 border-t border-[#d1fae5]/50">
+                <h3 className="font-serif text-xl font-semibold text-[#0B1B3A]">Change Password</h3>
+                <p className="mt-1 text-sm text-gray-500 mb-6">Ensure your account uses a strong, unique password.</p>
+
+                {passwordMessage.text && (
+                  <div className={`mb-6 p-4 rounded-xl flex items-start gap-3 ${passwordMessage.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                    <i className={`text-xl mt-0.5 ${passwordMessage.type === 'success' ? 'ri-checkbox-circle-line' : 'ri-error-warning-line'}`}></i>
+                    <div>{passwordMessage.text}</div>
+                  </div>
+                )}
+
+                <form onSubmit={handleChangePassword} className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-[#0B1B3A]">New Password</label>
+                      <input
+                        type="password"
+                        value={passwordData.password}
+                        onChange={e => setPasswordData({ ...passwordData, password: e.target.value })}
+                        className={inputCls}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-[#0B1B3A]">Confirm Password</label>
+                      <input
+                        type="password"
+                        value={passwordData.confirmPassword}
+                        onChange={e => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                        className={inputCls}
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={passwordLoading}
+                    className="rounded-full border border-[#d1fae5] px-8 py-3 text-sm font-medium text-[#0B1B3A] transition-all hover:border-emerald-400 hover:text-emerald-700 active:scale-95 disabled:opacity-50"
+                  >
+                    {passwordLoading ? 'Updating…' : 'Update Password'}
+                  </button>
+                </form>
               </div>
             </div>
+          )}
 
-            {/* Mobile Horizontal Navigation */}
-            <div className="lg:hidden col-span-1 pb-2 -mx-4 px-4">
-              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                {[
-                  { id: 'profile', icon: 'ri-user-settings-line', label: 'Profile' },
-                  { id: 'orders', icon: 'ri-shopping-bag-3-line', label: 'Orders' },
-                  { id: 'addresses', icon: 'ri-map-pin-2-line', label: 'Address' },
-                  { id: 'affiliate', icon: 'ri-user-star-line', label: 'Affiliate' },
-                  { id: 'security', icon: 'ri-shield-keyhole-line', label: 'Security' }
-                ].map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-medium whitespace-nowrap transition-all border shadow-sm ${activeTab === tab.id
-                      ? 'bg-blue-700 text-white border-blue-700 ring-2 ring-blue-100'
-                      : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
-                      }`}
+          {activeTab === 'orders' && <OrderHistory />}
+
+          {activeTab === 'addresses' && <AddressBook />}
+
+          {activeTab === 'affiliate' && (
+            <div>
+              <h3 className="font-serif text-xl font-semibold text-[#0B1B3A] mb-6">Affiliate</h3>
+              <AffiliateDashboardPanel />
+            </div>
+          )}
+
+          {activeTab === 'security' && (
+            <div>
+              <h3 className="font-serif text-xl font-semibold text-[#0B1B3A] mb-6">Security Settings</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {securityOptions.map((option, index) => (
+                  <Link
+                    key={index}
+                    href={option.link}
+                    className="flex items-center justify-between p-5 border border-[#d1fae5] rounded-2xl bg-white transition-all hover:border-emerald-300 hover:shadow-md group"
                   >
-                    <i className={tab.icon}></i>
-                    <span>{tab.label}</span>
-                  </button>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-12 h-12 bg-[#ecfdf5] rounded-full flex items-center justify-center text-[#0B1B3A]/70 group-hover:text-emerald-600 transition-colors flex-shrink-0">
+                        <i className={`${option.icon} text-xl`}></i>
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="font-semibold text-[#0B1B3A] truncate">{option.title}</h4>
+                        <p className="text-sm text-gray-500 truncate">{option.description}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      {option.status === 'verified' && (
+                        <span className="text-[10px] sm:text-xs font-semibold px-2 sm:px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full flex items-center gap-1">
+                          <i className="ri-verified-badge-fill"></i> <span className="hidden sm:inline">Verified</span>
+                        </span>
+                      )}
+                      {option.status === 'unverified' && (
+                        <span className="text-[10px] sm:text-xs font-semibold px-2 sm:px-3 py-1 bg-amber-50 text-amber-700 rounded-full flex items-center gap-1">
+                          <i className="ri-error-warning-fill"></i> <span className="hidden sm:inline">Verify</span>
+                        </span>
+                      )}
+                      <i className="ri-arrow-right-line text-gray-300 group-hover:text-emerald-400 transition-colors"></i>
+                    </div>
+                  </Link>
                 ))}
               </div>
             </div>
-
-            {/* Main Content Area */}
-            <div className="lg:col-span-3">
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-8 min-h-[500px]">
-                {activeTab === 'profile' && (
-                  <div className="max-w-2xl">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Profile Information</h2>
-                    <p className="text-gray-500 mb-8">Update your personal details and contact info.</p>
-
-                    {profileMessage.text && (
-                      <div className={`mb-6 p-4 rounded-xl flex items-start gap-3 ${profileMessage.type === 'success' ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
-                        <i className={`text-xl mt-0.5 ${profileMessage.type === 'success' ? 'ri-checkbox-circle-line' : 'ri-error-warning-line'}`}></i>
-                        <div>{profileMessage.text}</div>
-                      </div>
-                    )}
-
-                    <form onSubmit={handleUpdateProfile} className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <label className="text-sm font-semibold text-gray-900">First Name</label>
-                          <input
-                            type="text"
-                            value={profileData.firstName}
-                            onChange={e => setProfileData({ ...profileData, firstName: e.target.value })}
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 transition-all bg-gray-50 focus:bg-white"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-sm font-semibold text-gray-900">Last Name</label>
-                          <input
-                            type="text"
-                            value={profileData.lastName}
-                            onChange={e => setProfileData({ ...profileData, lastName: e.target.value })}
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 transition-all bg-gray-50 focus:bg-white"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-sm font-semibold text-gray-900">Email Address</label>
-                        <div className="relative">
-                          <i className="ri-mail-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                          <input
-                            type="email"
-                            value={profileData.email}
-                            disabled
-                            className="w-full pl-11 pr-4 py-3 border-2 border-gray-100 bg-gray-50/50 rounded-xl text-gray-500 cursor-not-allowed"
-                          />
-                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold bg-gray-200 text-gray-600 px-2 py-1 rounded">Read Only</span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-sm font-semibold text-gray-900">Phone Number</label>
-                        <div className="relative">
-                          <i className="ri-phone-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                          <input
-                            type="tel"
-                            value={profileData.phone}
-                            onChange={e => setProfileData({ ...profileData, phone: e.target.value })}
-                            placeholder="+233 XX XXX XXXX"
-                            className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 transition-all bg-gray-50 focus:bg-white"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="pt-4">
-                        <button
-                          type="submit"
-                          disabled={profileLoading}
-                          className="px-8 py-3 bg-blue-700 hover:bg-blue-800 text-white rounded-xl font-semibold transition-all shadow-lg shadow-blue-700/20 active:scale-95 disabled:opacity-50 disabled:shadow-none"
-                        >
-                          {profileLoading ? 'Saving Info...' : 'Save Profile Information'}
-                        </button>
-                      </div>
-                    </form>
-
-                    <div className="mt-12 pt-12 border-t border-gray-100">
-                      <h3 className="text-xl font-bold text-gray-900 mb-2">Change Password</h3>
-                      <p className="text-gray-500 mb-6">Ensure your account uses a strong, unique password.</p>
-
-                      {passwordMessage.text && (
-                        <div className={`mb-6 p-4 rounded-xl flex items-start gap-3 ${passwordMessage.type === 'success' ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-red-50 text-red-700 border border-red-100'}`}>
-                          <i className={`text-xl mt-0.5 ${passwordMessage.type === 'success' ? 'ri-checkbox-circle-line' : 'ri-error-warning-line'}`}></i>
-                          <div>{passwordMessage.text}</div>
-                        </div>
-                      )}
-
-                      <form onSubmit={handleChangePassword} className="space-y-5">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <label className="text-sm font-semibold text-gray-900">New Password</label>
-                            <div className="relative">
-                              <i className="ri-lock-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                              <input
-                                type="password"
-                                value={passwordData.password}
-                                onChange={e => setPasswordData({ ...passwordData, password: e.target.value })}
-                                className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 transition-all bg-gray-50 focus:bg-white"
-                              />
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-sm font-semibold text-gray-900">Confirm Password</label>
-                            <div className="relative">
-                              <i className="ri-lock-check-line absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                              <input
-                                type="password"
-                                value={passwordData.confirmPassword}
-                                onChange={e => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                                className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 transition-all bg-gray-50 focus:bg-white"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                        <button
-                          type="submit"
-                          disabled={passwordLoading}
-                          className="px-8 py-3 bg-gray-900 hover:bg-black text-white rounded-xl font-semibold transition-all shadow-lg shadow-gray-900/10 active:scale-95 disabled:opacity-50 disabled:shadow-none"
-                        >
-                          {passwordLoading ? 'Updating...' : 'Update Password'}
-                        </button>
-                      </form>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === 'orders' && <OrderHistory />}
-
-                {activeTab === 'addresses' && <AddressBook />}
-
-                {activeTab === 'affiliate' && (
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Affiliate</h2>
-                    <AffiliateDashboardPanel />
-                  </div>
-                )}
-
-                {activeTab === 'security' && (
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Security Settings</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {securityOptions.map((option, index) => (
-                        <Link
-                          key={index}
-                          href={option.link}
-                          className="flex items-center justify-between p-5 border border-gray-200 rounded-2xl hover:border-blue-500 hover:shadow-md transition-all group bg-white"
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center group-hover:bg-blue-100 group-hover:text-blue-700 transition-colors flex-shrink-0">
-                              <i className={`${option.icon} text-xl`}></i>
-                            </div>
-                            <div className="min-w-0">
-                              <h3 className="font-bold text-gray-900 truncate">{option.title}</h3>
-                              <p className="text-sm text-gray-500 truncate">{option.description}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3 flex-shrink-0">
-                            {option.status === 'verified' && (
-                              <span className="text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-1 bg-blue-100 text-blue-700 rounded-full flex items-center gap-1">
-                                <i className="ri-verified-badge-fill"></i> <span className="hidden sm:inline">Verified</span>
-                              </span>
-                            )}
-                            {option.status === 'unverified' && (
-                              <span className="text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-1 bg-amber-100 text-amber-700 rounded-full flex items-center gap-1">
-                                <i className="ri-error-warning-fill"></i> <span className="hidden sm:inline">Verify</span>
-                              </span>
-                            )}
-                            <i className="ri-arrow-right-line text-gray-300 group-hover:text-blue-500 transition-colors"></i>
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
 export default function AccountPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <i className="ri-loader-4-line animate-spin text-4xl text-blue-700"></i>
+      <div className="min-h-screen flex items-center justify-center bg-[#ecfdf5]/50">
+        <i className="ri-loader-4-line animate-spin text-4xl text-emerald-600"></i>
       </div>
     }>
       <AccountContent />

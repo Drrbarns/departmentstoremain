@@ -155,6 +155,7 @@ function SaleContent() {
                         inStock: effectiveStock > 0,
                         maxStock: effectiveStock || 50,
                         moq: p.moq || 1,
+                        categoryName: p.categories?.name || undefined,
                         hasVariants,
                         minVariantPrice,
                         colorVariants,

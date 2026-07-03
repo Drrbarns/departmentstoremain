@@ -92,20 +92,24 @@ export async function POST(req: Request) {
         const directIds = body.items.filter((i) => UUID_RE.test(i.id)).map((i) => i.id);
 
         const productMetaMap = new Map<string, any>();
+        const productStatusMap = new Map<string, string>(); // real uuid -> status
 
         if (directIds.length > 0) {
             const { data: prods } = await supabaseAdmin
                 .from('products')
-                .select('id, metadata')
+                .select('id, status, metadata')
                 .in('id', directIds);
-            (prods || []).forEach((p: any) => productMetaMap.set(p.id, p.metadata));
+            (prods || []).forEach((p: any) => {
+                productMetaMap.set(p.id, p.metadata);
+                productStatusMap.set(p.id, p.status);
+            });
         }
 
         const resolvedIds = new Map<string, string>(); // input -> real uuid
         for (const item of slugLookups) {
             const { data: prod } = await supabaseAdmin
                 .from('products')
-                .select('id, metadata')
+                .select('id, status, metadata')
                 .or(`slug.eq.${item.id},id.eq.${item.id}`)
                 .maybeSingle();
             if (!prod) {
@@ -113,6 +117,26 @@ export async function POST(req: Request) {
             }
             resolvedIds.set(item.id, prod.id);
             productMetaMap.set(prod.id, (prod as any).metadata);
+            productStatusMap.set(prod.id, (prod as any).status);
+        }
+
+        // --- Reject unavailable (draft / unknown) products ------------------
+        // Only `active` products may be purchased. This is the authoritative
+        // gate: it catches stale carts (product drafted after it was added),
+        // direct API calls, and links to draft product pages.
+        const unavailable: string[] = [];
+        for (const item of body.items) {
+            const productId = UUID_RE.test(item.id) ? item.id : resolvedIds.get(item.id);
+            const status = productId ? productStatusMap.get(productId) : undefined;
+            if (status !== 'active') {
+                unavailable.push(item.name || item.id);
+            }
+        }
+        if (unavailable.length > 0) {
+            return badRequest(
+                `Some items are no longer available and were removed: ${unavailable.join(', ')}. Please review your cart and try again.`,
+                { unavailable }
+            );
         }
 
         // --- Build the order row -------------------------------------------

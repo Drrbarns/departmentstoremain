@@ -54,8 +54,19 @@ function BarcodeImage({ value, width = 1.5, height = 50 }: { value: string; widt
     return <svg ref={svgRef} />;
 }
 
-function openPrintWindow(productsToPrint: { name: string; barcode: string; price: number; quantity: number; sku: string; image: string }[]) {
-    const totalLabels = productsToPrint.reduce((sum, p) => sum + p.quantity, 0);
+type PrintEntry = {
+    name: string;
+    barcode: string;
+    price: number;
+    quantity: number;
+    sku: string;
+    image: string;
+    /** When present, render one distinct label per cell (e.g. one per variant) instead of `quantity` identical copies. */
+    cells?: { caption: string; barcode: string; price: number }[];
+};
+
+function openPrintWindow(productsToPrint: PrintEntry[]) {
+    const totalLabels = productsToPrint.reduce((sum, p) => sum + (p.cells && p.cells.length ? p.cells.length : p.quantity), 0);
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
@@ -127,6 +138,11 @@ body { font-family: Arial, sans-serif; background: #fff; }
     margin-bottom: 1px; white-space: nowrap;
     overflow: hidden; text-overflow: ellipsis;
 }
+.barcode-cell .lbl-variant {
+    font-size: 6px; font-weight: 600; color: #4b5563; line-height: 1.1;
+    margin-bottom: 1px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+}
 .barcode-cell svg { max-width: 100%; height: auto; }
 .barcode-cell .lbl-price { font-size: 9px; font-weight: 800; margin-top: 1px; }
 </style>
@@ -144,24 +160,33 @@ body { font-family: Arial, sans-serif; background: #fff; }
 <script>
 const P=${JSON.stringify(productsToPrint)};
 const c=document.getElementById('c');
+function makeCell(name,caption,barcode,price){
+    const d=document.createElement('div');d.className='barcode-cell';
+    const n=document.createElement('div');n.className='lbl-name';n.textContent=name;d.appendChild(n);
+    if(caption){const vn=document.createElement('div');vn.className='lbl-variant';vn.textContent=caption;d.appendChild(vn);}
+    const v=document.createElementNS('http://www.w3.org/2000/svg','svg');d.appendChild(v);
+    try{JsBarcode(v,barcode,{format:'EAN13',width:1.2,height:30,displayValue:true,fontSize:9,margin:1,background:'#fff'});}
+    catch(e){try{JsBarcode(v,barcode,{format:'CODE128',width:1.2,height:30,displayValue:true,fontSize:9,margin:1,background:'#fff'});}catch(e2){}}
+    const pr=document.createElement('div');pr.className='lbl-price';pr.textContent='GH\\u20B5 '+Number(price).toFixed(2);d.appendChild(pr);
+    return d;
+}
 P.forEach(p=>{
+    const hasCells=p.cells&&p.cells.length;
+    const count=hasCells?p.cells.length:p.quantity;
     const s=document.createElement('div');s.className='product-section';
     const h=document.createElement('div');h.className='product-header';
+    const badge=hasCells?(count+' variant label'+(count!==1?'s':'')):(count+' label'+(count!==1?'s':''));
     h.innerHTML=(p.image?'<img class="product-img" src="'+p.image+'" />':'<div class="product-img-placeholder">&#128722;</div>')+
         '<div class="product-info"><h2>'+p.name+'</h2>'+
         '<div class="meta"><span>SKU: '+(p.sku||'\\u2014')+'</span><span>Barcode: '+p.barcode+'</span></div>'+
         '<div class="price-tag">GH\\u20B5 '+Number(p.price).toFixed(2)+'</div>'+
-        '<div style="margin-top:3px"><span class="qty-badge">'+p.quantity+' labels</span></div></div>';
+        '<div style="margin-top:3px"><span class="qty-badge">'+badge+'</span></div></div>';
     s.appendChild(h);
     const g=document.createElement('div');g.className='barcode-grid';
-    for(let i=0;i<p.quantity;i++){
-        const d=document.createElement('div');d.className='barcode-cell';
-        const n=document.createElement('div');n.className='lbl-name';n.textContent=p.name;d.appendChild(n);
-        const v=document.createElementNS('http://www.w3.org/2000/svg','svg');d.appendChild(v);
-        try{JsBarcode(v,p.barcode,{format:'EAN13',width:1.2,height:30,displayValue:true,fontSize:9,margin:1,background:'#fff'});}
-        catch(e){try{JsBarcode(v,p.barcode,{format:'CODE128',width:1.2,height:30,displayValue:true,fontSize:9,margin:1,background:'#fff'});}catch(e2){}}
-        const pr=document.createElement('div');pr.className='lbl-price';pr.textContent='GH\\u20B5 '+Number(p.price).toFixed(2);d.appendChild(pr);
-        g.appendChild(d);
+    if(hasCells){
+        p.cells.forEach(cell=>{ g.appendChild(makeCell(p.name,cell.caption,cell.barcode,Number(cell.price))); });
+    }else{
+        for(let i=0;i<p.quantity;i++){ g.appendChild(makeCell(p.name,'',p.barcode,Number(p.price))); }
     }
     s.appendChild(g);c.appendChild(s);
 });
@@ -319,8 +344,10 @@ export default function BarcodesPage() {
                 barcode_printed_at: p.metadata?.barcode_printed_at || null,
             }));
             setProducts(mapped);
+            // Default to a single label per product (a barcode identifies the
+            // product, not each unit of stock). Staff can raise it per row.
             const counts: Record<string, number> = {};
-            mapped.forEach(p => { counts[p.id] = Math.min(Math.max(p.quantity, 1), 50); });
+            mapped.forEach(p => { counts[p.id] = 1; });
             setLabelCounts(counts);
         }
         setLoading(false);
@@ -460,12 +487,49 @@ export default function BarcodesPage() {
 
     const printSingleProduct = async (product: Product) => {
         if (!product.barcode) return;
-        const qty = labelCounts[product.id] || Math.min(Math.max(product.quantity, 1), 50);
+        // How many copies of each label to print (defaults to 1).
+        const copies = Math.max(1, labelCounts[product.id] || 1);
+
+        // If this is a variant product, print one label per variant so the
+        // shelf shows one of each option instead of N copies for the stock.
+        const { data: variants } = await supabase
+            .from('product_variants')
+            .select('id, name, option1, option2, option3, price, barcode')
+            .eq('product_id', product.id)
+            .order('created_at', { ascending: true });
+
+        if (variants && variants.length > 0) {
+            const cells = variants
+                .map((v: any) => {
+                    const caption = [v.option1, v.option2, v.option3]
+                        .filter(Boolean)
+                        .join(' / ') || v.name || '';
+                    const barcode = v.barcode || product.barcode!;
+                    const price = (v.price !== null && v.price !== undefined) ? v.price : product.price;
+                    return { caption, barcode, price };
+                })
+                .filter(c => !!c.barcode)
+                // Repeat each variant `copies` times if more than one copy requested.
+                .flatMap(c => Array.from({ length: copies }, () => c));
+
+            openPrintWindow([{
+                name: product.name,
+                barcode: product.barcode,
+                price: product.price,
+                quantity: 1,
+                sku: product.sku,
+                image: product.image_url || '',
+                cells,
+            }]);
+            await markAsPrinted([product.id]);
+            return;
+        }
+
         openPrintWindow([{
             name: product.name,
             barcode: product.barcode,
             price: product.price,
-            quantity: qty,
+            quantity: copies,
             sku: product.sku,
             image: product.image_url || ''
         }]);
@@ -622,7 +686,7 @@ export default function BarcodesPage() {
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
                 <i className="ri-lightbulb-line text-blue-600 text-lg mt-0.5"></i>
                 <div className="text-sm text-blue-800">
-                    <strong>Tip:</strong> Use per-row print for one product at a time. You can print either traditional barcodes or POS short-code labels, and adjust label counts before printing.
+                    <strong>Tip:</strong> <strong>Print Barcode</strong> prints a single label per product — and for variant products, one label for each variant. Increase the <strong>Labels</strong> count if you want extra copies of each.
                 </div>
             </div>
 

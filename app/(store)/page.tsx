@@ -25,7 +25,7 @@ export default function Home() {
         // Fetch featured products directly from Supabase
         const { data: productsData, error: productsError } = await supabase
           .from('products')
-          .select('*, product_variants(*), product_images(*)')
+          .select('*, product_variants(*), product_images(*), categories(name)')
           .eq('status', 'active')
           .eq('featured', true)
           .order('created_at', { ascending: false })
@@ -36,7 +36,7 @@ export default function Home() {
         if (!productsData || productsData.length === 0) {
           const { data: fallbackProducts, error: fallbackError } = await supabase
             .from('products')
-            .select('*, product_variants(*), product_images(*)')
+            .select('*, product_variants(*), product_images(*), categories(name)')
             .eq('status', 'active')
             .order('created_at', { ascending: false })
             .limit(8);
@@ -182,6 +182,7 @@ export default function Home() {
                     rating={product.rating_avg || 5}
                     reviewCount={product.review_count || 0}
                     badge={product.featured ? 'Featured' : undefined}
+                    categoryName={product.categories?.name || undefined}
                     inStock={effectiveStock > 0}
                     maxStock={effectiveStock || 50}
                     moq={product.moq || 1}

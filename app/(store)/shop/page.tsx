@@ -288,6 +288,7 @@ function ShopContent() {
               maxStock: effectiveStock || 50,
               moq: p.moq || 1,
               category: p.categories?.name,
+              categoryName: p.categories?.name,
               hasVariants,
               minVariantPrice,
               colorVariants
