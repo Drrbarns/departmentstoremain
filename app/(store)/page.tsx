@@ -12,6 +12,7 @@ import HeroModern from '@/components/home/HeroModern';
 import HeroClassic from '@/components/home/HeroClassic';
 import { USE_NEW_DESIGN } from '@/lib/uiFlags';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { getOptimizedImageUrl } from '@/lib/imageOptimization';
 
 export default function Home() {
   usePageTitle('');
@@ -95,10 +96,10 @@ export default function Home() {
                 <div className="relative aspect-[3/4] overflow-hidden rounded-[1.25rem] shadow-md ring-1 ring-black/5 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_20px_40px_-18px_rgba(4,120,87,0.4)] group-hover:ring-emerald-200/70">
                   {categoryImage ? (
                     <Image
-                      src={categoryImage}
+                      src={getOptimizedImageUrl(categoryImage, { width: 640, quality: 70, format: 'webp' })}
                       alt={category.name}
                       fill
-                      unoptimized={Boolean(categoryImage.startsWith('http'))}
+                      unoptimized
                       className="object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.08]"
                       sizes="(max-width: 768px) 50vw, 25vw"
                       quality={75}

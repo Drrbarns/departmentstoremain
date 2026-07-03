@@ -5,45 +5,52 @@ type ImageOptimizationOptions = {
 };
 
 /**
- * Returns the image URL as-is. Supabase image transforms (/render/image/)
- * require a paid plan. If you upgrade, flip USE_RENDER_API to true to enable
- * automatic resize + WebP conversion.
+ * Images are optimized through wsrv.nl (a.k.a. images.weserv.nl) — a free,
+ * Cloudflare-backed image proxy that resizes and converts to WebP on the fly and
+ * caches the result on its own CDN.
+ *
+ * Why not the built-in optimizers?
+ *  - Supabase's render/transform API (`/render/image/`) requires a paid plan.
+ *  - Vercel's image optimizer returns 402 (billing) once the free quota is hit,
+ *    which is why `images.unoptimized` is enabled in next.config.
+ *
+ * wsrv.nl gives us free, on-the-fly resize + WebP + CDN caching. Local/relative
+ * assets are returned untouched (Vercel already serves those efficiently).
  */
-const USE_RENDER_API = false;
+const IMAGE_PROXY_HOST = 'wsrv.nl';
+const IMAGE_PROXY = `https://${IMAGE_PROXY_HOST}/`;
 
 export function getOptimizedImageUrl(
   src: string,
   options: ImageOptimizationOptions = {}
 ): string {
-  if (!src || !/^https?:\/\//i.test(src)) return src;
-  if (!USE_RENDER_API) return src;
+  if (!src || typeof src !== 'string') return src;
+  const trimmed = src.trim();
+
+  // Only proxy absolute http(s) images; leave local/relative assets untouched.
+  if (!/^https?:\/\//i.test(trimmed)) return trimmed;
+
+  // Never double-proxy an already-optimized URL.
+  if (trimmed.includes(IMAGE_PROXY_HOST) || trimmed.includes('images.weserv.nl')) {
+    return trimmed;
+  }
+
+  const { width, quality = 70, format = 'webp' } = options;
 
   try {
-    const url = new URL(src);
-    const pathname = url.pathname;
-
-    const isSupabasePublicObject =
-      url.hostname.endsWith('.supabase.co') &&
-      pathname.includes('/storage/v1/object/public/');
-
-    if (!isSupabasePublicObject) return src;
-
-    const { width = 1200, quality = 70, format = 'webp' } = options;
-    const renderPath = pathname.replace(
-      '/storage/v1/object/public/',
-      '/storage/v1/render/image/public/'
-    );
-
-    const optimizedUrl = new URL(`${url.origin}${renderPath}`);
-    optimizedUrl.searchParams.set('width', String(width));
-    optimizedUrl.searchParams.set('quality', String(quality));
-
-    if (format !== 'origin') {
-      optimizedUrl.searchParams.set('format', format);
+    // wsrv fetches https origins via the `ssl:` prefix (scheme is dropped).
+    const withoutScheme = trimmed.replace(/^https?:\/\//i, '');
+    const proxied = new URL(IMAGE_PROXY);
+    proxied.searchParams.set('url', `ssl:${withoutScheme}`);
+    if (width) proxied.searchParams.set('w', String(width));
+    proxied.searchParams.set('q', String(quality));
+    // Never upscale beyond the original resolution.
+    proxied.searchParams.set('we', '');
+    if (format && format !== 'origin') {
+      proxied.searchParams.set('output', format);
     }
-
-    return optimizedUrl.toString();
+    return proxied.toString();
   } catch {
-    return src;
+    return trimmed;
   }
 }
