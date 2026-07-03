@@ -23,6 +23,9 @@ const SHEET_NAV_LINKS = [
   { label: 'Contact', href: '/contact' },
 ];
 
+/** Quick-search suggestions shown under the search field. */
+const POPULAR_SEARCHES = ['Dresses', 'Bags', 'Shoes', 'Perfume', 'Electronics', 'Gift Sets'];
+
 export default function HeaderModern() {
   const pathname = usePathname();
   const isHome = pathname === '/';
@@ -80,13 +83,27 @@ export default function HeaderModern() {
     return () => window.removeEventListener('scroll', onScroll);
   }, [isHome]);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const q = searchQuery.trim().replace(/\s+/g, ' ');
+  const runSearch = (raw: string) => {
+    const q = raw.trim().replace(/\s+/g, ' ');
     if (q) {
       window.location.href = `/shop?search=${encodeURIComponent(q)}`;
     }
   };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    runSearch(searchQuery);
+  };
+
+  // Close the search panel on Escape.
+  useEffect(() => {
+    if (!isSearchOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsSearchOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isSearchOpen]);
 
   /** Home over the dark hero: light nav until scrolled, then a solid navy bar. */
   const onDarkHero = isHome && !heroSolid;
@@ -249,46 +266,61 @@ export default function HeaderModern() {
           </div>
         </div>
 
-        {/* MiniCart anchored to the header so it opens over the page */}
-        <MiniCart isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
-      </header>
-
-      {isSearchOpen && (
-        <div className="fixed inset-0 bg-black/50 z-[70] flex items-start justify-center pt-24" onClick={() => setIsSearchOpen(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-2xl mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-serif text-xl font-semibold text-[#0B1B3A]">Search Products</h3>
-                <button
-                  onClick={() => setIsSearchOpen(false)}
-                  className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-700"
-                  aria-label="Close search"
-                >
-                  <i className="ri-close-line text-2xl" />
-                </button>
-              </div>
+        {/* Search — full-width dropdown that expands beneath the header bar */}
+        {isSearchOpen && (
+          <div className="absolute inset-x-0 top-full z-[66] border-t border-[#d1fae5]/70 bg-white shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
               <form onSubmit={handleSearch}>
                 <div className="relative">
+                  <i className="ri-search-line absolute left-4 top-1/2 -translate-y-1/2 text-lg text-[#0B1B3A]/30" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search name, SKU, barcode, or store code (e.g. 042)..."
-                    className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 text-base"
+                    placeholder="Search dresses, bags, shoes, electronics..."
+                    className="h-12 w-full rounded-2xl border border-[#d1fae5] bg-emerald-50/40 pl-12 pr-12 text-base text-[#0B1B3A] transition-all placeholder:text-[#0B1B3A]/30 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                     autoFocus
+                    autoComplete="off"
                   />
                   <button
-                    type="submit"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center text-[#0B1B3A] hover:text-emerald-700"
-                    aria-label="Submit search"
+                    type="button"
+                    onClick={() => setIsSearchOpen(false)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-[#0B1B3A]/40 transition-colors hover:bg-emerald-50 hover:text-[#0B1B3A]"
+                    aria-label="Close search"
                   >
-                    <i className="ri-search-line text-xl" />
+                    <i className="ri-close-line text-lg" />
                   </button>
                 </div>
               </form>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="mr-1 self-center text-xs text-[#0B1B3A]/40">Popular:</span>
+                {POPULAR_SEARCHES.map((term) => (
+                  <button
+                    key={term}
+                    type="button"
+                    onClick={() => runSearch(term)}
+                    className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-100"
+                  >
+                    {term}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* MiniCart anchored to the header so it opens over the page */}
+        <MiniCart isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+      </header>
+
+      {/* Click-away catcher — closes the search panel when clicking the page */}
+      {isSearchOpen && (
+        <div
+          className="fixed inset-0 z-[45]"
+          onClick={() => setIsSearchOpen(false)}
+          aria-hidden="true"
+        />
       )}
 
       {/* Mobile Menu Drawer */}

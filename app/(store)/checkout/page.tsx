@@ -66,8 +66,6 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState('hubtel');
   const [errors, setErrors] = useState<any>({});
 
-
-
   // Check auth and cart
   useEffect(() => {
     async function checkUser() {
@@ -137,8 +135,6 @@ export default function CheckoutPage() {
     // Skip step 3 and directly initiate payment with default method (Hubtel/Mobile Money)
     await handlePlaceOrder();
   };
-
-
 
   const handlePlaceOrder = async () => {
     if (cart.length === 0) {
@@ -318,17 +314,28 @@ export default function CheckoutPage() {
     }
   };
 
+  const fieldClass = (hasError?: boolean) =>
+    `w-full rounded-xl border px-4 py-3.5 text-[#0B1B3A] outline-none transition placeholder:text-gray-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30 ${
+      hasError ? 'border-red-400' : 'border-[#d1fae5]'
+    }`;
+  const labelClass = 'block text-sm font-semibold text-[#0B1B3A] mb-2';
+  const cardClass =
+    'rounded-2xl border border-[#d1fae5] bg-white p-6 shadow-[0_16px_40px_-28px_rgba(11,27,58,0.35)] sm:p-8';
+
   if (cart.length === 0 && !isLoading) {
     return (
-      <main className="min-h-screen bg-gray-50 py-20">
-        <div className="max-w-md mx-auto text-center px-4">
-          <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
-            <i className="ri-shopping-cart-line text-4xl text-gray-300"></i>
+      <main className="bg-white">
+        <div className="mx-auto flex max-w-md flex-col items-center justify-center px-4 py-28 text-center">
+          <div className="flex size-24 items-center justify-center rounded-full bg-emerald-50">
+            <i className="ri-shopping-bag-3-line text-4xl text-emerald-600/50"></i>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h1>
-          <p className="text-gray-600 mb-8">Add some items to start the checkout process.</p>
-          <Link href="/shop" className="inline-block bg-emerald-700 text-white px-8 py-3 rounded-lg font-semibold hover:bg-emerald-800 transition-colors">
-            Return to Shop
+          <h1 className="mt-8 font-serif text-2xl font-semibold text-[#0B1B3A]">Your bag is empty</h1>
+          <p className="mt-2 text-gray-500">Add some items before checking out.</p>
+          <Link
+            href="/shop"
+            className="mt-8 rounded-full bg-emerald-600 px-10 py-3.5 text-base font-semibold text-white transition-colors hover:bg-emerald-700"
+          >
+            Continue Shopping
           </Link>
         </div>
       </main>
@@ -336,321 +343,290 @@ export default function CheckoutPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <Link href="/cart" className="text-gray-600 hover:text-gray-900 font-medium inline-flex items-center whitespace-nowrap">
-            <i className="ri-arrow-left-line mr-2"></i>
-            Back to Cart
-          </Link>
-        </div>
+    <main className="bg-white pb-16">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Breadcrumb */}
+        <nav className="py-6">
+          <ol className="flex items-center gap-2 text-sm text-gray-500">
+            <li><Link href="/" className="transition-colors hover:text-emerald-700">Home</Link></li>
+            <li><i className="ri-arrow-right-s-line"></i></li>
+            <li><Link href="/cart" className="transition-colors hover:text-emerald-700">Your Bag</Link></li>
+            <li><i className="ri-arrow-right-s-line"></i></li>
+            <li className="font-medium text-[#0B1B3A]">Checkout</li>
+          </ol>
+        </nav>
 
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">Checkout</h1>
+        <h1 className="mb-6 font-serif text-4xl font-semibold text-[#0B1B3A] sm:text-5xl">Checkout</h1>
 
-        <div className="mb-8 bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex gap-3">
-          <i className="ri-truck-line text-xl text-emerald-700 flex-shrink-0 mt-0.5"></i>
+        <div className="mb-8 flex gap-3 rounded-2xl border border-emerald-200 bg-[#ecfdf5] p-4">
+          <i className="ri-truck-line mt-0.5 flex-shrink-0 text-xl text-emerald-700"></i>
           <div className="text-sm text-emerald-900">
-            <p className="font-semibold mb-1">Delivery Information</p>
+            <p className="mb-1 font-semibold">Delivery Information</p>
             <p>Orders are delivered within <strong>24 – 72 hours</strong> after payment is confirmed. For faster or urgent deliveries, please reach out to our customer support team. Have your <strong>order number</strong> ready as you may be asked to provide it.</p>
           </div>
         </div>
 
-        {currentStep === 1 && (
-          <div className="mb-8 bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Checkout As</h2>
-            <div className="grid md:grid-cols-2 gap-4">
-              <button
-                onClick={() => !user && setCheckoutType('guest')}
-                className={`p-6 rounded-xl border-2 transition-all text-left cursor-pointer ${checkoutType === 'guest'
-                  ? 'border-emerald-700 bg-emerald-50'
-                  : 'border-gray-200 hover:border-gray-300'
-                  } ${user ? 'opacity-50 cursor-not-allowed' : ''}`}
-                disabled={!!user}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <i className="ri-user-line text-3xl text-emerald-700"></i>
-                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${checkoutType === 'guest' ? 'border-emerald-700 bg-emerald-700' : 'border-gray-300'
-                    }`}>
-                    {checkoutType === 'guest' && <i className="ri-check-line text-white text-sm"></i>}
-                  </div>
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">Guest Checkout</h3>
-                <p className="text-sm text-gray-600">Quick checkout without creating an account</p>
-                {user && <p className="text-xs text-emerald-600 mt-2">You are logged in</p>}
-              </button>
+        <div className="mb-8">
+          <CheckoutSteps currentStep={currentStep} />
+        </div>
 
-              <button
-                onClick={() => setCheckoutType('account')}
-                className={`p-6 rounded-xl border-2 transition-all text-left cursor-pointer ${checkoutType === 'account'
-                  ? 'border-emerald-700 bg-emerald-50'
-                  : 'border-gray-200 hover:border-gray-300'
-                  }`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <i className="ri-account-circle-line text-3xl text-emerald-700"></i>
-                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${checkoutType === 'account' ? 'border-emerald-700 bg-emerald-700' : 'border-gray-300'
-                    }`}>
-                    {checkoutType === 'account' && <i className="ri-check-line text-white text-sm"></i>}
-                  </div>
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">{user ? 'My Account' : 'Create Account'}</h3>
-                <p className="text-sm text-gray-600">
-                  {user ? `Logged in as ${user.email}` : 'Save info, track orders & earn loyalty points'}
-                </p>
-              </button>
-            </div>
-          </div>
-        )}
-
-        <CheckoutSteps currentStep={currentStep} />
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px]">
+          <div className="space-y-6">
             {currentStep === 1 && (
               <>
-                <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-                  <h2 className="text-xl font-bold text-gray-900 mb-6">Shipping Information</h2>
+                <div className={cardClass}>
+                  <h2 className="mb-6 font-serif text-2xl font-semibold text-[#0B1B3A]">Checkout As</h2>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <button
+                      onClick={() => !user && setCheckoutType('guest')}
+                      className={`rounded-2xl border-2 p-6 text-left transition-all cursor-pointer ${
+                        checkoutType === 'guest' ? 'border-emerald-600 bg-emerald-50' : 'border-[#d1fae5] hover:border-emerald-300'
+                      } ${user ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={!!user}
+                    >
+                      <div className="mb-3 flex items-center justify-between">
+                        <i className="ri-user-line text-3xl text-emerald-700"></i>
+                        <div className={`flex size-6 items-center justify-center rounded-full border-2 ${checkoutType === 'guest' ? 'border-emerald-600 bg-emerald-600' : 'border-gray-300'}`}>
+                          {checkoutType === 'guest' && <i className="ri-check-line text-sm text-white"></i>}
+                        </div>
+                      </div>
+                      <h3 className="mb-1 text-lg font-semibold text-[#0B1B3A]">Guest Checkout</h3>
+                      <p className="text-sm text-gray-500">Quick checkout without creating an account</p>
+                      {user && <p className="mt-2 text-xs text-emerald-600">You are logged in</p>}
+                    </button>
+
+                    <button
+                      onClick={() => setCheckoutType('account')}
+                      className={`rounded-2xl border-2 p-6 text-left transition-all cursor-pointer ${
+                        checkoutType === 'account' ? 'border-emerald-600 bg-emerald-50' : 'border-[#d1fae5] hover:border-emerald-300'
+                      }`}
+                    >
+                      <div className="mb-3 flex items-center justify-between">
+                        <i className="ri-account-circle-line text-3xl text-emerald-700"></i>
+                        <div className={`flex size-6 items-center justify-center rounded-full border-2 ${checkoutType === 'account' ? 'border-emerald-600 bg-emerald-600' : 'border-gray-300'}`}>
+                          {checkoutType === 'account' && <i className="ri-check-line text-sm text-white"></i>}
+                        </div>
+                      </div>
+                      <h3 className="mb-1 text-lg font-semibold text-[#0B1B3A]">{user ? 'My Account' : 'Create Account'}</h3>
+                      <p className="text-sm text-gray-500">
+                        {user ? `Logged in as ${user.email}` : 'Save info, track orders & earn loyalty points'}
+                      </p>
+                    </button>
+                  </div>
+                </div>
+
+                <div className={cardClass}>
+                  <h2 className="mb-6 font-serif text-2xl font-semibold text-[#0B1B3A]">Your Details</h2>
 
                   <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <div>
-                        <label className="block text-sm font-semibold text-gray-900 mb-2">
-                          First Name *
-                        </label>
+                        <label className={labelClass}>First Name *</label>
                         <input
                           type="text"
                           value={shippingData.firstName}
                           onChange={(e) => setShippingData({ ...shippingData, firstName: e.target.value })}
-                          className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${errors.firstName ? 'border-red-500' : 'border-gray-300'
-                            }`}
+                          className={fieldClass(errors.firstName)}
                           placeholder="John"
                         />
-                        {errors.firstName && <p className="text-sm text-red-600 mt-1">{errors.firstName}</p>}
+                        {errors.firstName && <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>}
                       </div>
                       <div>
-                        <label className="block text-sm font-semibold text-gray-900 mb-2">
-                          Last Name *
-                        </label>
+                        <label className={labelClass}>Last Name *</label>
                         <input
                           type="text"
                           value={shippingData.lastName}
                           onChange={(e) => setShippingData({ ...shippingData, lastName: e.target.value })}
-                          className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${errors.lastName ? 'border-red-500' : 'border-gray-300'
-                            }`}
+                          className={fieldClass(errors.lastName)}
                           placeholder="Doe"
                         />
-                        {errors.lastName && <p className="text-sm text-red-600 mt-1">{errors.lastName}</p>}
+                        {errors.lastName && <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>}
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-gray-900 mb-2">
-                        Email Address *
-                      </label>
+                      <label className={labelClass}>Email Address *</label>
                       <input
                         type="email"
                         value={shippingData.email}
-                        readOnly={!!user} // Make read-only if logged in (optional, but safer)
+                        readOnly={!!user}
                         onChange={(e) => setShippingData({ ...shippingData, email: e.target.value })}
-                        className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${errors.email ? 'border-red-500' : 'border-gray-300'
-                          } ${user ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                        className={`${fieldClass(errors.email)} ${user ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         placeholder="you@example.com"
                       />
-                      {errors.email && <p className="text-sm text-red-600 mt-1">{errors.email}</p>}
+                      {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-gray-900 mb-2">
-                        Phone Number *
-                      </label>
+                      <label className={labelClass}>Phone Number *</label>
                       <input
                         type="tel"
                         value={shippingData.phone}
                         onChange={(e) => setShippingData({ ...shippingData, phone: e.target.value })}
-                        className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${errors.phone ? 'border-red-500' : 'border-gray-300'
-                          }`}
+                        className={fieldClass(errors.phone)}
                         placeholder="+233 XX XXX XXXX"
                       />
-                      {errors.phone && <p className="text-sm text-red-600 mt-1">{errors.phone}</p>}
+                      {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-gray-900 mb-2">
-                        Street Address *
-                      </label>
+                      <label className={labelClass}>Street Address *</label>
                       <input
                         type="text"
                         value={shippingData.address}
                         onChange={(e) => setShippingData({ ...shippingData, address: e.target.value })}
-                        className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${errors.address ? 'border-red-500' : 'border-gray-300'
-                          }`}
+                        className={fieldClass(errors.address)}
                         placeholder="House number and street name"
                       />
-                      {errors.address && <p className="text-sm text-red-600 mt-1">{errors.address}</p>}
+                      {errors.address && <p className="mt-1 text-sm text-red-600">{errors.address}</p>}
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <div>
-                        <label className="block text-sm font-semibold text-gray-900 mb-2">
-                          City *
-                        </label>
+                        <label className={labelClass}>City *</label>
                         <input
                           type="text"
                           value={shippingData.city}
                           onChange={(e) => setShippingData({ ...shippingData, city: e.target.value })}
-                          className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${errors.city ? 'border-red-500' : 'border-gray-300'
-                            }`}
+                          className={fieldClass(errors.city)}
                           placeholder="Accra"
                         />
-                        {errors.city && <p className="text-sm text-red-600 mt-1">{errors.city}</p>}
+                        {errors.city && <p className="mt-1 text-sm text-red-600">{errors.city}</p>}
                       </div>
                       <div>
-                        <label className="block text-sm font-semibold text-gray-900 mb-2">
-                          Region *
-                        </label>
+                        <label className={labelClass}>Region *</label>
                         <select
                           value={shippingData.region}
                           onChange={(e) => setShippingData({ ...shippingData, region: e.target.value })}
-                          className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white ${errors.region ? 'border-red-500' : 'border-gray-300'
-                            }`}
+                          className={`${fieldClass(errors.region)} bg-white`}
                         >
                           <option value="">Select Region</option>
                           {ghanaRegions.map((region) => (
                             <option key={region} value={region}>{region}</option>
                           ))}
                         </select>
-                        {errors.region && <p className="text-sm text-red-600 mt-1">{errors.region}</p>}
+                        {errors.region && <p className="mt-1 text-sm text-red-600">{errors.region}</p>}
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-gray-900 mb-2">
-                        Preferred delivery or pickup date <span className="text-gray-500 font-normal">(optional)</span>
+                      <label className={labelClass}>
+                        Preferred delivery or pickup date <span className="font-normal text-gray-400">(optional)</span>
                       </label>
                       <input
                         type="date"
                         value={shippingData.preferredDate}
                         min={new Date().toISOString().slice(0, 10)}
-                        onChange={(e) =>
-                          setShippingData({ ...shippingData, preferredDate: e.target.value })
-                        }
-                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                        onChange={(e) => setShippingData({ ...shippingData, preferredDate: e.target.value })}
+                        className={`${fieldClass(false)} bg-white`}
                       />
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="mt-1 text-xs text-gray-400">
                         If you need delivery or pickup on a specific day, choose it here. Our team will see it on your order.
                       </p>
                     </div>
 
                     {checkoutType === 'account' && (
-                      <label className="flex items-center space-x-3 cursor-pointer">
+                      <label className="flex cursor-pointer items-center gap-3">
                         <input
                           type="checkbox"
                           checked={saveAddress}
                           onChange={(e) => setSaveAddress(e.target.checked)}
-                          className="w-5 h-5 text-emerald-700 rounded border-gray-300 focus:ring-emerald-500"
+                          className="size-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                         />
-                        <span className="text-sm text-gray-700">Save this address for future orders</span>
+                        <span className="text-sm text-gray-600">Save this address for future orders</span>
                       </label>
                     )}
                   </div>
 
                   <button
                     onClick={handleContinueToDelivery}
-                    className="w-full mt-6 bg-emerald-700 hover:bg-emerald-800 text-white py-4 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer"
+                    className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 py-4 font-semibold text-white transition-colors hover:bg-emerald-700 cursor-pointer"
                   >
                     Continue to Delivery
+                    <i className="ri-arrow-right-line"></i>
                   </button>
                 </div>
-
-
               </>
             )}
 
             {currentStep === 2 && (
-              <>
-                <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-                  <h2 className="text-xl font-bold text-gray-900 mb-6">Delivery Method</h2>
-                  <div className="space-y-4">
-                    <label className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition-colors ${deliveryMethod === 'pickup' ? 'border-emerald-700 bg-emerald-50' : 'border-gray-300 hover:border-gray-400'
-                      }`}>
-                      <div className="flex items-center space-x-4">
-                        <input
-                          type="radio"
-                          name="delivery"
-                          value="pickup"
-                          checked={deliveryMethod === 'pickup'}
-                          onChange={(e) => setDeliveryMethod(e.target.value)}
-                          className="w-5 h-5 text-emerald-700"
-                        />
+              <div className={cardClass}>
+                <h2 className="mb-6 font-serif text-2xl font-semibold text-[#0B1B3A]">Delivery Method</h2>
+                <div className="space-y-4">
+                  <label className={`flex cursor-pointer items-center justify-between rounded-2xl border-2 p-4 transition-colors ${deliveryMethod === 'pickup' ? 'border-emerald-600 bg-emerald-50' : 'border-[#d1fae5] hover:border-emerald-300'}`}>
+                    <div className="flex items-center gap-4">
+                      <input
+                        type="radio"
+                        name="delivery"
+                        value="pickup"
+                        checked={deliveryMethod === 'pickup'}
+                        onChange={(e) => setDeliveryMethod(e.target.value)}
+                        className="size-5 text-emerald-600"
+                      />
+                      <div className="flex items-center gap-3">
+                        <i className="ri-store-2-line text-xl text-[#0B1B3A]"></i>
                         <div>
-                          <p className="font-semibold text-gray-900">Store Pickup</p>
-                          <p className="text-sm text-gray-600">Pick up from our store — Ready in 24 hours</p>
+                          <p className="font-semibold text-[#0B1B3A]">Store Pickup</p>
+                          <p className="text-sm text-gray-500">Pick up from our store — Ready in 24 hours</p>
                         </div>
                       </div>
-                      <p className="font-bold text-emerald-700">FREE</p>
-                    </label>
+                    </div>
+                    <p className="text-sm font-bold text-emerald-700">FREE</p>
+                  </label>
 
-                    <label className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition-colors ${deliveryMethod === 'doorstep' ? 'border-emerald-700 bg-emerald-50' : 'border-gray-300 hover:border-gray-400'
-                      }`}>
-                      <div className="flex items-center space-x-4">
-                        <input
-                          type="radio"
-                          name="delivery"
-                          value="doorstep"
-                          checked={deliveryMethod === 'doorstep'}
-                          onChange={(e) => setDeliveryMethod(e.target.value)}
-                          className="w-5 h-5 text-emerald-700"
-                        />
+                  <label className={`flex cursor-pointer items-center justify-between rounded-2xl border-2 p-4 transition-colors ${deliveryMethod === 'doorstep' ? 'border-emerald-600 bg-emerald-50' : 'border-[#d1fae5] hover:border-emerald-300'}`}>
+                    <div className="flex items-center gap-4">
+                      <input
+                        type="radio"
+                        name="delivery"
+                        value="doorstep"
+                        checked={deliveryMethod === 'doorstep'}
+                        onChange={(e) => setDeliveryMethod(e.target.value)}
+                        className="size-5 text-emerald-600"
+                      />
+                      <div className="flex items-center gap-3">
+                        <i className="ri-truck-line text-xl text-[#0B1B3A]"></i>
                         <div>
-                          <p className="font-semibold text-gray-900">Doorstep Delivery</p>
-                          <p className="text-sm text-gray-600">We will contact you with the delivery cost</p>
+                          <p className="font-semibold text-[#0B1B3A]">Doorstep Delivery</p>
+                          <p className="text-sm text-gray-500">We will contact you with the delivery cost</p>
                         </div>
                       </div>
-                      <p className="font-semibold text-amber-600 text-sm">At a Cost</p>
-                    </label>
-
-                    {/* No predefined delivery zones — delivery is always
-                        priced at hand-off by the rider, so the only options
-                        we show are Store Pickup (free) and Doorstep
-                        Delivery (At a Cost). */}
-                  </div>
-
-                  <div className="flex flex-col-reverse md:flex-row gap-4 mt-6">
-                    <button
-                      onClick={() => setCurrentStep(1)}
-                      disabled={isLoading}
-                      className="flex-1 border-2 border-gray-300 hover:border-gray-400 text-gray-700 py-4 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer disabled:opacity-50"
-                    >
-                      Back
-                    </button>
-                    <button
-                      onClick={handleContinueToPayment}
-                      disabled={isLoading}
-                      className="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white py-4 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer disabled:opacity-70 flex items-center justify-center"
-                    >
-                      {isLoading ? (
-                        <>
-                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Processing...
-                        </>
-                      ) : (
-                        'Pay with Mobile Money'
-                      )}
-                    </button>
-                  </div>
+                    </div>
+                    <p className="text-sm font-semibold text-amber-600">At a Cost</p>
+                  </label>
                 </div>
 
-
-              </>
+                <div className="mt-6 flex flex-col-reverse gap-4 md:flex-row">
+                  <button
+                    onClick={() => setCurrentStep(1)}
+                    disabled={isLoading}
+                    className="flex-1 rounded-full border border-[#0B1B3A] py-4 font-semibold text-[#0B1B3A] transition-colors hover:bg-[#0B1B3A] hover:text-white cursor-pointer disabled:opacity-50"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={handleContinueToPayment}
+                    disabled={isLoading}
+                    className="flex flex-1 items-center justify-center rounded-full bg-emerald-600 py-4 font-semibold text-white transition-colors hover:bg-emerald-700 cursor-pointer disabled:opacity-70"
+                  >
+                    {isLoading ? (
+                      <>
+                        <svg className="-ml-1 mr-3 h-5 w-5 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Processing...
+                      </>
+                    ) : (
+                      'Pay with Mobile Money'
+                    )}
+                  </button>
+                </div>
+              </div>
             )}
-
-            {/* Step 3 removed - payment now initiates directly from step 2 */}
           </div>
 
-          <div className="lg:col-span-1">
+          <div>
             <OrderSummary
               items={displayItems}
               subtotal={subtotal}
