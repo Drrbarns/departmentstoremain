@@ -91,33 +91,39 @@ export default function Home() {
             {categories.map((category) => {
               const categoryImage = category.image || category.image_url || '';
               return (
-              <Link href={`/shop?category=${category.slug}`} key={category.id} className="group cursor-pointer block relative">
-                <div className="aspect-[3/4] rounded-2xl overflow-hidden relative shadow-md group-hover:shadow-xl transition-all duration-300">
+              <Link href={`/shop?category=${category.slug}`} key={category.id} className="group block cursor-pointer">
+                <div className="relative aspect-[3/4] overflow-hidden rounded-[1.25rem] shadow-md ring-1 ring-black/5 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_20px_40px_-18px_rgba(4,120,87,0.4)] group-hover:ring-emerald-200/70">
                   {categoryImage ? (
                     <Image
                       src={categoryImage}
                       alt={category.name}
                       fill
                       unoptimized={Boolean(categoryImage.startsWith('http'))}
-                      className="object-cover transition-transform duration-700 group-hover:scale-110"
+                      className="object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.08]"
                       sizes="(max-width: 768px) 50vw, 25vw"
                       quality={75}
                     />
                   ) : (
-                    <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
-                      <i className="ri-image-line text-4xl text-gray-400"></i>
+                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-emerald-50 to-emerald-100">
+                      <i className="ri-image-line text-4xl text-emerald-300"></i>
                     </div>
                   )}
-                  {/* Gradient Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300"></div>
-                  
+
+                  {/* Emerald-tinted scrim */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-emerald-950/85 via-emerald-950/25 to-transparent transition-all duration-300 group-hover:from-emerald-950/90"></div>
+
+                  {/* Hover arrow badge */}
+                  <div className="absolute right-3 top-3 flex size-9 scale-90 items-center justify-center rounded-full bg-white/95 text-emerald-700 opacity-0 shadow-md backdrop-blur-sm transition-all duration-300 group-hover:scale-100 group-hover:opacity-100">
+                    <i className="ri-arrow-right-up-line text-lg"></i>
+                  </div>
+
                   {/* Content */}
-                  <div className="absolute bottom-0 left-0 right-0 p-6 flex flex-col justify-end h-full">
-                    <h3 className="font-serif font-bold text-white text-xl md:text-2xl mb-1 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">{category.name}</h3>
-                    <div className="flex items-center text-white/90 text-sm font-medium opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-4 group-hover:translate-y-0 delay-75">
-                      <span className="uppercase tracking-wider text-xs">Shop Now</span>
-                      <i className="ri-arrow-right-line ml-2 transition-transform group-hover:translate-x-1"></i>
-                    </div>
+                  <div className="absolute inset-x-0 bottom-0 p-5">
+                    <h3 className="font-serif text-lg font-semibold leading-snug text-white drop-shadow-sm md:text-xl">{category.name}</h3>
+                    <span className="mt-2 inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-200">
+                      <span className="h-px w-5 bg-emerald-300/80 transition-all duration-300 group-hover:w-9"></span>
+                      Shop Now
+                    </span>
                   </div>
                 </div>
               </Link>
