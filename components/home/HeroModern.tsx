@@ -9,25 +9,52 @@ import { useEffect, useState } from 'react';
  * left-to-right scrim, a pill "eyebrow" badge, a serif headline and two
  * rounded CTAs. Slides under the transparent header on the homepage.
  * Revert via USE_NEW_DESIGN in lib/uiFlags.ts.
+ *
+ * The slide order is shuffled on every visit (client-side, after mount)
+ * so each visitor sees the images in a fresh random order.
  */
 
 const HERO_SLIDES = [
-  { src: '/hero-1.png', alt: 'Discount Discovery Zone — fashion, bags and shoes' },
-  { src: '/hero-2.png', alt: 'Discount Discovery Zone — electronics and home essentials' },
+  { src: '/hero/hero-womens.jpeg', alt: "Discount Discovery Zone — women's dresses, heels and handbags" },
+  { src: '/hero/hero-mens.jpeg', alt: "Discount Discovery Zone — men's fashion, sneakers and fragrance" },
+  { src: '/hero/hero-beauty.jpeg', alt: 'Discount Discovery Zone — perfume, jewellery and designer bags' },
+  { src: '/hero/hero-activewear.jpeg', alt: 'Discount Discovery Zone — activewear, sneakers and water bottles' },
+  { src: '/hero/hero-appliances.jpeg', alt: 'Discount Discovery Zone — home appliances and accessories' },
+  { src: '/hero/hero-home.jpeg', alt: 'Discount Discovery Zone — glassware, cookware and home essentials' },
 ] as const;
 
-const SLIDE_INTERVAL_MS = 3000;
+const SLIDE_INTERVAL_MS = 4000;
+
+type Slide = (typeof HERO_SLIDES)[number];
+
+function shuffle(list: readonly Slide[]): Slide[] {
+  const arr = [...list];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
 
 export default function HeroModern() {
+  // Deterministic order for the server render / first paint, then shuffled
+  // on the client after mount so each visit gets a random order without
+  // causing a hydration mismatch.
+  const [slides, setSlides] = useState<Slide[]>([...HERO_SLIDES]);
   const [active, setActive] = useState(0);
 
   useEffect(() => {
-    if (HERO_SLIDES.length < 2) return;
+    setSlides(shuffle(HERO_SLIDES));
+    setActive(0);
+  }, []);
+
+  useEffect(() => {
+    if (slides.length < 2) return;
     const id = window.setInterval(() => {
-      setActive((i) => (i + 1) % HERO_SLIDES.length);
+      setActive((i) => (i + 1) % slides.length);
     }, SLIDE_INTERVAL_MS);
     return () => window.clearInterval(id);
-  }, []);
+  }, [slides]);
 
   return (
     <section
@@ -36,7 +63,7 @@ export default function HeroModern() {
     >
       {/* Slides */}
       <div className="absolute inset-0">
-        {HERO_SLIDES.map((slide, i) => (
+        {slides.map((slide, i) => (
           <div
             key={slide.src}
             className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
@@ -68,12 +95,12 @@ export default function HeroModern() {
       />
 
       {/* Slide dots */}
-      {HERO_SLIDES.length > 1 && (
+      {slides.length > 1 && (
         <div
           className="pointer-events-none absolute bottom-6 left-1/2 z-[12] flex -translate-x-1/2 gap-2 sm:bottom-8"
           aria-hidden
         >
-          {HERO_SLIDES.map((_, i) => (
+          {slides.map((_, i) => (
             <span
               key={i}
               className={`h-1.5 rounded-full transition-all duration-300 ${
