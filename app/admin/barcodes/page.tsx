@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPaged } from '@/lib/supabase-paginate';
 import JsBarcode from 'jsbarcode';
 import { generateNextPosCode, getPosCodeFromMetadata } from '@/lib/posCode';
 
@@ -24,6 +25,7 @@ interface Product {
     pos_code: string;
     price: number;
     quantity: number;
+    status: string;
     category_name?: string;
     image_url?: string;
     barcode_printed_at?: string | null;
@@ -319,18 +321,24 @@ export default function BarcodesPage() {
     const [selected, setSelected] = useState<Set<string>>(new Set());
     const [searchQuery, setSearchQuery] = useState('');
     const [filter, setFilter] = useState<'all' | 'with' | 'without' | 'printed' | 'not_printed'>('all');
+    const [statusFilter, setStatusFilter] = useState<'active' | 'draft' | 'all'>('active');
     const [labelCounts, setLabelCounts] = useState<Record<string, number>>({});
     const [currentPage, setCurrentPage] = useState(1);
 
     const fetchProducts = useCallback(async () => {
         setLoading(true);
-        const { data, error } = await supabase
-            .from('products')
-            .select('id, name, sku, barcode, price, quantity, metadata, categories(name), product_images(url, position)')
-            .eq('status', 'active')
-            .order('name');
+        // Load both active and draft products so staff can print labels for
+        // drafts (e.g. new stock not yet published).  We page through rows
+        // because PostgREST caps a bare select at 1000.
+        try {
+            const data = await fetchAllPaged<any>(() =>
+                supabase
+                    .from('products')
+                    .select('id, name, sku, barcode, price, quantity, status, metadata, categories(name), product_images(url, position)')
+                    .in('status', ['active', 'draft'])
+                    .order('name')
+            );
 
-        if (!error && data) {
             const mapped = data.map((p: any) => ({
                 id: p.id,
                 name: p.name,
@@ -339,6 +347,7 @@ export default function BarcodesPage() {
                 pos_code: getPosCodeFromMetadata(p.metadata),
                 price: p.price,
                 quantity: p.quantity,
+                status: p.status || 'active',
                 category_name: p.categories?.name || '',
                 image_url: p.product_images?.sort((a: any, b: any) => a.position - b.position)?.[0]?.url || '',
                 barcode_printed_at: p.metadata?.barcode_printed_at || null,
@@ -349,6 +358,8 @@ export default function BarcodesPage() {
             const counts: Record<string, number> = {};
             mapped.forEach(p => { counts[p.id] = 1; });
             setLabelCounts(counts);
+        } catch (error) {
+            console.error('Failed to load products for barcodes:', error);
         }
         setLoading(false);
     }, []);
@@ -448,7 +459,12 @@ export default function BarcodesPage() {
             filter === 'printed' ? !!p.barcode_printed_at :
             filter === 'not_printed' ? (!!p.barcode && !p.barcode_printed_at) :
             true;
-        return matchesSearch && matchesFilter;
+        const matchesStatus =
+            statusFilter === 'all' ? true :
+            statusFilter === 'active' ? p.status === 'active' :
+            statusFilter === 'draft' ? p.status === 'draft' :
+            true;
+        return matchesSearch && matchesFilter && matchesStatus;
     });
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
@@ -458,7 +474,7 @@ export default function BarcodesPage() {
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchQuery, filter]);
+    }, [searchQuery, filter, statusFilter]);
 
     useEffect(() => {
         if (currentPage > totalPages) {
@@ -592,6 +608,13 @@ export default function BarcodesPage() {
 
     const missingCount = products.filter(p => !p.barcode).length;
     const missingPosCodeCount = products.filter(p => !p.pos_code).length;
+    const draftCount = products.filter(p => p.status === 'draft').length;
+    const activeCount = products.filter(p => p.status === 'active').length;
+    // Stat cards reflect the currently selected status so the numbers match
+    // what's being shown in the table below.
+    const statusScoped = statusFilter === 'all'
+        ? products
+        : products.filter(p => p.status === statusFilter);
     const totalSelectedLabels = (selected.size > 0
         ? products.filter(p => selected.has(p.id) && p.barcode)
         : filtered.filter(p => p.barcode)
@@ -657,24 +680,24 @@ export default function BarcodesPage() {
             {/* Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-6 gap-4">
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
-                    <p className="text-sm text-gray-500">Total Products</p>
-                    <p className="text-2xl font-bold text-gray-900">{products.length}</p>
+                    <p className="text-sm text-gray-500">{statusFilter === 'all' ? 'Total Products' : statusFilter === 'draft' ? 'Draft Products' : 'Active Products'}</p>
+                    <p className="text-2xl font-bold text-gray-900">{statusScoped.length}</p>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
                     <p className="text-sm text-gray-500">With Barcode</p>
-                    <p className="text-2xl font-bold text-green-600">{products.filter(p => p.barcode).length}</p>
+                    <p className="text-2xl font-bold text-green-600">{statusScoped.filter(p => p.barcode).length}</p>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
                     <p className="text-sm text-gray-500">Missing Barcode</p>
-                    <p className="text-2xl font-bold text-amber-600">{missingCount}</p>
+                    <p className="text-2xl font-bold text-amber-600">{statusScoped.filter(p => !p.barcode).length}</p>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
                     <p className="text-sm text-gray-500">Missing POS Code</p>
-                    <p className="text-2xl font-bold text-purple-600">{missingPosCodeCount}</p>
+                    <p className="text-2xl font-bold text-purple-600">{statusScoped.filter(p => !p.pos_code).length}</p>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
                     <p className="text-sm text-gray-500">Printed</p>
-                    <p className="text-2xl font-bold text-green-700">{products.filter(p => p.barcode_printed_at).length}</p>
+                    <p className="text-2xl font-bold text-green-700">{statusScoped.filter(p => p.barcode_printed_at).length}</p>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
                     <p className="text-sm text-gray-500">Selected</p>
@@ -691,7 +714,7 @@ export default function BarcodesPage() {
             </div>
 
             {/* Search & Filters */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
                 <div className="flex flex-col sm:flex-row gap-3">
                     <div className="flex-1 relative">
                         <i className="ri-search-line absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
@@ -720,6 +743,24 @@ export default function BarcodesPage() {
                             </button>
                         ))}
                     </div>
+                </div>
+
+                {/* Status filter — print labels for Active or Draft products */}
+                <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-semibold text-gray-500 uppercase mr-1">Product status:</span>
+                    {([
+                        { key: 'active', label: 'Active', count: activeCount },
+                        { key: 'draft', label: 'Draft', count: draftCount },
+                        { key: 'all', label: 'All', count: products.length },
+                    ] as const).map(s => (
+                        <button
+                            key={s.key}
+                            onClick={() => setStatusFilter(s.key)}
+                            className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold border transition-colors cursor-pointer ${statusFilter === s.key ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                        >
+                            {s.label} <span className={statusFilter === s.key ? 'text-gray-300' : 'text-gray-400'}>({s.count})</span>
+                        </button>
+                    ))}
                 </div>
             </div>
 
@@ -785,6 +826,12 @@ export default function BarcodesPage() {
                                         <div className="min-w-0">
                                             <div className="flex items-center gap-2">
                                                 <p className="font-semibold text-gray-900 truncate text-sm">{product.name}</p>
+                                                {product.status === 'draft' && (
+                                                    <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-full">
+                                                        <i className="ri-draft-line text-[10px]"></i>
+                                                        Draft
+                                                    </span>
+                                                )}
                                                 {product.barcode_printed_at && (
                                                     <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full">
                                                         <i className="ri-printer-fill text-[10px]"></i>
