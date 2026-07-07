@@ -162,7 +162,7 @@ export default function HeaderModern() {
                 <img
                   src={onDarkHero ? heroLogoSrc : siteLogo}
                   alt={siteName}
-                  className={`h-8 w-auto max-w-[min(42vw,10rem)] object-contain sm:h-9 ${
+                  className={`h-9 w-auto max-w-[min(60vw,14rem)] object-contain sm:h-10 ${
                     onDarkHero
                       ? `drop-shadow-[0_2px_14px_rgba(0,0,0,0.5)] ${invertLogoOnHero ? 'brightness-0 invert' : ''}`
                       : ''
@@ -229,7 +229,7 @@ export default function HeaderModern() {
                   <img
                     src={onDarkHero ? heroLogoSrc : siteLogo}
                     alt={siteName}
-                    className={`h-10 w-auto max-w-[14rem] object-contain xl:h-11 ${
+                    className={`h-11 w-auto max-w-[18rem] object-contain xl:h-12 ${
                       onDarkHero
                         ? `drop-shadow-[0_2px_14px_rgba(0,0,0,0.5)] ${invertLogoOnHero ? 'brightness-0 invert' : ''}`
                         : ''
