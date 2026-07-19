@@ -63,6 +63,8 @@ type PrintEntry = {
     quantity: number;
     sku: string;
     image: string;
+    /** Current stock on hand — shown in the print header so staff can match label counts to stock. */
+    stock?: number;
     /** When present, render one distinct label per cell (e.g. one per variant) instead of `quantity` identical copies. */
     cells?: { caption: string; barcode: string; price: number }[];
 };
@@ -127,6 +129,11 @@ body { font-family: Arial, sans-serif; background: #fff; }
     display: inline-block; background: #dbeafe; color: #1e40af;
     font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 9999px;
 }
+.stock-badge {
+    display: inline-block; background: #dcfce7; color: #166534;
+    font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 9999px;
+    margin-left: 4px;
+}
 .barcode-grid {
     display: grid; grid-template-columns: repeat(4, 1fr);
     gap: 3px; padding: 6px;
@@ -182,7 +189,9 @@ P.forEach(p=>{
         '<div class="product-info"><h2>'+p.name+'</h2>'+
         '<div class="meta"><span>SKU: '+(p.sku||'\\u2014')+'</span><span>Barcode: '+p.barcode+'</span></div>'+
         '<div class="price-tag">GH\\u20B5 '+Number(p.price).toFixed(2)+'</div>'+
-        '<div style="margin-top:3px"><span class="qty-badge">'+badge+'</span></div></div>';
+        '<div style="margin-top:3px"><span class="qty-badge">'+badge+'</span>'+
+        (p.stock!==undefined&&p.stock!==null?'<span class="stock-badge">In stock: '+p.stock+'</span>':'')+
+        '</div></div>';
     s.appendChild(h);
     const g=document.createElement('div');g.className='barcode-grid';
     if(hasCells){
@@ -197,7 +206,7 @@ P.forEach(p=>{
     printWindow.document.close();
 }
 
-function openPosCodePrintWindow(productsToPrint: { name: string; posCode: string; price: number; quantity: number; sku: string; image: string }[]) {
+function openPosCodePrintWindow(productsToPrint: { name: string; posCode: string; price: number; quantity: number; sku: string; image: string; stock?: number }[]) {
     const totalLabels = productsToPrint.reduce((sum, p) => sum + p.quantity, 0);
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
@@ -257,6 +266,11 @@ body { font-family: Arial, sans-serif; background: #fff; }
     display: inline-block; background: #dbeafe; color: #1e40af;
     font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 9999px;
 }
+.stock-badge {
+    display: inline-block; background: #dcfce7; color: #166534;
+    font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 9999px;
+    margin-left: 4px;
+}
 .code-grid {
     display: grid; grid-template-columns: repeat(4, 1fr);
     gap: 4px; padding: 8px;
@@ -296,7 +310,9 @@ P.forEach(p=>{
         '<div class="product-info"><h2>'+p.name+'</h2>'+
         '<div class="meta"><span>SKU: '+(p.sku||'\\u2014')+'</span><span>POS Code: '+p.posCode+'</span></div>'+
         '<div class="price-tag">GH\\u20B5 '+Number(p.price).toFixed(2)+'</div>'+
-        '<div style="margin-top:3px"><span class="qty-badge">'+p.quantity+' labels</span></div></div>';
+        '<div style="margin-top:3px"><span class="qty-badge">'+p.quantity+' labels</span>'+
+        (p.stock!==undefined&&p.stock!==null?'<span class="stock-badge">In stock: '+p.stock+'</span>':'')+
+        '</div></div>';
     s.appendChild(h);
     const g=document.createElement('div');g.className='code-grid';
     for(let i=0;i<p.quantity;i++){
@@ -535,6 +551,7 @@ export default function BarcodesPage() {
                 quantity: 1,
                 sku: product.sku,
                 image: product.image_url || '',
+                stock: product.quantity,
                 cells,
             }]);
             await markAsPrinted([product.id]);
@@ -547,7 +564,8 @@ export default function BarcodesPage() {
             price: product.price,
             quantity: copies,
             sku: product.sku,
-            image: product.image_url || ''
+            image: product.image_url || '',
+            stock: product.quantity,
         }]);
         await markAsPrinted([product.id]);
     };
@@ -568,7 +586,8 @@ export default function BarcodesPage() {
             price: p.price,
             quantity: labelCounts[p.id] || Math.min(Math.max(p.quantity, 1), 50),
             sku: p.sku,
-            image: p.image_url || ''
+            image: p.image_url || '',
+            stock: p.quantity,
         })));
         await markAsPrinted(toPrint.map(p => p.id));
     };
@@ -582,7 +601,8 @@ export default function BarcodesPage() {
             price: product.price,
             quantity: qty,
             sku: product.sku,
-            image: product.image_url || ''
+            image: product.image_url || '',
+            stock: product.quantity,
         }]);
     };
 
@@ -602,7 +622,8 @@ export default function BarcodesPage() {
             price: p.price,
             quantity: labelCounts[p.id] || Math.min(Math.max(p.quantity, 1), 50),
             sku: p.sku,
-            image: p.image_url || ''
+            image: p.image_url || '',
+            stock: p.quantity,
         })));
     };
 
