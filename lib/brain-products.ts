@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { applyStorefrontProductFilter } from '@/lib/product-visibility';
 
 export type BrainProductRow = {
     id: string;
@@ -114,11 +115,10 @@ export async function fetchActiveProductById(
     supabase: SupabaseClient,
     id: string
 ): Promise<BrainProductRow | null> {
-    const { data, error } = await supabase
-        .from('products')
-        .select(productSelect)
+    const { data, error } = await applyStorefrontProductFilter(
+        supabase.from('products').select(productSelect)
+    )
         .eq('id', id)
-        .eq('status', 'active')
         .maybeSingle();
 
     if (error || !data) return null;
@@ -129,10 +129,9 @@ export async function fetchActiveProducts(
     supabase: SupabaseClient,
     options: { category?: string | null; search?: string | null }
 ): Promise<BrainProductRow[]> {
-    let query = supabase
-        .from('products')
-        .select(productSelect)
-        .eq('status', 'active')
+    let query = applyStorefrontProductFilter(
+        supabase.from('products').select(productSelect)
+    )
         .order('name', { ascending: true });
 
     if (options.category) {

@@ -5,6 +5,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { generateNextPosCode, getPosCodeFromMetadata } from '@/lib/posCode';
+import {
+    normalizeProductVisibility,
+    type ProductVisibility,
+} from '@/lib/product-visibility';
 
 interface ProductFormProps {
     initialData?: any;
@@ -82,6 +86,9 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
     const [description, setDescription] = useState(initialData?.description || '');
     const [status, setStatus] = useState<'active' | 'draft' | 'archived'>(
         normalizeProductStatus(initialData?.status)
+    );
+    const [visibility, setVisibility] = useState<ProductVisibility>(
+        normalizeProductVisibility(initialData?.visibility ?? initialData?.metadata?.visibility)
     );
     const [featured, setFeatured] = useState(initialData?.featured || false);
     const [preorderShipping, setPreorderShipping] = useState(initialData?.metadata?.preorder_shipping || '');
@@ -426,6 +433,7 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                 pos_code: ensuredPosCode || null,
                 low_stock_threshold: parseInt(lowStockThreshold) || 5,
                 preorder_shipping: preorderShipping.trim() || null,
+                visibility,
             };
 
             let pricingFields: Record<string, any>;
@@ -878,6 +886,42 @@ export default function ProductForm({ initialData, isEditMode = false }: Product
                                         <option value="draft">Draft</option>
                                         <option value="archived">Archived</option>
                                     </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                                    Product Visibility
+                                </label>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setVisibility('global')}
+                                        className={`text-left rounded-xl border-2 p-4 transition-colors cursor-pointer ${
+                                            visibility === 'global'
+                                                ? 'border-blue-600 bg-blue-50'
+                                                : 'border-gray-200 hover:border-gray-300 bg-white'
+                                        }`}
+                                    >
+                                        <p className="font-semibold text-gray-900">Global</p>
+                                        <p className="text-xs text-gray-600 mt-1">
+                                            Visible on the website and in POS (default).
+                                        </p>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setVisibility('pos_only')}
+                                        className={`text-left rounded-xl border-2 p-4 transition-colors cursor-pointer ${
+                                            visibility === 'pos_only'
+                                                ? 'border-violet-600 bg-violet-50'
+                                                : 'border-gray-200 hover:border-gray-300 bg-white'
+                                        }`}
+                                    >
+                                        <p className="font-semibold text-gray-900">POS only</p>
+                                        <p className="text-xs text-gray-600 mt-1">
+                                            Walk-in sales only — hidden from website product pages.
+                                        </p>
+                                    </button>
                                 </div>
                             </div>
 

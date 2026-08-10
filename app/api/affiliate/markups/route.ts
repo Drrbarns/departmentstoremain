@@ -93,9 +93,10 @@ export async function GET(request: Request) {
   if (search) {
     const { data: prods } = await supabaseAdmin
       .from('products')
-      .select('id, name, slug, price, status')
+      .select('id, name, slug, price, status, metadata')
       .ilike('name', `%${search}%`)
       .eq('status', 'active')
+      .or('metadata->>visibility.is.null,metadata->>visibility.eq.global')
       .limit(15);
     const searchImgs = await imageMapFor((prods || []).map((p: any) => p.id));
     const overrideMap = new Map(overrides.map((o) => [o.product_id, o]));

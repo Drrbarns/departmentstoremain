@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPaged } from '@/lib/supabase-paginate';
+import { getProductVisibility } from '@/lib/product-visibility';
 
 const PRODUCTS_SCROLL_KEY = 'admin_products_scroll_y';
 const PRODUCTS_UI_STATE_KEY = 'admin_products_ui_state';
@@ -883,9 +884,16 @@ export default function ProductsPage() {
                       )}
                     </td>
                     <td className="py-4 px-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap capitalize ${statusColors[product.status] || 'bg-gray-100 text-gray-600'}`}>
-                        {product.status}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap capitalize ${statusColors[product.status] || 'bg-gray-100 text-gray-600'}`}>
+                          {product.status}
+                        </span>
+                        {getProductVisibility(product) === 'pos_only' && (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap bg-violet-100 text-violet-700">
+                            POS only
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex items-center space-x-2">
@@ -924,9 +932,16 @@ export default function ProductsPage() {
                     <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
                   </div>
                 </div>
-                <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold mb-2 capitalize ${statusColors[product.status] || 'bg-gray-100 text-gray-600'}`}>
-                  {product.status}
-                </span>
+                <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold capitalize ${statusColors[product.status] || 'bg-gray-100 text-gray-600'}`}>
+                    {product.status}
+                  </span>
+                  {getProductVisibility(product) === 'pos_only' && (
+                    <span className="inline-block px-2 py-1 rounded-full text-xs font-semibold bg-violet-100 text-violet-700">
+                      POS only
+                    </span>
+                  )}
+                </div>
                 <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2">{product.name}</h3>
                 <p className="text-sm text-gray-600 mb-2">{product.category}</p>
                 <div className="flex items-center justify-between mb-3">

@@ -16,6 +16,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { getShopListingReturnHref } from '@/lib/shopListingReturn';
 import ProductShareControls from '@/components/ProductShareControls';
 import { PUBLIC_SITE_DOMAIN } from '@/lib/brand-contact';
+import { applyStorefrontProductFilter, isStorefrontVisible } from '@/lib/product-visibility';
 
 // Map common color names to hex values for the swatch preview
 function colorNameToHex(name: string): string {
@@ -113,8 +114,8 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
           return;
         }
 
-        // Draft / unpublished products are not shoppable — treat as not found.
-        if (productData.status !== 'active') {
+        // Draft / POS-only products are not shoppable — treat as not found.
+        if (!isStorefrontVisible(productData)) {
           setProduct(null);
           setLoading(false);
           return;
@@ -196,11 +197,12 @@ export default function ProductDetailClient({ slug }: { slug: string }) {
         if (productData.category_id) {
           const { data: related } = await cachedQuery<{ data: any; error: any }>(
             `related:${productData.category_id}:${productData.id}`,
-            (() => supabase
-              .from('products')
-              .select('*, product_images(url, position), product_variants(id, name, price, quantity)')
+            (() => applyStorefrontProductFilter(
+              supabase
+                .from('products')
+                .select('*, product_images(url, position), product_variants(id, name, price, quantity)')
+            )
               .eq('category_id', productData.category_id)
-              .eq('status', 'active')
               .neq('id', productData.id)
               .limit(4)) as any,
             5 * 60 * 1000

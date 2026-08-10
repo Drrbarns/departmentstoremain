@@ -13,6 +13,7 @@ import HeroClassic from '@/components/home/HeroClassic';
 import { USE_NEW_DESIGN } from '@/lib/uiFlags';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { getOptimizedImageUrl } from '@/lib/imageOptimization';
+import { applyStorefrontProductFilter } from '@/lib/product-visibility';
 
 export default function Home() {
   usePageTitle('');
@@ -24,10 +25,11 @@ export default function Home() {
     async function fetchData() {
       try {
         // Fetch featured products directly from Supabase
-        const { data: productsData, error: productsError } = await supabase
-          .from('products')
-          .select('*, product_variants(*), product_images(*), categories(name)')
-          .eq('status', 'active')
+        const { data: productsData, error: productsError } = await applyStorefrontProductFilter(
+          supabase
+            .from('products')
+            .select('*, product_variants(*), product_images(*), categories(name)')
+        )
           .eq('featured', true)
           .order('created_at', { ascending: false })
           .limit(8);
@@ -35,10 +37,11 @@ export default function Home() {
         if (productsError) throw productsError;
         // Fallback: if no featured rows are configured, show latest active products.
         if (!productsData || productsData.length === 0) {
-          const { data: fallbackProducts, error: fallbackError } = await supabase
-            .from('products')
-            .select('*, product_variants(*), product_images(*), categories(name)')
-            .eq('status', 'active')
+          const { data: fallbackProducts, error: fallbackError } = await applyStorefrontProductFilter(
+            supabase
+              .from('products')
+              .select('*, product_variants(*), product_images(*), categories(name)')
+          )
             .order('created_at', { ascending: false })
             .limit(8);
           if (fallbackError) throw fallbackError;

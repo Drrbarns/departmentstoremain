@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit';
+import { isStorefrontVisible } from '@/lib/product-visibility';
 
 const CREATE_RATE_LIMIT = { maxRequests: 12, windowSeconds: 60 };
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -92,7 +93,7 @@ export async function POST(req: Request) {
         const directIds = body.items.filter((i) => UUID_RE.test(i.id)).map((i) => i.id);
 
         const productMetaMap = new Map<string, any>();
-        const productStatusMap = new Map<string, string>(); // real uuid -> status
+        const productCatalogMap = new Map<string, { status?: string; metadata?: any }>();
 
         if (directIds.length > 0) {
             const { data: prods } = await supabaseAdmin
@@ -101,7 +102,7 @@ export async function POST(req: Request) {
                 .in('id', directIds);
             (prods || []).forEach((p: any) => {
                 productMetaMap.set(p.id, p.metadata);
-                productStatusMap.set(p.id, p.status);
+                productCatalogMap.set(p.id, { status: p.status, metadata: p.metadata });
             });
         }
 
@@ -117,18 +118,18 @@ export async function POST(req: Request) {
             }
             resolvedIds.set(item.id, prod.id);
             productMetaMap.set(prod.id, (prod as any).metadata);
-            productStatusMap.set(prod.id, (prod as any).status);
+            productCatalogMap.set(prod.id, { status: (prod as any).status, metadata: (prod as any).metadata });
         }
 
-        // --- Reject unavailable (draft / unknown) products ------------------
-        // Only `active` products may be purchased. This is the authoritative
-        // gate: it catches stale carts (product drafted after it was added),
-        // direct API calls, and links to draft product pages.
+        // --- Reject unavailable (draft / POS-only / unknown) products -------
+        // Only active, globally visible products may be purchased. This is the
+        // authoritative gate: it catches stale carts, direct API calls, and
+        // links to draft or POS-only product pages.
         const unavailable: string[] = [];
         for (const item of body.items) {
             const productId = UUID_RE.test(item.id) ? item.id : resolvedIds.get(item.id);
-            const status = productId ? productStatusMap.get(productId) : undefined;
-            if (status !== 'active') {
+            const catalog = productId ? productCatalogMap.get(productId) : undefined;
+            if (!isStorefrontVisible(catalog || {})) {
                 unavailable.push(item.name || item.id);
             }
         }

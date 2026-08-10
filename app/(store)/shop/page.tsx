@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { cachedQuery } from '@/lib/query-cache';
 import { rememberShopListingPath } from '@/lib/shopListingReturn';
 import PageHero from '@/components/PageHero';
+import { applyStorefrontProductFilter } from '@/lib/product-visibility';
 
 function ShopContent() {
   usePageTitle('Shop All Products');
@@ -116,14 +117,16 @@ function ShopContent() {
                 hits.map((h: any, i: number) => [h.id, i])
               );
 
-              let rowsQuery = supabase
-                .from('products')
-                .select(`
+              let rowsQuery = applyStorefrontProductFilter(
+                supabase
+                  .from('products')
+                  .select(`
                   *,
                   categories(name, slug),
                   product_images!product_id(url, position),
                   product_variants(id, name, price, quantity, option1, option2, image_url)
                 `)
+              )
                 .in('id', hits.map((h: any) => h.id))
                 .order('position', { foreignTable: 'product_images', ascending: true });
 
@@ -184,15 +187,16 @@ function ShopContent() {
             // --------------------------------------------------------------
             // BROWSE PATH — no search term; standard filtered listing.
             // --------------------------------------------------------------
-            let query = supabase
-              .from('products')
-              .select(`
+            let query = applyStorefrontProductFilter(
+              supabase
+                .from('products')
+                .select(`
                 *,
                 categories!inner(name, slug),
                 product_images!product_id(url, position),
                 product_variants(id, name, price, quantity, option1, option2, image_url)
               `, { count: 'exact' })
-              .eq('status', 'active')
+            )
               .order('position', { foreignTable: 'product_images', ascending: true });
 
             // Category Filter with Subcategories

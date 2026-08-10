@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next';
 import { createClient } from '@supabase/supabase-js';
+import { applyStorefrontProductFilter } from '@/lib/product-visibility';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -48,11 +49,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch active products
-    const { data: products } = await supabase
-      .from('products')
-      .select('slug, updated_at')
-      .eq('status', 'active');
+    // Fetch active, website-visible products
+    const { data: products } = await applyStorefrontProductFilter(
+      supabase.from('products').select('slug, updated_at')
+    );
 
     if (products) {
       productPages = products.map((product) => ({

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { applyStorefrontProductFilter } from '@/lib/product-visibility';
 
 // Server-side Supabase client (no auth needed for public data)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -30,18 +31,17 @@ export async function GET(request: Request) {
     }
 
     try {
-        let query = supabase
-            .from('products')
-            .select(`
+        let query = applyStorefrontProductFilter(
+            supabase
+                .from('products')
+                .select(`
                 id, name, slug, price, compare_at_price, quantity, description, metadata,
                 categories(id, name, slug),
                 product_images(url, position),
                 product_variants(id, name, price, quantity)
             `)
+        )
             .order('created_at', { ascending: false });
-
-        // Always filter active products
-        query = query.eq('status', 'active');
 
         if (featured) {
             query = query.eq('featured', true).limit(limit);
