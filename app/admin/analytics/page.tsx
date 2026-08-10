@@ -1,104 +1,184 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { fetchAllPaged } from '@/lib/supabase-paginate';
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, AreaChart, Area, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, AreaChart, Area, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
+type TimeRange = 'day' | 'week' | 'month';
+
+type SalesRow = {
+  date: string;
+  sales: number;
+  orders: number;
+  fullDate: number;
+};
+
+/** Store timezone — all day/week/month boundaries use Accra local time. */
+const STORE_TIMEZONE = 'Africa/Accra';
+
+function getStoreParts(date: Date = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: STORE_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date).reduce<Record<string, string>>((acc, p) => {
+    if (p.type !== 'literal') acc[p.type] = p.value;
+    return acc;
+  }, {});
+}
+
+/** Accra is GMT+0 year-round; keep the helper so DST elsewhere never skews audits. */
+function getStoreOffsetMinutes(at: Date = new Date()) {
+  const nowStr = new Intl.DateTimeFormat('en-US', {
+    timeZone: STORE_TIMEZONE,
+    timeZoneName: 'shortOffset',
+  }).formatToParts(at).find(p => p.type === 'timeZoneName')?.value ?? 'GMT';
+  const match = /GMT([+-])(\d{1,2})(?::(\d{2}))?/.exec(nowStr);
+  if (!match) return 0;
+  const sign = match[1] === '-' ? -1 : 1;
+  return sign * (Number(match[2] ?? 0) * 60 + Number(match[3] ?? 0));
+}
+
+function ymd(year: number, month: number, day: number) {
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function parseYmd(value: string) {
+  const [y, m, d] = value.split('-').map(Number);
+  return { year: y, month: m, day: d };
+}
+
+function addDaysYmd(value: string, days: number) {
+  const { year, month, day } = parseYmd(value);
+  const base = new Date(Date.UTC(year, month - 1, day + days));
+  return ymd(base.getUTCFullYear(), base.getUTCMonth() + 1, base.getUTCDate());
+}
+
+function mondayOf(value: string) {
+  const { year, month, day } = parseYmd(value);
+  const dow = new Date(Date.UTC(year, month - 1, day)).getUTCDay(); // 0 = Sun
+  const diffToMonday = dow === 0 ? 6 : dow - 1;
+  return addDaysYmd(value, -diffToMonday);
+}
+
+function endOfMonth(year: number, month: number) {
+  const last = new Date(Date.UTC(year, month, 0));
+  return ymd(last.getUTCFullYear(), last.getUTCMonth() + 1, last.getUTCDate());
+}
+
+function formatDisplayDate(value: string) {
+  const { year, month, day } = parseYmd(value);
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
+function formatMonthLabel(value: string) {
+  const { year, month } = parseYmd(value);
+  return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString('en-GB', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
 
 export default function AnalyticsPage() {
-  const [timeRange, setTimeRange] = useState<'day' | 'week' | 'month'>('day');
-  const [reportType, setReportType] = useState('overview');
+  const todayParts = getStoreParts();
+  const todayYmd = ymd(Number(todayParts.year), Number(todayParts.month), Number(todayParts.day));
+
+  const [timeRange, setTimeRange] = useState<TimeRange>('day');
+  const [anchorDate, setAnchorDate] = useState(todayYmd);
   const [loading, setLoading] = useState(true);
 
-  const [salesData, setSalesData] = useState<any[]>([]);
+  const [salesData, setSalesData] = useState<SalesRow[]>([]);
   const [categoryRevenue, setCategoryRevenue] = useState<any[]>([]);
   const [topProducts, setTopProducts] = useState<any[]>([]);
 
   const [metrics, setMetrics] = useState({
     revenue: 0,
-    revenueGrowth: 0,
     orders: 0,
-    ordersGrowth: 0,
     aov: 0,
-    aovGrowth: 0,
-    conversion: 0,
-    conversionGrowth: 0
   });
+
+  const period = useMemo(() => {
+    const offsetMinutes = getStoreOffsetMinutes();
+    let startYmd = anchorDate;
+    let endYmd = anchorDate;
+
+    if (timeRange === 'week') {
+      startYmd = mondayOf(anchorDate);
+      endYmd = addDaysYmd(startYmd, 6);
+    } else if (timeRange === 'month') {
+      const { year, month } = parseYmd(anchorDate);
+      startYmd = ymd(year, month, 1);
+      endYmd = endOfMonth(year, month);
+    }
+
+    // Cap the end at today so future empty days don't inflate charts for "this month".
+    if (endYmd > todayYmd) endYmd = todayYmd;
+
+    const startParts = parseYmd(startYmd);
+    const endParts = parseYmd(endYmd);
+    const start = new Date(
+      Date.UTC(startParts.year, startParts.month - 1, startParts.day, 0, 0, 0, 0) - offsetMinutes * 60_000
+    );
+    const end = new Date(
+      Date.UTC(endParts.year, endParts.month - 1, endParts.day, 23, 59, 59, 999) - offsetMinutes * 60_000
+    );
+
+    let label = formatDisplayDate(startYmd);
+    if (timeRange === 'week') {
+      label = `${formatDisplayDate(startYmd)} – ${formatDisplayDate(endYmd)}`;
+    } else if (timeRange === 'month') {
+      label = formatMonthLabel(startYmd);
+    }
+
+    const isCurrent =
+      timeRange === 'day'
+        ? startYmd === todayYmd
+        : timeRange === 'week'
+          ? mondayOf(anchorDate) === mondayOf(todayYmd)
+          : parseYmd(anchorDate).year === Number(todayParts.year) &&
+            parseYmd(anchorDate).month === Number(todayParts.month);
+
+    return { start, end, startYmd, endYmd, label, isCurrent };
+  }, [timeRange, anchorDate, todayYmd, todayParts.year, todayParts.month]);
 
   useEffect(() => {
     fetchAnalytics();
-  }, [timeRange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period.startYmd, period.endYmd, timeRange]);
 
-  // Business timezone — all day/week/month boundaries are computed here so
-  // reports line up with the store's operating hours regardless of where
-  // the admin's browser is.
-  const STORE_TIMEZONE = 'Africa/Accra';
-
-  const getPeriodBounds = () => {
-    // Build the store-local "today" components by formatting now in the
-    // store timezone.  Then construct a UTC Date from those components and
-    // offset by the store's current UTC offset so the ISO value we send
-    // to Postgres is correct.
-    const now = new Date();
-    const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: STORE_TIMEZONE,
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
-    }).formatToParts(now).reduce<Record<string, string>>((acc, p) => {
-      if (p.type !== 'literal') acc[p.type] = p.value;
-      return acc;
-    }, {});
-
-    const year = Number(parts.year);
-    const month = Number(parts.month); // 1-12
-    const day = Number(parts.day);
-    const dow = new Date(Date.UTC(year, month - 1, day)).getUTCDay(); // 0 = Sun
-
-    let startY = year, startM = month, startD = day;
-    if (timeRange === 'week') {
-      const diffToMonday = dow === 0 ? 6 : dow - 1;
-      const base = new Date(Date.UTC(year, month - 1, day - diffToMonday));
-      startY = base.getUTCFullYear();
-      startM = base.getUTCMonth() + 1;
-      startD = base.getUTCDate();
-    } else if (timeRange === 'month') {
-      startD = 1;
+  const shiftPeriod = (direction: -1 | 1) => {
+    if (timeRange === 'day') {
+      setAnchorDate(addDaysYmd(anchorDate, direction));
+      return;
     }
-
-    // Resolve the UTC offset of the store at this instant so we can convert
-    // the local "midnight" / "end-of-day" back to UTC for the DB query.
-    const offsetMinutes = (() => {
-      const nowStr = new Intl.DateTimeFormat('en-US', { timeZone: STORE_TIMEZONE, timeZoneName: 'shortOffset' })
-        .formatToParts(now).find(p => p.type === 'timeZoneName')?.value ?? 'GMT';
-      const match = /GMT([+-])(\d{1,2})(?::(\d{2}))?/.exec(nowStr);
-      if (!match) return 0; // Africa/Accra = GMT+0 all year
-      const sign = match[1] === '-' ? -1 : 1;
-      const h = Number(match[2] ?? 0);
-      const m = Number(match[3] ?? 0);
-      return sign * (h * 60 + m);
-    })();
-
-    const utcStart = new Date(Date.UTC(startY, startM - 1, startD, 0, 0, 0, 0) - offsetMinutes * 60_000);
-    const utcEnd = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999) - offsetMinutes * 60_000);
-
-    return { start: utcStart, end: utcEnd };
+    if (timeRange === 'week') {
+      setAnchorDate(addDaysYmd(mondayOf(anchorDate), direction * 7));
+      return;
+    }
+    const { year, month } = parseYmd(anchorDate);
+    const next = new Date(Date.UTC(year, month - 1 + direction, 1));
+    setAnchorDate(ymd(next.getUTCFullYear(), next.getUTCMonth() + 1, 1));
   };
 
-  const periodLabel =
-    timeRange === 'day' ? 'Today' : timeRange === 'week' ? 'This Week' : 'This Month';
+  const goToCurrent = () => setAnchorDate(todayYmd);
 
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
 
-      const { start, end } = getPeriodBounds();
-      const isoStart = start.toISOString();
-      const isoEnd = end.toISOString();
+      const isoStart = period.start.toISOString();
+      const isoEnd = period.end.toISOString();
 
-      // Fetch Orders for Revenue & Count - only PAID orders count as revenue.
-      // Page through chunks so we never undercount once the shop crosses the
-      // 1000-order PostgREST cap.
       const orders = await fetchAllPaged<{
         id: string;
         created_at: string;
@@ -115,8 +195,6 @@ export default function AnalyticsPage() {
           .order('created_at')
       );
 
-      // Fetch order_items for the fetched orders, paged so we can survive
-      // shops with thousands of line items in the period.
       let validItems: any[] = [];
       if (orders.length > 0) {
         const orderIds = orders.map(o => o.id);
@@ -138,62 +216,56 @@ export default function AnalyticsPage() {
         }
       }
 
-      // Process Metrics
-      const totalRevenue = orders?.reduce((sum, o) => sum + (o.total || 0), 0) || 0;
-      const totalOrders = orders?.length || 0;
+      const totalRevenue = orders.reduce((sum, o) => sum + (o.total || 0), 0);
+      const totalOrders = orders.length;
       const aov = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
       setMetrics({
         revenue: totalRevenue,
-        revenueGrowth: 0, // Needs comparison with previous period (skipped for simplicity/speed)
         orders: totalOrders,
-        ordersGrowth: 0,
-        aov: aov,
-        aovGrowth: 0,
-        conversion: 0, // No visitor data
-        conversionGrowth: 0
+        aov,
       });
 
-      // Process Sales Chart Data (Group by Date with Zero-Filling)
-      const salesMap: Record<string, any> = {};
-
-      // Initialize map with all dates in range
-      const d = new Date(start);
-      while (d <= end) {
-        const dateKey = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        salesMap[dateKey] = {
+      // Zero-fill every day in the selected period so audits show quiet days too.
+      const salesMap: Record<string, SalesRow> = {};
+      let cursor = period.startYmd;
+      while (cursor <= period.endYmd) {
+        const { year, month, day } = parseYmd(cursor);
+        const dateKey = new Date(Date.UTC(year, month - 1, day)).toLocaleDateString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+          timeZone: 'UTC',
+        });
+        salesMap[cursor] = {
           date: dateKey,
           sales: 0,
           orders: 0,
-          fullDate: d.getTime() // Helper for sorting
+          fullDate: Date.UTC(year, month - 1, day),
         };
-        d.setDate(d.getDate() + 1);
+        cursor = addDaysYmd(cursor, 1);
       }
 
-      orders?.forEach(o => {
-        const dateKey = new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        if (salesMap[dateKey]) {
-          salesMap[dateKey].sales += o.total || 0;
-          salesMap[dateKey].orders += 1;
+      orders.forEach(o => {
+        const parts = getStoreParts(new Date(o.created_at));
+        const key = ymd(Number(parts.year), Number(parts.month), Number(parts.day));
+        if (salesMap[key]) {
+          salesMap[key].sales += o.total || 0;
+          salesMap[key].orders += 1;
         }
       });
 
-      setSalesData(Object.values(salesMap));
+      setSalesData(Object.values(salesMap).sort((a, b) => a.fullDate - b.fullDate));
 
-      // Process Category Revenue
       const catMap: Record<string, any> = {};
       validItems.forEach(item => {
         const catName = item.products?.categories?.name || 'Uncategorized';
         if (!catMap[catName]) catMap[catName] = { name: catName, value: 0 };
-        // Use total_price if available, otherwise calculate from unit_price * quantity
         const itemRevenue = item.total_price || (item.unit_price * item.quantity) || 0;
         catMap[catName].value += itemRevenue;
       });
-      // Convert to array for Recharts Pie
-      const catArray = Object.values(catMap).map((c: any) => ({ name: c.name, value: c.value }));
-      setCategoryRevenue(catArray);
+      setCategoryRevenue(Object.values(catMap).map((c: any) => ({ name: c.name, value: c.value })));
 
-      // Process Top Products
       const prodMap: Record<string, any> = {};
       validItems.forEach(item => {
         const pName = item.products?.name || 'Unknown';
@@ -202,9 +274,11 @@ export default function AnalyticsPage() {
         prodMap[pName].revenue += itemRevenue;
         prodMap[pName].units += item.quantity;
       });
-      const topProdArray = Object.values(prodMap).sort((a: any, b: any) => b.revenue - a.revenue).slice(0, 5);
-      setTopProducts(topProdArray);
-
+      setTopProducts(
+        Object.values(prodMap)
+          .sort((a: any, b: any) => b.revenue - a.revenue)
+          .slice(0, 5)
+      );
     } catch (err) {
       console.error('Error fetching analytics:', err);
     } finally {
@@ -214,37 +288,38 @@ export default function AnalyticsPage() {
 
   const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
 
+  const rangeTabs: { key: TimeRange; label: string }[] = [
+    { key: 'day', label: 'Daily' },
+    { key: 'week', label: 'Weekly' },
+    { key: 'month', label: 'Monthly' },
+  ];
+
+  const exportCsv = () => {
+    const csvContent = `Date,Revenue,Orders\n${salesData.map(d => `${d.date},${d.sales},${d.orders}`).join('\n')}`;
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `analytics-${timeRange}-${period.startYmd}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Advanced Analytics</h1>
-            <p className="text-gray-600 mt-1 md:mt-2 text-sm md:text-base">Detailed insights and performance metrics</p>
+            <p className="text-gray-600 mt-1 md:mt-2 text-sm md:text-base">
+              Audit paid sales by day, week, or month
+            </p>
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <select
-              value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value as 'day' | 'week' | 'month')}
-              className="px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium pr-8 cursor-pointer bg-white"
-            >
-              <option value="day">Today</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-            </select>
             <button
-              onClick={() => {
-                const csvContent = `Date,Revenue,Orders\n${salesData.map(d => `${d.date},${d.sales},${d.orders}`).join('\n')}`;
-                const blob = new Blob([csvContent], { type: 'text/csv' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `analytics-${timeRange}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-              }}
+              onClick={exportCsv}
               className="bg-blue-700 hover:bg-blue-800 text-white px-6 py-3 rounded-lg font-semibold transition-colors whitespace-nowrap cursor-pointer flex items-center justify-center"
             >
               <i className="ri-download-line mr-2"></i>
@@ -259,17 +334,120 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
+        {/* Period filter — Daily / Weekly / Monthly */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-4 justify-between">
+            <div className="inline-flex rounded-xl border border-gray-200 overflow-hidden self-start">
+              {rangeTabs.map(tab => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setTimeRange(tab.key)}
+                  className={`px-4 py-2.5 text-sm font-semibold transition-colors cursor-pointer ${
+                    timeRange === tab.key
+                      ? 'bg-blue-700 text-white'
+                      : 'bg-white text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => shiftPeriod(-1)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+                aria-label="Previous period"
+              >
+                <i className="ri-arrow-left-s-line text-lg"></i>
+              </button>
+
+              {timeRange === 'day' && (
+                <input
+                  type="date"
+                  value={anchorDate}
+                  max={todayYmd}
+                  onChange={(e) => e.target.value && setAnchorDate(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              )}
+
+              {timeRange === 'week' && (
+                <input
+                  type="date"
+                  value={mondayOf(anchorDate)}
+                  max={todayYmd}
+                  onChange={(e) => e.target.value && setAnchorDate(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  title="Pick any day in the week"
+                />
+              )}
+
+              {timeRange === 'month' && (
+                <input
+                  type="month"
+                  value={anchorDate.slice(0, 7)}
+                  max={todayYmd.slice(0, 7)}
+                  onChange={(e) => {
+                    if (!e.target.value) return;
+                    setAnchorDate(`${e.target.value}-01`);
+                  }}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              )}
+
+              <button
+                type="button"
+                onClick={() => shiftPeriod(1)}
+                disabled={period.isCurrent}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label="Next period"
+              >
+                <i className="ri-arrow-right-s-line text-lg"></i>
+              </button>
+
+              {!period.isCurrent && (
+                <button
+                  type="button"
+                  onClick={goToCurrent}
+                  className="px-3 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg text-sm font-semibold hover:bg-emerald-100 cursor-pointer"
+                >
+                  {timeRange === 'day' ? 'Today' : timeRange === 'week' ? 'This Week' : 'This Month'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-gray-600">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 font-semibold text-blue-800">
+              <i className="ri-calendar-line"></i>
+              {period.label}
+            </span>
+            <span>
+              Showing paid orders only · Africa/Accra timezone
+            </span>
+            {loading && (
+              <span className="inline-flex items-center gap-1 text-blue-600">
+                <i className="ri-loader-4-line animate-spin"></i>
+                Loading…
+              </span>
+            )}
+          </div>
+        </div>
+
         {/* Metrics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 flex items-center justify-center bg-blue-100 rounded-lg">
                 <i className="ri-money-dollar-circle-line text-2xl text-blue-700"></i>
               </div>
-              <span className="text-blue-700 font-semibold text-sm">{periodLabel}</span>
+              <span className="text-blue-700 font-semibold text-sm capitalize">{timeRange}</span>
             </div>
-            <p className="text-sm text-gray-600 mb-1">Revenue ({periodLabel})</p>
-            <p className="text-3xl font-bold text-gray-900">GH₵{metrics.revenue.toLocaleString()}</p>
+            <p className="text-sm text-gray-600 mb-1">Revenue</p>
+            <p className="text-3xl font-bold text-gray-900">GH₵{metrics.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-6">
@@ -278,7 +456,7 @@ export default function AnalyticsPage() {
                 <i className="ri-shopping-cart-line text-2xl text-blue-700"></i>
               </div>
             </div>
-            <p className="text-sm text-gray-600 mb-1">Paid Orders ({periodLabel})</p>
+            <p className="text-sm text-gray-600 mb-1">Paid Orders</p>
             <p className="text-3xl font-bold text-gray-900">{metrics.orders}</p>
           </div>
 
@@ -291,16 +469,55 @@ export default function AnalyticsPage() {
             <p className="text-sm text-gray-600 mb-1">Avg. Order Value</p>
             <p className="text-3xl font-bold text-gray-900">GH₵{metrics.aov.toFixed(2)}</p>
           </div>
+        </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 flex items-center justify-center bg-amber-100 rounded-lg">
-                <i className="ri-percent-line text-2xl text-amber-700"></i>
-              </div>
-            </div>
-            <p className="text-sm text-gray-600 mb-1">Conversion Rate</p>
-            <p className="text-3xl font-bold text-gray-900">--</p>
-            <p className="text-xs text-gray-400 mt-1">Setup Tracking</p>
+        {/* Sales breakdown table — for end-of-day / week / month audits */}
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">
+              {timeRange === 'day' ? 'Day Sales Detail' : timeRange === 'week' ? 'Daily Breakdown (This Week)' : 'Daily Breakdown (This Month)'}
+            </h2>
+            <p className="text-sm font-semibold text-gray-700">
+              Total: GH₵{metrics.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="border-b border-gray-100">
+                <tr>
+                  <th className="text-left pb-3 text-sm font-semibold text-gray-600">Date</th>
+                  <th className="text-right pb-3 text-sm font-semibold text-gray-600">Orders</th>
+                  <th className="text-right pb-3 text-sm font-semibold text-gray-600">Revenue</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {salesData.map((row) => (
+                  <tr key={row.fullDate} className={row.sales === 0 ? 'text-gray-400' : ''}>
+                    <td className="py-3 text-sm font-medium text-gray-900">{row.date}</td>
+                    <td className="py-3 text-right text-sm text-gray-600">{row.orders}</td>
+                    <td className="py-3 text-right text-sm font-semibold text-blue-600">
+                      GH₵{row.sales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                ))}
+                {salesData.length === 0 && !loading && (
+                  <tr>
+                    <td colSpan={3} className="text-center py-6 text-gray-500">No paid sales in this period.</td>
+                  </tr>
+                )}
+              </tbody>
+              {salesData.length > 0 && (
+                <tfoot className="border-t-2 border-gray-200">
+                  <tr>
+                    <td className="pt-3 text-sm font-bold text-gray-900">Total</td>
+                    <td className="pt-3 text-right text-sm font-bold text-gray-900">{metrics.orders}</td>
+                    <td className="pt-3 text-right text-sm font-bold text-blue-700">
+                      GH₵{metrics.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
           </div>
         </div>
 
@@ -308,7 +525,6 @@ export default function AnalyticsPage() {
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-900">Revenue & Performance Trends</h2>
-            {/* Report Type Toggles omitted for brevity, hardcoded to Sales for now */}
           </div>
           <div style={{ width: '100%', height: 350 }}>
             <ResponsiveContainer>
@@ -331,7 +547,6 @@ export default function AnalyticsPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Pie Chart */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Revenue by Category</h2>
             <div className="flex items-center justify-center mb-6">
@@ -359,7 +574,6 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          {/* Top Products */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Top Performing Products</h2>
             <div className="overflow-x-auto">
@@ -379,7 +593,11 @@ export default function AnalyticsPage() {
                       <td className="py-3 text-right text-sm font-semibold text-blue-600">GH₵{product.revenue.toLocaleString()}</td>
                     </tr>
                   ))}
-                  {topProducts.length === 0 && <tr><td colSpan={3} className="text-center py-4 text-gray-500">No sales data yet.</td></tr>}
+                  {topProducts.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="text-center py-4 text-gray-500">No sales data yet.</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
