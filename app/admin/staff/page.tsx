@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { DEFAULT_STAFF_ROLE, roleLabel, type StaffRole } from '@/lib/admin-staff';
+import { DEFAULT_STAFF_ROLE, roleLabel, type StaffRole } from '@/lib/admin-staff-shared';
 
 type StaffMember = {
   id: string;
